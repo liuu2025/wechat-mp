@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微信公众号开发调试模拟器 - WeChat MP Hub</title>
+  <style>
+    :root {
+      --wx-green: #07c160;
+      --wx-green-bubble: #95ec69;
+      --wx-bg: #ededed;
+      --wx-border: #dcdcdc;
+      --wx-dark: #191919;
+      --wx-gray: #7f7f7f;
+      --primary: #2563eb;
+      --card-bg: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部导航 */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 500;
+    }
+
+    /* 主工作区左右布局 */
+    .workspace {
+      display: flex;
+      flex: 1;
+      padding: 28px;
+      gap: 36px;
+      max-width: 1350px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* 左侧：手机高仿外壳 */
+    .phone-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .phone-case {
+      width: 380px;
+      height: 720px;
+      background: #ffffff;
+      border-radius: 40px;
+      border: 10px solid #1e293b;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 手机顶部刘海与状态栏 */
+    .phone-status-bar {
+      background: var(--wx-bg);
+      padding: 8px 16px 4px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+    .phone-notch {
+      width: 120px;
+      height: 18px;
+      background: #1e293b;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      z-index: 100;
+    }
+
+    /* 微信导航顶栏 */
+    .wx-navbar {
+      background: var(--wx-bg);
+      border-bottom: 1px solid #dcdcdc;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+    .wx-nav-back {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 15px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .wx-nav-back::before {
+      content: "‹";
+      font-size: 26px;
+      line-height: 1;
+      margin-top: -2px;
+    }
+    .wx-nav-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+    }
+    .wx-nav-more {
+      font-size: 20px;
+      letter-spacing: 2px;
+      cursor: pointer;
+    }
+
+    /* 聊天内容视口 */
+    .wx-chat-view {
+      flex: 1;
+      background: var(--wx-bg);
+      overflow-y: auto;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .wx-time-pill {
+      align-self: center;
+      background: rgba(0, 0, 0, 0.08);
+      color: #ffffff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* 气泡消息条目 */
+    .wx-msg-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    .wx-msg-row.official {
+      justify-content: flex-start;
+    }
+    .wx-msg-row.user {
+      justify-content: flex-end;
+    }
+    .wx-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .wx-avatar.official {
+      background: #07c160;
+      color: #fff;
+    }
+    .wx-avatar.user {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .wx-bubble {
+      max-width: 74%;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      white-space: pre-wrap;
+      position: relative;
+    }
+    .wx-msg-row.official .wx-bubble {
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #e5e5e5;
+    }
+    .wx-msg-row.official .wx-bubble::before {
+      content: "";
+      position: absolute;
+      left: -6px;
+      top: 14px;
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-right: 6px solid #ffffff;
+    }
+    .wx-msg-row.user .wx-bubble {
+      background: var(--wx-green-bubble);
+      color: #000000;
+    }
+    .wx-msg-row.user .wx-bubble::after {
+      content: "";
+      position: absolute;
+      right: -6px;
+      top: 14px;
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 6px solid var(--wx-green-bubble);
+    }
+    .wx-bubble a {
+      color: #576b95;
+      text-decoration: underline;
+    }
+
+    /* 手机底部常驻纯原生输入栏（100%还原真实手机） */
+    .wx-footer {
+      background: #f7f7f7;
+      border-top: 1px solid var(--wx-border);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+    }
+    .wx-text-input {
+      flex: 1;
+      height: 38px;
+      border-radius: 6px;
+      border: 1px solid #dcdcdc;
+      background: #ffffff;
+      padding: 0 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    .wx-text-input:focus {
+      border-color: var(--wx-green);
+    }
+    .wx-send-btn {
+      height: 38px;
+      padding: 0 16px;
+      background: var(--wx-green);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* 快捷功能键 */
+    .phone-tools {
+      display: flex;
+      gap: 10px;
+    }
+    .phone-tools button {
+      padding: 6px 14px;
+      font-size: 13px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .phone-tools button:hover {
+      background: #f8fafc;
+    }
+
+    /* 右侧控制台面板 */
+    .control-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 14px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 表单与输入区 */
+    .verify-box {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .input-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .input-row label {
+      width: 90px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    .input-row input, .input-row select {
+      flex: 1;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-success:hover { background: #15803d; }
+
+    /* 验证码结果卡片 */
+    .code-display {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .code-number {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: #2563eb;
+      font-family: monospace;
+    }
+    .code-status {
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-pending { color: #d97706; }
+    .status-verified { color: #16a34a; font-weight: 700; }
+
+    /* 快捷发送指令药丸 */
+    .quick-pill {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #334155;
+      transition: all 0.2s;
+    }
+    .quick-pill:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <span>🟢 微信公众号多平台验证码中枢</span>
+      <span class="badge">1:1 真机模式仿真</span>
+    </div>
+    <div style="font-size: 13px; color: #64748b;">
+      真实状态: <span style="color: #16a34a; font-weight: 600;">公网隧道已通 · 微信消息已接入</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <!-- 左侧：微信手机外观（100%还原纯输入框真机交互） -->
+    <div class="phone-column">
+      <div class="phone-case">
+        <div class="phone-notch"></div>
+        <div class="phone-status-bar">
+          <span id="phone-clock">12:00</span>
+          <span>5G 📶 98% 🔋</span>
+        </div>
+
+        <!-- 微信导航条 -->
+        <div class="wx-navbar">
+          <div class="wx-nav-back">微信</div>
+          <div class="wx-nav-title">睡大觉觉</div>
+          <div class="wx-nav-more">···</div>
+        </div>
+
+        <!-- 微信聊天视口 -->
+        <div class="wx-chat-view" id="chatView">
+          <div class="wx-time-pill">今日 会话</div>
+          <div class="wx-msg-row official">
+            <div class="wx-avatar official">睡</div>
+            <div class="wx-bubble">您好！欢迎使用验证码中枢。<br>👉 网站登录/验证：请直接发送网站上显示的 6 位数字验证码；<br>👉 回复【帮助】或【项目】可查看详细支持的业务。</div>
+          </div>
+        </div>
+
+        <!-- 手机底部原生打字输入栏（纯消息模式） -->
+        <div class="wx-footer">
+          <input type="text" class="wx-text-input" id="messageInput" placeholder="输入 6 位验证码、项目、帮助..." onkeydown="if(event.key==='Enter') sendTextMessage()">
+          <button class="wx-send-btn" onclick="sendTextMessage()">发送</button>
+        </div>
+      </div>
+
+      <div class="phone-tools">
+        <button id="btnSubscribe" onclick="simulateSubscribe()" style="color: #16a34a; font-weight: 500;">🔔 模拟关注公众号</button>
+        <button id="btnUnsubscribe" onclick="simulateUnsubscribe()" style="color: #dc2626;">🔕 模拟取消关注</button>
+        <button onclick="clearChat()">🗑️ 清屏</button>
+      </div>
+    </div>
+
+    <!-- 右侧：真实业务项目端联调控制台 -->
+    <div class="control-panel">
+
+      <!-- 卡片 1：流向一（网站发起弹码，微信发码核销） -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🖥️【流向一】网站弹码 ➔ 手机回复纯数字 ➔ 网页免动自动登录</div>
+          <span style="font-size: 12px; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px;">适合 PC 网站端</span>
+        </div>
+
+        <div class="verify-box">
+          <div class="input-row">
+            <label>目标业务项目：</label>
+            <select id="projectSelect">
+              <option value="商城系统">项目 A (商城系统)</option>
+              <option value="个人博客">项目 B (个人博客)</option>
+              <option value="工具箱导航">项目 C (工具箱导航)</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <label>业务透传信息：</label>
+            <input type="text" id="extraParam" value="session_guest_9527" placeholder="前端 session_id、用户临时ID等">
+          </div>
+
+          <div>
+            <button class="btn-primary" onclick="generateCodeFromProject()">
+              ⚡ 模拟网站生成验证码 (POST /api/code/create)
+            </button>
+          </div>
+
+          <div id="codeDisplayArea" style="display: none;" class="code-display">
+            <div>
+              <div style="font-size: 13px; color: #64748b; margin-bottom: 6px;">项目网站前台弹窗显示：</div>
+              <div class="code-number" id="generatedCode">------</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="code-status" id="pollStatus">
+                <span class="status-pending">⏳ 网站轮询等待核销中...</span>
+              </div>
+              <div style="margin-top: 10px;">
+                <button class="btn-success" onclick="quickFillAndSend()">📲 模拟在手机一键回复此码</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 卡片 2：流向二（微信索取通用码，网站表单填码核销） -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📱【流向二】微信索码 ➔ 获得通行码 ➔ 网站表单填码核销</div>
+          <span style="font-size: 12px; background: #f0fdf4; color: #15803d; padding: 2px 8px; border-radius: 4px;">适合短信替代方案</span>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
+          用户在手机公众号发【验证码】索取 6 位通用通行码，随后在网站输入框中填入并点击核销：
+        </p>
+
+        <div class="verify-box">
+          <div class="input-row">
+            <label>核销项目：</label>
+            <select id="universalProjectSelect">
+              <option value="商城系统">项目 A (商城系统)</option>
+              <option value="个人博客">项目 B (个人博客)</option>
+              <option value="工具箱导航">项目 C (工具箱导航)</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <label>填入验证码：</label>
+            <input type="text" id="universalCodeInput" placeholder="输入用户微信收到的 6 位通行码" maxlength="6">
+            <button class="btn-primary" onclick="submitUniversalVerify()">
+              ✔️ 模拟网站提交校验 (POST /api/code/verify-universal)
+            </button>
+          </div>
+
+          <div id="universalResultArea" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- 卡片 3：快捷测试指令与业务说明 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🚀 快捷常用指令测试</div>
+          <span style="font-size: 13px; color: #64748b;">点击直接填入手机并发送</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <span class="quick-pill" onclick="sendQuickText('验证码')">🔑 发送「验证码」（体验流向二）</span>
+          <span class="quick-pill" onclick="sendQuickText('帮助')">💬 发送「帮助」</span>
+          <span class="quick-pill" onclick="sendQuickText('项目')">💬 发送「项目」</span>
+          <span class="quick-pill" onclick="sendQuickText('你好')">💬 发送「闲聊 你好」</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // 模拟的用户 OpenID
+    const currentOpenID = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
+    let currentPollingTimer = null;
+    let latestActiveCode = "";
+
+    // 手机状态栏时钟
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('phone-clock').textContent = `${h}:${m}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 发送文本消息
+    async function sendTextMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendUserMsg(text);
+      input.value = '';
+
+      const xml = `<xml>` +
+  `<ToUserName><![CDATA[gh_d43c47d77c1a]]></ToUserName>` +
+  `<FromUserName><![CDATA[${currentOpenID}]]></FromUserName>` +
+  `<CreateTime>${Math.floor(Date.now()/1000)}</CreateTime>` +
+  `<MsgType><![CDATA[text]]></MsgType>` +
+  `<Content><![CDATA[${text}]]></Content>` +
+  `<MsgId>${Date.now()}</MsgId>` +
+`</xml>`;
+
+      await sendXmlToWechat(xml);
+    }
+
+    function sendQuickText(text) {
+      document.getElementById('messageInput').value = text;
+      sendTextMessage();
+    }
+
+    // 模拟新关注事件
+    async function simulateSubscribe() {
+      appendSystemNotice("用户扫码关注了公众号");
+      const xml = `<xml>` +
+  `<ToUserName><![CDATA[gh_d43c47d77c1a]]></ToUserName>` +
+  `<FromUserName><![CDATA[${currentOpenID}]]></FromUserName>` +
+  `<CreateTime>${Math.floor(Date.now()/1000)}</CreateTime>` +
+  `<MsgType><![CDATA[event]]></MsgType>` +
+  `<Event><![CDATA[subscribe]]></Event>` +
+`</xml>`;
+      await sendXmlToWechat(xml);
+    }
+
+    // 模拟取消关注事件
+    async function simulateUnsubscribe() {
+      appendSystemNotice("用户取消关注了公众号（微信不会向用户下发回复）");
+      const xml = `<xml>` +
+  `<ToUserName><![CDATA[gh_d43c47d77c1a]]></ToUserName>` +
+  `<FromUserName><![CDATA[${currentOpenID}]]></FromUserName>` +
+  `<CreateTime>${Math.floor(Date.now()/1000)}</CreateTime>` +
+  `<MsgType><![CDATA[event]]></MsgType>` +
+  `<Event><![CDATA[unsubscribe]]></Event>` +
+`</xml>`;
+      await sendXmlToWechat(xml);
+    }
+
+    // 向 Go 后端推送 XML
+    async function sendXmlToWechat(xml) {
+      try {
+        const res = await fetch('/wechat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/xml' },
+          body: xml
+        });
+        const replyXml = await res.text();
+        parseAndAppendOfficialReply(replyXml);
+      } catch (err) {
+        appendOfficialMsg("⚠️ 无法连接到后端服务器");
+      }
+    }
+
+    // 解析微信回复的 XML
+    function parseAndAppendOfficialReply(xmlStr) {
+      if (!xmlStr || xmlStr === 'success') return;
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlStr, "application/xml");
+      const contentEl = xmlDoc.getElementsByTagName("Content")[0];
+      if (contentEl) {
+        appendOfficialMsg(contentEl.textContent);
+      }
+    }
+
+    // 气泡渲染
+    function appendUserMsg(text) {
+      const chat = document.getElementById('chatView');
+      const row = document.createElement('div');
+      row.className = 'wx-msg-row user';
+      row.innerHTML = `<div class="wx-bubble">${escapeHtml(text)}</div><div class="wx-avatar user">我</div>`;
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function appendOfficialMsg(text) {
+      const chat = document.getElementById('chatView');
+      const row = document.createElement('div');
+      row.className = 'wx-msg-row official';
+      const htmlText = linkify(escapeHtml(text));
+      row.innerHTML = `<div class="wx-avatar official">睡</div><div class="wx-bubble">${htmlText}</div>`;
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function appendSystemNotice(text) {
+      const chat = document.getElementById('chatView');
+      const pill = document.createElement('div');
+      pill.className = 'wx-time-pill';
+      pill.textContent = text;
+      chat.appendChild(pill);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function clearChat() {
+      document.getElementById('chatView').innerHTML = '<div class="wx-time-pill">聊天记录已清空</div>';
+    }
+
+    // --- 业务项目生成验证码测试 ---
+    async function generateCodeFromProject() {
+      const project = document.getElementById('projectSelect').value;
+      const extra = document.getElementById('extraParam').value;
+
+      try {
+        const res = await fetch('/api/code/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project, extra, expire_seconds: 300 })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          latestActiveCode = json.data.code;
+          document.getElementById('codeDisplayArea').style.display = 'flex';
+          document.getElementById('generatedCode').textContent = latestActiveCode;
+          document.getElementById('pollStatus').innerHTML = '<span class="status-pending">⏳ 网站轮询等待核销中...</span>';
+          startPolling(latestActiveCode);
+        }
+      } catch (err) {
+        alert("生成验证码失败: " + err);
+      }
+    }
+
+    function quickFillAndSend() {
+      if (!latestActiveCode) return;
+      document.getElementById('messageInput').value = latestActiveCode;
+      sendTextMessage();
+    }
+
+    function startPolling(code) {
+      if (currentPollingTimer) clearInterval(currentPollingTimer);
+      currentPollingTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/code/check?code=${code}`);
+          const json = await res.json();
+          if (json.code === 0 && json.data && json.data.verified) {
+            clearInterval(currentPollingTimer);
+            document.getElementById('pollStatus').innerHTML = `<span class="status-verified">🎉【核销成功】OpenID: ${json.data.openid}</span>`;
+          }
+        } catch (e) {}
+      }, 1000);
+    }
+
+    async function submitUniversalVerify() {
+      const code = document.getElementById('universalCodeInput').value.trim();
+      const project = document.getElementById('universalProjectSelect').value;
+      const resArea = document.getElementById('universalResultArea');
+
+      if (!code) {
+        alert("请先输入 6 位验证码！");
+        return;
+      }
+
+      resArea.style.display = 'block';
+      resArea.style.background = '#f8fafc';
+      resArea.style.color = '#334155';
+      resArea.innerHTML = '⏳ 正在向中枢核销校验...';
+
+      try {
+        const res = await fetch('/api/code/verify-universal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project, code })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data && json.data.valid) {
+          resArea.style.background = '#dcfce7';
+          resArea.style.color = '#15803d';
+          resArea.innerHTML = `<b>🎉【核销登录成功】</b><br>
+            • 绑定微信 OpenID: <code>${json.data.openid}</code><br>
+            • 业务系统【${json.data.project}】已为该微信用户下发 Token / 放行登录！`;
+        } else {
+          resArea.style.background = '#fee2e2';
+          resArea.style.color = '#991b1b';
+          resArea.innerHTML = `<b>❌ 核销失败</b>: ${json.message || '验证码无效或已过期'}`;
+        }
+      } catch (err) {
+        resArea.style.background = '#fee2e2';
+        resArea.style.color = '#991b1b';
+        resArea.innerHTML = `<b>⚠️ 接口请求异常</b>: ${err}`;
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag] || tag));
+    }
+
+    function linkify(str) {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return str.replace(urlRegex, url => `<a href="${url}" target="_blank">${url}</a>`);
+    }
+  </script>
+</body>
+</html>

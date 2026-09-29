@@ -1,0 +1,39 @@
+{
+  "button": [
+    {
+      "type": "click",
+      "name": "获取A验证码",
+      "key": "GET_CODE_PROJECT_A"
+    },
+    {
+      "name": "更多项目",
+      "sub_button": [
+        {
+          "type": "click",
+          "name": "获取B验证码",
+          "key": "GET_CODE_PROJECT_B"
+        },
+        {
+          "type": "click",
+          "name": "获取C验证码",
+          "key": "GET_CODE_PROJECT_C"
+        }
+      ]
+    },
+    {
+      "name": "服务支持",
+      "sub_button": [
+        {
+          "type": "click",
+          "name": "使用帮助",
+          "key": "HELP_INFO"
+        },
+        {
+          "type": "click",
+          "name": "站长推荐",
+          "key": "AD_INFO"
+        }
+      ]
+    }
+  ]
+}

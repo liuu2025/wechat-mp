@@ -1,0 +1,43 @@
+services:
+  # Redis 缓存服务（直接使用本地已有的 redis:8-alpine 镜像）
+  redis:
+    image: redis:8-alpine
+    container_name: wechat-mp-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # 微信多平台验证码中枢核心服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wechat-mp-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      - "8080:5000"
+    volumes:
+      - ./config:/app/config
+    environment:
+      - PORT=5000
+      - WECHAT_TOKEN=${WECHAT_TOKEN:-mywechat2025}
+      - WECHAT_APPID=${WECHAT_APPID:-}
+      - WECHAT_APPSECRET=${WECHAT_APPSECRET:-}
+      - REDIS_ADDR=redis:6379
+      - REDIS_DB=0
+      - CODE_EXPIRE_SECONDS=${CODE_EXPIRE_SECONDS:-300}
+      - AD_CONTENT=${AD_CONTENT:-------------------\n🌟 推荐站点：实用工具导航站（https://example.com）}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:
