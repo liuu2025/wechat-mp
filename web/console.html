@@ -1634,11 +1634,11 @@
               </tr>
               <tr>
                 <td><code>POST /api/code/create</code></td>
-                <td><code>{"project": "your_project", "extra": "可选自定义会话参数", "expire_seconds": 300}</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "extra": "可选自定义会话参数", "expire_seconds": 300}</code></td>
                 <td>
-                  1. 中枢检查项目是否开启；<br>
+                  1. 严格白名单与密钥核验，项目必须已启用且密钥匹配；<br>
                   2. 生成 6 位不重复的随机数字，默认 5 分钟有效；<br>
-                  3. 返回该数字供前端展示。
+                  3. 返回该数字供展示。
                 </td>
               </tr>
               <tr>
@@ -1654,13 +1654,13 @@
 
             <div class="code-block">
               <button class="code-block-btn" onclick="copySnippet('codeFlow1')">复制代码</button>
-              <pre id="codeFlow1">// 【流向一前端标准调用示例】
+              <pre id="codeFlow1">// 【流向一标准调用示例】
 async function handleWechatScanLogin() {
-  // 步骤 1: 申请 6 位验证码
-  const createRes = await fetch('http://中枢域名/api/code/create', {
+  // 步骤 1: 申请 6 位验证码（传入项目标识与安全密钥）
+  const createRes = await fetch('https://中枢域名/api/code/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project: 'your_project', expire_seconds: 300 })
+    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', expire_seconds: 300 })
   });
   const { data } = await createRes.json();
   const code = data.code;
@@ -1727,11 +1727,12 @@ async function handleWechatScanLogin() {
               </tr>
               <tr>
                 <td><code>POST /api/code/verify-universal</code></td>
-                <td><code>{"project": "your_project", "code": "209710"}</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "code": "209710"}</code></td>
                 <td>
-                  1. <b>严格单次消费</b>：核销成功后立即销毁，防止重放；<br>
-                  2. <b>过期保护</b>：超过有效时间自动失效；<br>
-                  3. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，供实际项目进行身份处理。
+                  1. <b>严格密钥校验</b>：项目必须在白名单启用且 key 正确；<br>
+                  2. <b>单次消费</b>：核销成功后立即销毁，防止重放；<br>
+                  3. <b>过期保护</b>：超过有效时间自动失效；<br>
+                  4. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，供实际项目进行身份处理。
                 </td>
               </tr>
             </table>
@@ -1749,8 +1750,9 @@ def login_by_wechat():
     user_code = request.json.get('code')
 
     # 请求中枢平台进行核销
-    verify_resp = requests.post('http://中枢域名/api/code/verify-universal', json={
+    verify_resp = requests.post('https://中枢域名/api/code/verify-universal', json={
         'project': 'your_project',
+        'key': 'sec_your_key',
         'code': user_code
     })
     res_data = verify_resp.json()
@@ -2892,11 +2894,18 @@ def login_by_wechat():
       const project = document.getElementById('projectSelect').value;
       const extra = document.getElementById('extraParam').value;
 
+      // 提取项目 secret
+      let key = "";
+      if (cachedProjects) {
+        const pObj = cachedProjects.find(p => p.id === project);
+        if (pObj) key = pObj.secret;
+      }
+
       try {
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, extra, expire_seconds: 300 })
+          body: JSON.stringify({ project, key, extra, expire_seconds: 300 })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -2950,11 +2959,18 @@ def login_by_wechat():
       resArea.style.color = 'var(--text-main)';
       resArea.innerHTML = '⏳ 正在向中枢核销校验...';
 
+      // 提取项目 secret
+      let key = "";
+      if (cachedProjects) {
+        const pObj = cachedProjects.find(p => p.id === project);
+        if (pObj) key = pObj.secret;
+      }
+
       try {
         const res = await fetch('/api/code/verify-universal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, code })
+          body: JSON.stringify({ project, key, code })
         });
         const json = await res.json();
         if (json.code === 0 && json.data && json.data.valid) {
@@ -3428,8 +3444,9 @@ def login_by_wechat():
 - **申请 6 位验证码**：
   * 请求：\`POST ${baseUrl}/api/code/create\`
   * Headers: \`Content-Type: application/json\`
-  * Body: \`{ "project": "<项目英文标识>", "expire_seconds": 300, "extra": "<可选自定义参数>" }\`
+  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 300, "extra": "<可选自定义参数>" }\`
   * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "expire_seconds": 300 } }\`
+  * 安全鉴权：中枢严格校验 project 白名单及 key，不合法或未授权将返回 401 拦截。
 
 - **前端轮询状态**：
   * 请求：\`GET ${baseUrl}/api/code/check?code=640798\`（建议间隔 1.5 秒）
@@ -3447,9 +3464,9 @@ def login_by_wechat():
 - **后端核销接口**：
   * 请求：\`POST ${baseUrl}/api/code/verify-universal\`
   * Headers: \`Content-Type: application/json\`
-  * Body: \`{ "project": "<项目英文标识>", "code": "<用户填入的6位码>" }\`
+  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "code": "<用户填入的6位码>" }\`
   * 响应（核销成功）：\`{ "code": 0, "data": { "valid": true, "openid": "oXYZ_xxx", "project": "..." } }\`
-  * 说明：核销成功后该码在 Redis 中即刻作废销毁（单次消费防重放）。当前系统拿到 \`openid\` 执行自身业务逻辑。
+  * 安全鉴权：严格单次消费，中枢校验 project 白名单及 key，不合法或未授权将返回 401 拦截。核销成功瞬间该码在 Redis 中作废销毁防重放。当前系统拿到 \`openid\` 执行自身业务逻辑。
 `;
       }
 

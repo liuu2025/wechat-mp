@@ -41,6 +41,10 @@ func (h *VerifyHandler) CreateCode(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.verifyService.GenerateCode(r.Context(), &req)
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "unauthorized") {
+			writeError(w, http.StatusUnauthorized, 401, err.Error())
+			return
+		}
 		writeError(w, http.StatusInternalServerError, 500, "failed to generate code: "+err.Error())
 		return
 	}
@@ -99,6 +103,10 @@ func (h *VerifyHandler) VerifyUniversal(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		if errors.Is(err, storage.ErrCodeNotFound) {
 			writeError(w, http.StatusNotFound, 404, "code not found or expired")
+			return
+		}
+		if strings.HasPrefix(err.Error(), "unauthorized") {
+			writeError(w, http.StatusUnauthorized, 401, err.Error())
 			return
 		}
 		writeError(w, http.StatusBadRequest, 400, err.Error())

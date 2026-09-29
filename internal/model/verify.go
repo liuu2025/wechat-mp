@@ -20,6 +20,7 @@ type CodeRecord struct {
 // CreateCodeReq 项目方请求生成验证码的参数
 type CreateCodeReq struct {
 	Project       string `json:"project"`        // 项目标识（如 "blog", "shop"）
+	Key           string `json:"key"`            // 项目安全通信密钥（必须与后台配置一致）
 	Extra         string `json:"extra"`          // 业务透传信息
 	ExpireSeconds int    `json:"expire_seconds"` // 自定义过期秒数（可选）
 }
@@ -45,6 +46,7 @@ type CheckCodeResp struct {
 // VerifyUniversalReq 业务网站提交通用验证码进行核销的请求
 type VerifyUniversalReq struct {
 	Project string `json:"project"` // 核销该码的目标项目（如 "shop", "blog"）
+	Key     string `json:"key"`     // 项目安全通信密钥（必须与后台配置一致）
 	Code    string `json:"code"`    // 用户在微信中索取到的 6 位验证码
 }
 

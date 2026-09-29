@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"wechat-mp/internal/config"
@@ -28,14 +29,24 @@ func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectSer
 
 // GenerateCode 为业务项目生成唯一的 6 位数字验证码
 func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq) (*model.CreateCodeResp, error) {
-	// 如果配置了项目系统，检查该项目是否处于启用状态
-	if s.projectService != nil && req.Project != "" {
-		if p, err := s.projectService.GetProject(req.Project); err == nil {
-			if !p.Enabled {
-				return nil, fmt.Errorf("业务项目【%s】已被管理员停用，暂停服务", p.Name)
-			}
-			req.Project = p.Name // 标准化为项目正式名称
+	if strings.TrimSpace(req.Project) == "" {
+		return nil, fmt.Errorf("field 'project' is required")
+	}
+
+	// 严格白名单与密钥鉴权校验
+	if s.projectService != nil {
+		p, err := s.projectService.GetProject(req.Project)
+		if err != nil {
+			return nil, fmt.Errorf("unauthorized: project '%s' not registered in whitelist", req.Project)
 		}
+		if !p.Enabled {
+			return nil, fmt.Errorf("unauthorized: project '%s' is disabled by administrator", p.Name)
+		}
+		// 校验通信密钥 Key
+		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
+			return nil, fmt.Errorf("unauthorized: invalid or missing project key")
+		}
+		req.Project = p.Name // 标准化为项目正式名称
 	}
 
 	expireSec := req.ExpireSeconds
@@ -151,22 +162,28 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 
 // VerifyUniversalCode 业务网站主动验证并消费用户的通用码（流向二）
 func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.VerifyUniversalReq) (*model.VerifyUniversalResp, error) {
-	if req.Code == "" {
+	if strings.TrimSpace(req.Code) == "" {
 		return nil, fmt.Errorf("code cannot be empty")
 	}
-	projectName := req.Project
+	projectName := strings.TrimSpace(req.Project)
 	if projectName == "" {
-		projectName = "default"
+		return nil, fmt.Errorf("field 'project' is required")
 	}
 
-	// 检查目标核销项目是否已禁用
+	// 严格白名单与密钥鉴权校验
 	if s.projectService != nil {
-		if p, err := s.projectService.GetProject(projectName); err == nil {
-			if !p.Enabled {
-				return nil, fmt.Errorf("业务项目【%s】已被管理员停用，暂停核销", p.Name)
-			}
-			projectName = p.Name
+		p, err := s.projectService.GetProject(projectName)
+		if err != nil {
+			return nil, fmt.Errorf("unauthorized: project '%s' not registered in whitelist", projectName)
 		}
+		if !p.Enabled {
+			return nil, fmt.Errorf("unauthorized: project '%s' is disabled by administrator", p.Name)
+		}
+		// 校验通信密钥 Key
+		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
+			return nil, fmt.Errorf("unauthorized: invalid or missing project key")
+		}
+		projectName = p.Name
 	}
 
 	record, err := s.storage.ConsumeUniversalCode(ctx, req.Code, projectName)

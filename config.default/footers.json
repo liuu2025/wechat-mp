@@ -1,0 +1,14 @@
+[
+  {
+    "id": "footer_service",
+    "title": "人工客服与服务支持",
+    "content": "如需技术支持或业务咨询，请直接在公众号回复【客服】或添加微信号：service_support",
+    "active": true
+  },
+  {
+    "id": "footer_tips",
+    "title": "安全使用小贴士",
+    "content": "验证码属于个人身份凭据，请勿将验证码泄露给他人。",
+    "active": false
+  }
+]

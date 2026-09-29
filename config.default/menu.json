@@ -1,0 +1,19 @@
+{
+  "button": [
+    {
+      "type": "click",
+      "name": "获取验证码",
+      "key": "MENU_GET_CODE"
+    },
+    {
+      "type": "click",
+      "name": "产品介绍",
+      "key": "MENU_INTRO"
+    },
+    {
+      "type": "click",
+      "name": "人工客服",
+      "key": "MENU_HELP"
+    }
+  ]
+}

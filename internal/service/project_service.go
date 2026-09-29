@@ -47,89 +47,107 @@ func (s *ProjectService) ensureInitialized() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// 优先从 config.default 目录自动拷贝纯净模板（若存在）
+	copyFromDefault := func(targetPath, defaultName string) bool {
+		defaultFile := filepath.Join("config.default", defaultName)
+		if content, err := os.ReadFile(defaultFile); err == nil && len(content) > 0 {
+			_ = os.WriteFile(targetPath, content, 0644)
+			return true
+		}
+		return false
+	}
+
 	// 确保 replies.json 存在
 	if _, err := os.Stat(s.repliesPath); os.IsNotExist(err) {
-		initialReplies := model.RepliesConfig{
-			Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：输入网站上显示的 6 位数字直接验证；\n👉 方式 2：回复【验证码】获取 6 位通行码填入网站；\n👉 回复【帮助】或【项目】可查看支持的业务。",
-			CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
-			CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
-			CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
-			UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
-			Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
-			Help:          "📖【使用指南】\n👉 方式 1（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！\n👉 方式 2（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！",
-			UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
-			MediaMessage:  "💡 抱歉，本中枢暂不支持语音/图片/表情包识别，请发送 6 位纯数字验证码或文字指令。",
+		if !copyFromDefault(s.repliesPath, "replies.json") {
+			initialReplies := model.RepliesConfig{
+				Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：输入网站上显示的 6 位数字直接验证；\n👉 方式 2：回复【验证码】获取 6 位通行码填入网站；\n👉 回复【帮助】或【项目】可查看支持的业务。",
+				CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
+				CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
+				CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
+				UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
+				Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
+				Help:          "📖【使用指南】\n👉 方式 1（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！\n👉 方式 2（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！",
+				UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
+				MediaMessage:  "💡 抱歉，本中枢暂不支持语音/图片/表情包识别，请发送 6 位纯数字验证码或文字指令。",
+			}
+			data, _ := json.MarshalIndent(initialReplies, "", "  ")
+			_ = os.WriteFile(s.repliesPath, data, 0644)
 		}
-		data, _ := json.MarshalIndent(initialReplies, "", "  ")
-		_ = os.WriteFile(s.repliesPath, data, 0644)
 	}
 
 	// 确保 footers.json 存在
 	if _, err := os.Stat(s.footersPath); os.IsNotExist(err) {
-		initialFooters := []*model.FooterItem{
-			{
-				ID:      "ft_nav",
-				Title:   "日常工具站推广",
-				Content: "🌟 推荐站点：实用工具导航站（https://example.com）",
-				Active:  true,
-			},
-			{
-				ID:      "ft_contact",
-				Title:   "站长客服微信",
-				Content: "💬 站长微信：v_helper_888（问题反馈/商务合作）",
-				Active:  false,
-			},
-			{
-				ID:      "ft_notice",
-				Title:   "服务维护公告",
-				Content: "📢 温馨提示：本平台运行平稳，如遇验证异常请稍后重试。",
-				Active:  false,
-			},
+		if !copyFromDefault(s.footersPath, "footers.json") {
+			initialFooters := []*model.FooterItem{
+				{
+					ID:      "ft_nav",
+					Title:   "日常工具站推广",
+					Content: "🌟 推荐站点：实用工具导航站（https://example.com）",
+					Active:  true,
+				},
+				{
+					ID:      "ft_contact",
+					Title:   "站长客服微信",
+					Content: "💬 站长微信：v_helper_888（问题反馈/商务合作）",
+					Active:  false,
+				},
+				{
+					ID:      "ft_notice",
+					Title:   "服务维护公告",
+					Content: "📢 温馨提示：本平台运行平稳，如遇验证异常请稍后重试。",
+					Active:  false,
+				},
+			}
+			data, _ := json.MarshalIndent(initialFooters, "", "  ")
+			_ = os.WriteFile(s.footersPath, data, 0644)
 		}
-		data, _ := json.MarshalIndent(initialFooters, "", "  ")
-		_ = os.WriteFile(s.footersPath, data, 0644)
 	}
 
 	// 确保 auth.json 存在
 	if _, err := os.Stat(s.authPath); os.IsNotExist(err) {
-		initialAuth := model.AuthConfig{
-			Password:  "admin",
-			UpdatedAt: time.Now().Unix(),
+		if !copyFromDefault(s.authPath, "auth.json") {
+			initialAuth := model.AuthConfig{
+				Password:  "admin",
+				UpdatedAt: time.Now().Unix(),
+			}
+			data, _ := json.MarshalIndent(initialAuth, "", "  ")
+			_ = os.WriteFile(s.authPath, data, 0644)
 		}
-		data, _ := json.MarshalIndent(initialAuth, "", "  ")
-		_ = os.WriteFile(s.authPath, data, 0644)
 	}
 
 	// 确保 projects.json 存在
 	if _, err := os.Stat(s.projectsPath); os.IsNotExist(err) {
-		initialProjects := []*model.ProjectItem{
-			{
-				ID:        "shop",
-				Name:      "商城系统",
-				Secret:    "sec_shop_" + generateRandomHex(6),
-				Enabled:   true,
-				CustomAd:  "🛒 商城新人专享：全场首单 8 折，限时抢购！",
-				CreatedAt: time.Now().Unix(),
-			},
-			{
-				ID:        "blog",
-				Name:      "个人技术博客",
-				Secret:    "sec_blog_" + generateRandomHex(6),
-				Enabled:   true,
-				CustomAd:  "📚 关注站长博客获取更多架构与技术干货！",
-				CreatedAt: time.Now().Unix(),
-			},
-			{
-				ID:        "nav",
-				Name:      "工具箱导航",
-				Secret:    "sec_nav_" + generateRandomHex(6),
-				Enabled:   true,
-				CustomAd:  "🚀 实用工具箱：聚合百款精选免费效率工具！",
-				CreatedAt: time.Now().Unix(),
-			},
+		if !copyFromDefault(s.projectsPath, "projects.json") {
+			initialProjects := []*model.ProjectItem{
+				{
+					ID:        "shop",
+					Name:      "商城系统",
+					Secret:    "sec_shop_8f9a2b1c",
+					Enabled:   true,
+					CustomAd:  "🛒 商城新人专享：全场首单 8 折，限时抢购！",
+					CreatedAt: time.Now().Unix(),
+				},
+				{
+					ID:        "blog",
+					Name:      "个人技术博客",
+					Secret:    "sec_blog_7e6d5c4b",
+					Enabled:   true,
+					CustomAd:  "📚 关注站长博客获取更多架构与技术干货！",
+					CreatedAt: time.Now().Unix(),
+				},
+				{
+					ID:        "nav",
+					Name:      "工具箱导航",
+					Secret:    "sec_nav_3a2b1c0d",
+					Enabled:   true,
+					CustomAd:  "🚀 实用工具箱：聚合百款精选免费效率工具！",
+					CreatedAt: time.Now().Unix(),
+				},
+			}
+			data, _ := json.MarshalIndent(initialProjects, "", "  ")
+			_ = os.WriteFile(s.projectsPath, data, 0644)
 		}
-		data, _ := json.MarshalIndent(initialProjects, "", "  ")
-		_ = os.WriteFile(s.projectsPath, data, 0644)
 	}
 }
 
