@@ -9,7 +9,7 @@ type ProjectItem struct {
 	Enabled       bool   `json:"enabled"`                  // 是否启用该项目（true=允许对接，false=暂时停用）
 	CustomAdTitle string `json:"custom_ad_title,omitempty"`// 项目专属尾注标题（选填，如：项目特惠、网盘须知）
 	CustomAd      string `json:"custom_ad"`                // 该项目的专属定制尾注说明文案
-	IncludeGlobal bool   `json:"include_global,omitempty"` // 是否同时追加系统默认尾注（true=两者叠加，false=仅项目尾注）
+	IncludeGlobal bool   `json:"include_global"`           // 是否同时追加系统默认尾注（true=两者叠加，false=仅项目尾注）
 	CreatedAt     int64  `json:"created_at"`               // 创建时间戳
 }
 
