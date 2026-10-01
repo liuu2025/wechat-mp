@@ -4,17 +4,29 @@ package model
 const (
 	StatusPending  = "pending"
 	StatusVerified = "verified"
+	StatusUsed     = "used"    // 已被使用/已消费
+	StatusExpired  = "expired" // 已过期
+)
+
+// 标准错误代号（供调用方做 switch 逻辑分支）
+const (
+	ErrTypeNotFound     = "code_not_found"
+	ErrTypeExpired      = "code_expired"
+	ErrTypeAlreadyUsed  = "code_already_used"
+	ErrTypeUnauthorized = "unauthorized"
+	ErrTypeInvalidParam = "invalid_param"
 )
 
 // CodeRecord 存储在 Redis 中的验证码实体信息
 type CodeRecord struct {
-	Code       string `json:"code"`
-	Project    string `json:"project"`
-	Status     string `json:"status"` // pending | verified
-	OpenID     string `json:"openid,omitempty"`
-	CreatedAt  int64  `json:"created_at"`
-	VerifiedAt int64  `json:"verified_at,omitempty"`
-	Extra      string `json:"extra,omitempty"` // 业务自传字段（如前端 session_id、用户临时ID等）
+	Code        string `json:"code"`
+	Project     string `json:"project"`      // 项目唯一英文代号
+	ProjectName string `json:"project_name"` // 项目中文展示名称
+	Status      string `json:"status"`       // pending | verified | used
+	OpenID      string `json:"openid,omitempty"`
+	CreatedAt   int64  `json:"created_at"`
+	VerifiedAt  int64  `json:"verified_at,omitempty"`
+	Extra       string `json:"extra,omitempty"` // 业务自传字段（如前端 session_id、用户临时ID等）
 }
 
 // CreateCodeReq 项目方请求生成验证码的参数
@@ -28,19 +40,22 @@ type CreateCodeReq struct {
 // CreateCodeResp 生成验证码的响应结构
 type CreateCodeResp struct {
 	Code          string `json:"code"`
-	Project       string `json:"project"`
+	Project       string `json:"project"`      // 始终返回项目英文代号（用于机器比对）
+	ProjectName   string `json:"project_name"` // 项目中文展示名称
 	ExpireSeconds int    `json:"expire_seconds"`
 }
 
 // CheckCodeResp 查询核销状态的响应结构
 type CheckCodeResp struct {
-	Code       string `json:"code"`
-	Project    string `json:"project"`
-	Status     string `json:"status"`
-	Verified   bool   `json:"verified"`
-	OpenID     string `json:"openid,omitempty"`
-	VerifiedAt int64  `json:"verified_at,omitempty"`
-	Extra      string `json:"extra,omitempty"`
+	Code        string `json:"code"`
+	Project     string `json:"project"`      // 始终返回项目英文代号
+	ProjectName string `json:"project_name"` // 项目中文展示名称
+	Status      string `json:"status"`       // pending | verified | used | expired
+	Verified    bool   `json:"verified"`
+	OpenID      string `json:"openid,omitempty"`
+	VerifiedAt  int64  `json:"verified_at,omitempty"`
+	Extra       string `json:"extra,omitempty"`
+	ErrorType   string `json:"error_type,omitempty"` // 当异常时携带机器错误代号
 }
 
 // VerifyUniversalReq 业务网站提交通用验证码进行核销的请求
@@ -52,10 +67,11 @@ type VerifyUniversalReq struct {
 
 // VerifyUniversalResp 业务网站提交通用验证码核销的响应
 type VerifyUniversalResp struct {
-	Valid      bool   `json:"valid"`       // 是否核销成功
-	OpenID     string `json:"openid"`      // 成功核销时绑定的微信用户 OpenID
-	Project    string `json:"project"`     // 核销的目标项目
-	VerifiedAt int64  `json:"verified_at"` // 核销时间戳
+	Valid       bool   `json:"valid"`        // 是否核销成功
+	OpenID      string `json:"openid"`       // 成功核销时绑定的微信用户 OpenID
+	Project     string `json:"project"`      // 始终返回目标项目英文代号
+	ProjectName string `json:"project_name"`  // 目标项目中文展示名称
+	VerifiedAt  int64  `json:"verified_at"`  // 核销时间戳
 }
 
 // APIResponse 通用 API JSON 返回包装

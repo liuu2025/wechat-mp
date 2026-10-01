@@ -1638,7 +1638,7 @@
                 <td>
                   1. 严格白名单与密钥核验，项目必须已启用且密钥匹配；<br>
                   2. 生成 6 位不重复的随机数字，默认 5 分钟有效；<br>
-                  3. 返回该数字供展示。
+                  3. 响应包含 <code>project</code> (项目英文标识) 与 <code>project_name</code> (中文名)。
                 </td>
               </tr>
               <tr>
@@ -1646,8 +1646,9 @@
                 <td>URL 参数：<code>code</code> (6 位数字)</td>
                 <td>
                   1. 初始状态为 <code>verified: false</code>；<br>
-                  2. 用户在微信发送该纯数字后，状态变为 <code>verified: true</code> 并附带微信 <code>openid</code>；<br>
-                  3. 网站检测到 <code>verified: true</code> 即可提取 openid 进行自身业务处理。
+                  2. 用户在微信发送该纯数字后，状态变为 <code>verified: true</code> 并附带微信 <code>openid</code>，同时返回英文 <code>project</code> 与中文 <code>project_name</code>；<br>
+                  3. 网站检测到 <code>verified: true</code> 即可提取 openid 进行自身业务处理。<br>
+                  4. 若验证码失效或过期，返回 <code>status: "expired", error_type: "code_not_found"</code>。
                 </td>
               </tr>
             </table>
@@ -1732,7 +1733,8 @@ async function handleWechatScanLogin() {
                   1. <b>严格密钥校验</b>：项目必须在白名单启用且 key 正确；<br>
                   2. <b>单次消费</b>：核销成功后立即销毁，防止重放；<br>
                   3. <b>过期保护</b>：超过有效时间自动失效；<br>
-                  4. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，供实际项目进行身份处理。
+                  4. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，英文代号 <code>project</code>，中文名称 <code>project_name</code>；<br>
+                  5. <b>细分状态</b>：若重复核销返回 <code>error_type: "code_already_used"</code>，未找到或过期返回 <code>code_not_found</code>。
                 </td>
               </tr>
             </table>
@@ -2535,24 +2537,24 @@ def login_by_wechat():
       s1.innerHTML = '';
       s2.innerHTML = '';
       if (sAi) {
-        sAi.innerHTML = '<option value="__CUSTOM__">⚙️ 通用模版（代码中留出环境变量/配置项）</option>';
+        sAi.innerHTML = '<option value="__CUSTOM__">通用模版（代码中留出环境变量/配置项）</option>';
       }
 
       projects.forEach(p => {
         const opt1 = document.createElement('option');
-        opt1.value = p.name;
+        opt1.value = p.id;
         opt1.textContent = `${p.name} (${p.id})${p.enabled ? '' : ' [已禁用]'}`;
         s1.appendChild(opt1);
 
         const opt2 = document.createElement('option');
-        opt2.value = p.name;
+        opt2.value = p.id;
         opt2.textContent = `${p.name} (${p.id})${p.enabled ? '' : ' [已禁用]'}`;
         s2.appendChild(opt2);
 
         if (sAi) {
           const optAi = document.createElement('option');
           optAi.value = p.id;
-          optAi.textContent = `🎯 已有项目：${p.name} (代号: ${p.id})`;
+          optAi.textContent = `已有项目：${p.name} (代号: ${p.id})`;
           sAi.appendChild(optAi);
         }
       });
@@ -3000,7 +3002,8 @@ def login_by_wechat():
           resArea.style.color = '#34d399';
           resArea.innerHTML = `<b>🎉【核销登录成功】</b><br>
             • 绑定微信 OpenID: <code>${json.data.openid}</code><br>
-            • 业务系统【${json.data.project}】已为该微信用户下发 Token / 放行登录！`;
+            • 目标项目英文标识: <code>${json.data.project}</code><br>
+            • 业务系统【${json.data.project_name || json.data.project}】已为该微信用户下发 Token / 放行登录！`;
         } else {
           resArea.style.background = 'rgba(239, 68, 68, 0.15)';
           resArea.style.border = '1px solid #ef4444';
@@ -3466,14 +3469,15 @@ def login_by_wechat():
   * 请求：\`POST ${baseUrl}/api/code/create\`
   * Headers: \`Content-Type: application/json\`
   * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 300, "extra": "<可选自定义参数>" }\`
-  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "expire_seconds": 300 } }\`
-  * 安全鉴权：中枢严格校验 project 白名单及 key，不合法或未授权将返回 401 拦截。
+  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "project": "your_project", "project_name": "项目名称", "expire_seconds": 300 } }\`
+  * 规范约定：返回的 \`project\` 为英文唯一代号（用于代码逻辑校验），\`project_name\` 为中文展示名。
 
 - **前端轮询状态**：
   * 请求：\`GET ${baseUrl}/api/code/check?code=640798\`（建议间隔 1.5 秒）
-  * 响应（未验证）：\`{ "code": 0, "data": { "verified": false } }\`
-  * 响应（已验证）：\`{ "code": 0, "data": { "verified": true, "openid": "oXYZ_xxx", "project": "..." } }\`
-  * 说明：检测到 \`verified === true\` 即刻停止轮询，提取 \`openid\` 完成当前系统的登录或绑定。
+  * 响应（未验证）：\`{ "code": 0, "data": { "verified": false, "status": "pending" } }\`
+  * 响应（已验证）：\`{ "code": 0, "data": { "verified": true, "openid": "oXYZ_xxx", "project": "your_project", "project_name": "项目名称" } }\`
+  * 响应（已失效/过期）：\`{ "code": 404, "data": { "verified": false, "status": "expired", "error_type": "code_not_found" } }\`
+  * 说明：检测到 \`verified === true\` 即刻停止轮询，提取 \`openid\` 完成当前系统的登录或绑定。切勿将中文名当做英文代号比对！
 `;
       }
 
@@ -3486,8 +3490,10 @@ def login_by_wechat():
   * 请求：\`POST ${baseUrl}/api/code/verify-universal\`
   * Headers: \`Content-Type: application/json\`
   * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "code": "<用户填入的6位码>" }\`
-  * 响应（核销成功）：\`{ "code": 0, "data": { "valid": true, "openid": "oXYZ_xxx", "project": "..." } }\`
-  * 安全鉴权：严格单次消费，中枢校验 project 白名单及 key，不合法或未授权将返回 401 拦截。核销成功瞬间该码在 Redis 中作废销毁防重放。当前系统拿到 \`openid\` 执行自身业务逻辑。
+  * 响应（核销成功）：\`{ "code": 0, "data": { "valid": true, "openid": "oXYZ_xxx", "project": "your_project", "project_name": "项目名称" } }\`
+  * 响应（重复核销）：\`{ "code": 40002, "data": { "valid": false, "error_type": "code_already_used" } }\`
+  * 响应（不存在/已过期）：\`{ "code": 404, "data": { "valid": false, "error_type": "code_not_found" } }\`
+  * 规范约定：返回的 \`project\` 为英文唯一代号，\`project_name\` 为中文名称。业务系统核对项目归属时，请务必比对 \`project\` 英文标识。
 `;
       }
 

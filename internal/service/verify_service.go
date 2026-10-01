@@ -29,24 +29,27 @@ func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectSer
 
 // GenerateCode 为业务项目生成唯一的 6 位数字验证码
 func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq) (*model.CreateCodeResp, error) {
-	if strings.TrimSpace(req.Project) == "" {
+	projectSlug := strings.TrimSpace(req.Project)
+	if projectSlug == "" {
 		return nil, fmt.Errorf("field 'project' is required")
 	}
 
+	projectName := projectSlug
 	// 严格白名单与密钥鉴权校验
 	if s.projectService != nil {
-		p, err := s.projectService.GetProject(req.Project)
+		p, err := s.projectService.GetProject(projectSlug)
 		if err != nil {
-			return nil, fmt.Errorf("unauthorized: project '%s' not registered in whitelist", req.Project)
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 未在白名单中登记", projectSlug)
 		}
 		if !p.Enabled {
-			return nil, fmt.Errorf("unauthorized: project '%s' is disabled by administrator", p.Name)
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已被管理员停用", p.Name)
 		}
 		// 校验通信密钥 Key
 		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
-			return nil, fmt.Errorf("unauthorized: invalid or missing project key")
+			return nil, fmt.Errorf("unauthorized: 项目通信密钥（Key）不匹配或未提供")
 		}
-		req.Project = p.Name // 标准化为项目正式名称
+		projectSlug = p.ID   // 始终保持标准英文标识
+		projectName = p.Name // 项目中文展示名称
 	}
 
 	expireSec := req.ExpireSeconds
@@ -75,11 +78,12 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 	}
 
 	record := &model.CodeRecord{
-		Code:      code,
-		Project:   req.Project,
-		Status:    model.StatusPending,
-		CreatedAt: time.Now().Unix(),
-		Extra:     req.Extra,
+		Code:        code,
+		Project:     projectSlug,
+		ProjectName: projectName,
+		Status:      model.StatusPending,
+		CreatedAt:   time.Now().Unix(),
+		Extra:       req.Extra,
 	}
 
 	ttl := time.Duration(expireSec) * time.Second
@@ -89,7 +93,8 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 
 	return &model.CreateCodeResp{
 		Code:          code,
-		Project:       req.Project,
+		Project:       projectSlug,
+		ProjectName:   projectName,
 		ExpireSeconds: expireSec,
 	}, nil
 }
@@ -101,14 +106,20 @@ func (s *VerifyService) CheckCode(ctx context.Context, code string) (*model.Chec
 		return nil, err
 	}
 
+	projectName := record.ProjectName
+	if projectName == "" {
+		projectName = record.Project
+	}
+
 	return &model.CheckCodeResp{
-		Code:       record.Code,
-		Project:    record.Project,
-		Status:     record.Status,
-		Verified:   record.Status == model.StatusVerified,
-		OpenID:     record.OpenID,
-		VerifiedAt: record.VerifiedAt,
-		Extra:      record.Extra,
+		Code:        record.Code,
+		Project:     record.Project,
+		ProjectName: projectName,
+		Status:      record.Status,
+		Verified:    record.Status == model.StatusVerified,
+		OpenID:      record.OpenID,
+		VerifiedAt:  record.VerifiedAt,
+		Extra:       record.Extra,
 	}, nil
 }
 
@@ -141,11 +152,12 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 	}
 
 	record := &model.CodeRecord{
-		Code:      code,
-		Project:   "universal",
-		Status:    model.StatusPending,
-		OpenID:    openID,
-		CreatedAt: time.Now().Unix(),
+		Code:        code,
+		Project:     "universal",
+		ProjectName: "通用登录",
+		Status:      model.StatusPending,
+		OpenID:      openID,
+		CreatedAt:   time.Now().Unix(),
 	}
 
 	ttl := time.Duration(s.cfg.DefaultCodeExpire) * time.Second
@@ -162,40 +174,44 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 
 // VerifyUniversalCode 业务网站主动验证并消费用户的通用码（流向二）
 func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.VerifyUniversalReq) (*model.VerifyUniversalResp, error) {
-	if strings.TrimSpace(req.Code) == "" {
+	reqCode := strings.TrimSpace(req.Code)
+	if reqCode == "" {
 		return nil, fmt.Errorf("code cannot be empty")
 	}
-	projectName := strings.TrimSpace(req.Project)
-	if projectName == "" {
+	projectSlug := strings.TrimSpace(req.Project)
+	if projectSlug == "" {
 		return nil, fmt.Errorf("field 'project' is required")
 	}
 
+	projectName := projectSlug
 	// 严格白名单与密钥鉴权校验
 	if s.projectService != nil {
-		p, err := s.projectService.GetProject(projectName)
+		p, err := s.projectService.GetProject(projectSlug)
 		if err != nil {
-			return nil, fmt.Errorf("unauthorized: project '%s' not registered in whitelist", projectName)
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 未在白名单中登记", projectSlug)
 		}
 		if !p.Enabled {
-			return nil, fmt.Errorf("unauthorized: project '%s' is disabled by administrator", p.Name)
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已被管理员停用", p.Name)
 		}
 		// 校验通信密钥 Key
 		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
-			return nil, fmt.Errorf("unauthorized: invalid or missing project key")
+			return nil, fmt.Errorf("unauthorized: 项目通信密钥（Key）不匹配或未提供")
 		}
-		projectName = p.Name
+		projectSlug = p.ID   // 始终保持标准英文标识
+		projectName = p.Name // 项目中文展示名称
 	}
 
-	record, err := s.storage.ConsumeUniversalCode(ctx, req.Code, projectName)
+	record, err := s.storage.ConsumeUniversalCode(ctx, reqCode, projectSlug, projectName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.VerifyUniversalResp{
-		Valid:      true,
-		OpenID:     record.OpenID,
-		Project:    record.Project,
-		VerifiedAt: record.VerifiedAt,
+		Valid:       true,
+		OpenID:      record.OpenID,
+		Project:     projectSlug,
+		ProjectName: projectName,
+		VerifiedAt:  record.VerifiedAt,
 	}, nil
 }
 

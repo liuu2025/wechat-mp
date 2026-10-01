@@ -123,7 +123,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 			return "系统繁忙，请稍后重试。"
 		}
 
-		if record.Status == model.StatusVerified {
+		if record.Status == model.StatusVerified || record.Status == model.StatusUsed {
 			msg := strings.ReplaceAll(replies.CodeUsed, "{code}", text)
 			return msg + s.getActiveGlobalFooter()
 		}

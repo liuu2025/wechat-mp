@@ -211,14 +211,15 @@ func (s *ProjectService) ListProjects() ([]*model.ProjectItem, error) {
 	return projects, nil
 }
 
-// GetProject 获取单个项目信息
+// GetProject 获取单个项目信息（支持大小写不敏感与空白字符容错）
 func (s *ProjectService) GetProject(idOrName string) (*model.ProjectItem, error) {
 	projects, err := s.ListProjects()
 	if err != nil {
 		return nil, err
 	}
+	target := strings.ToLower(strings.TrimSpace(idOrName))
 	for _, p := range projects {
-		if p.ID == idOrName || p.Name == idOrName {
+		if strings.ToLower(strings.TrimSpace(p.ID)) == target || strings.ToLower(strings.TrimSpace(p.Name)) == target {
 			return p, nil
 		}
 	}

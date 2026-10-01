@@ -141,17 +141,18 @@ func (s *Storage) SaveUserUniversalCode(ctx context.Context, openid string, reco
 }
 
 // ConsumeUniversalCode 网站核销通用码（一次性核销并废除该码）
-func (s *Storage) ConsumeUniversalCode(ctx context.Context, code, targetProject string) (*model.CodeRecord, error) {
+func (s *Storage) ConsumeUniversalCode(ctx context.Context, code, targetProject, targetProjectName string) (*model.CodeRecord, error) {
 	record, err := s.GetCode(ctx, code)
 	if err != nil {
 		return nil, err
 	}
-	if record.Status == model.StatusVerified {
-		return nil, errors.New("code has already been verified and consumed")
+	if record.Status == model.StatusVerified || record.Status == model.StatusUsed {
+		return nil, errors.New("code_already_used")
 	}
 
-	record.Status = model.StatusVerified
+	record.Status = model.StatusUsed
 	record.Project = targetProject
+	record.ProjectName = targetProjectName
 	record.VerifiedAt = time.Now().Unix()
 
 	// 立即清理用户活跃码映射，并设置已核销状态保留短暂 TTL
