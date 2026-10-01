@@ -109,6 +109,70 @@ func (s *Storage) Exists(ctx context.Context, code string) (bool, error) {
 	return n > 0, nil
 }
 
+// ----------------- 安全防护：IP 与项目级限流配额 -----------------
+
+// AllowIPCheck 检查单 IP 频控（防短时间机器连击，如 2 秒内最多 2 次）
+func (s *Storage) AllowIPCheck(ctx context.Context, ip string, maxInWindow int, window time.Duration) (bool, error) {
+	if ip == "" {
+		return true, nil
+	}
+	key := fmt.Sprintf("wx:rate:ip:%s", ip)
+	count, err := s.client.Incr(ctx, key).Result()
+	if err != nil {
+		return true, nil // Redis 异常时平滑放行，不阻断正常业务
+	}
+	if count == 1 {
+		_ = s.client.Expire(ctx, key, window).Err()
+	}
+	return count <= int64(maxInWindow), nil
+}
+
+// AllowProjectRateCheck 检查单项目全局速率（防项目死循环刷量，如 1 秒最多 15 次）
+func (s *Storage) AllowProjectRateCheck(ctx context.Context, project string, maxPerSec int) (bool, error) {
+	if project == "" {
+		return true, nil
+	}
+	key := fmt.Sprintf("wx:rate:prj:%s:%d", project, time.Now().Unix())
+	count, err := s.client.Incr(ctx, key).Result()
+	if err != nil {
+		return true, nil
+	}
+	if count == 1 {
+		_ = s.client.Expire(ctx, key, 2*time.Second).Err()
+	}
+	return count <= int64(maxPerSec), nil
+}
+
+// CheckAndIncrProjectActiveCodes 检查并累加单项目活跃验证码配额硬顶（如最多 300 个未核销活跃码）
+func (s *Storage) CheckAndIncrProjectActiveCodes(ctx context.Context, project string, maxActive int) (bool, error) {
+	if project == "" {
+		return true, nil
+	}
+	key := fmt.Sprintf("wx:quota:prj_active:%s", project)
+	count, err := s.client.Incr(ctx, key).Result()
+	if err != nil {
+		return true, nil
+	}
+	if count > int64(maxActive) {
+		// 超过硬顶配额，回退计数
+		_ = s.client.Decr(ctx, key).Err()
+		return false, nil
+	}
+	return true, nil
+}
+
+// DecrProjectActiveCodes 验证码核销或作废时释放配额
+func (s *Storage) DecrProjectActiveCodes(ctx context.Context, project string) {
+	if project == "" {
+		return
+	}
+	key := fmt.Sprintf("wx:quota:prj_active:%s", project)
+	count, _ := s.client.Decr(ctx, key).Result()
+	if count < 0 {
+		_ = s.client.Set(ctx, key, 0, 0).Err()
+	}
+}
+
 func userActiveCodeKey(openid string) string {
 	return fmt.Sprintf("wx:user:active_code:%s", openid)
 }

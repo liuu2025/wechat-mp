@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 
@@ -17,6 +18,27 @@ type VerifyHandler struct {
 
 func NewVerifyHandler(svc *service.VerifyService) *VerifyHandler {
 	return &VerifyHandler{verifyService: svc}
+}
+
+// getClientIP 提取真实客户端 IP（优先取反向代理标准 Header，兜底取 RemoteAddr）
+func getClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			ip := strings.TrimSpace(parts[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+	if xrip := strings.TrimSpace(r.Header.Get("X-Real-IP")); xrip != "" {
+		return xrip
+	}
+	remote := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(remote); err == nil {
+		return host
+	}
+	return remote
 }
 
 // CreateCode 处理各项目生成验证码的请求
@@ -39,8 +61,14 @@ func (h *VerifyHandler) CreateCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.verifyService.GenerateCode(r.Context(), &req)
+	clientIP := getClientIP(r)
+	resp, err := h.verifyService.GenerateCode(r.Context(), &req, clientIP)
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "rate_limit:") || strings.HasPrefix(err.Error(), "quota_limit:") {
+			msg := strings.TrimSpace(strings.SplitN(err.Error(), ":", 2)[1])
+			writeError(w, http.StatusTooManyRequests, 429, msg)
+			return
+		}
 		if strings.HasPrefix(err.Error(), "unauthorized") {
 			msg := strings.TrimPrefix(err.Error(), "unauthorized: ")
 			writeError(w, http.StatusUnauthorized, 401, msg)

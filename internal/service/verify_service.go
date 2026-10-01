@@ -27,8 +27,8 @@ func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectSer
 	}
 }
 
-// GenerateCode 为业务项目生成唯一的 6 位数字验证码
-func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq) (*model.CreateCodeResp, error) {
+// GenerateCode 为业务项目生成唯一的 6 位数字验证码（集成三道防线限流与配额保护）
+func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq, clientIP string) (*model.CreateCodeResp, error) {
 	projectSlug := strings.TrimSpace(req.Project)
 	if projectSlug == "" {
 		return nil, fmt.Errorf("field 'project' is required")
@@ -52,6 +52,26 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		projectName = p.Name // 项目中文展示名称
 	}
 
+	// ---------------- 第一道防线：单 IP 频控（2秒内最多申请 2 次，防机器疯狂连点） ----------------
+	if clientIP != "" {
+		allowed, err := s.storage.AllowIPCheck(ctx, clientIP, 2, 2*time.Second)
+		if err == nil && !allowed {
+			return nil, fmt.Errorf("rate_limit: 请求过于频繁，请稍候再试")
+		}
+	}
+
+	// ---------------- 第二道防线：单项目总速率熔断（每秒最多允许 15 次，防死循环刷量） ----------------
+	allowedRate, err := s.storage.AllowProjectRateCheck(ctx, projectSlug, 15)
+	if err == nil && !allowedRate {
+		return nil, fmt.Errorf("rate_limit: 当前项目请求并发已达峰值，请稍后再试")
+	}
+
+	// ---------------- 第三道防线：单项目活跃码池硬顶（每个项目同时最多 300 个未核销活跃码） ----------------
+	allowedQuota, err := s.storage.CheckAndIncrProjectActiveCodes(ctx, projectSlug, 300)
+	if err == nil && !allowedQuota {
+		return nil, fmt.Errorf("quota_limit: 当前项目等待核销的验证码过多，请等待现有验证码核销或过期后再试")
+	}
+
 	expireSec := req.ExpireSeconds
 	if expireSec <= 0 {
 		expireSec = s.cfg.DefaultCodeExpire
@@ -62,10 +82,12 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 	for i := 0; i < 5; i++ {
 		c, err := randomDigits(6)
 		if err != nil {
+			s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 			return nil, err
 		}
 		exists, err := s.storage.Exists(ctx, c)
 		if err != nil {
+			s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 			return nil, err
 		}
 		if !exists {
@@ -74,6 +96,7 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		}
 	}
 	if code == "" {
+		s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 		return nil, fmt.Errorf("system busy, failed to generate unique code")
 	}
 
@@ -88,6 +111,7 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 
 	ttl := time.Duration(expireSec) * time.Second
 	if err := s.storage.SaveCode(ctx, record, ttl); err != nil {
+		s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 		return nil, err
 	}
 

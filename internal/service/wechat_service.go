@@ -314,7 +314,7 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 				Project:       projectName,
 				Extra:         "menu_click:" + openID,
 				ExpireSeconds: s.cfg.DefaultCodeExpire,
-			})
+			}, "wechat_internal")
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"
 			}
