@@ -1,0 +1,28 @@
+# 公网生产部署覆写文件（本地开发不要使用本文件）。
+# 启动：docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+# 依赖项目根目录 .env 中的 DOMAIN（域名）与可选 ACME_EMAIL；域名需解析到本机且 80/443 可达。
+# 相对路径基于项目根目录执行；相对路径解析异常时可追加 --project-directory .
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: wechat-mp-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - DOMAIN=${DOMAIN:?请在 .env 中设置 DOMAIN=你的域名}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+  app:
+    # !override 需要较新的 Docker Compose v2；旧版本请手动把根目录
+    # docker-compose.yml 中 app 的 ports 改为 "127.0.0.1:5000:5000"
+    ports: !override
+      - "127.0.0.1:5000:5000"
+
+volumes:
+  caddy_data:
+  caddy_config:
