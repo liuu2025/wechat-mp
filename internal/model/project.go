@@ -11,6 +11,9 @@ type ProjectItem struct {
 	CustomAd      string `json:"custom_ad"`                // 该项目的专属定制尾注说明文案
 	IncludeGlobal bool   `json:"include_global"`           // 是否同时追加系统默认尾注（true=两者叠加，false=仅项目尾注）
 	CreatedAt     int64  `json:"created_at"`               // 创建时间戳
+	SecretRotatedAt int64 `json:"secret_rotated_at,omitempty"` // 最近一次密钥轮换时间戳
+	OwnerAccountID  string `json:"owner_account_id,omitempty"` // 归属账号ID（租户项目；管理员项目为空）
+	ExpiresAt       int64  `json:"expires_at,omitempty"`       // 授权到期时间戳（0=永久）
 }
 
 // FooterItem 默认尾注模版实体
@@ -58,15 +61,9 @@ type AuthConfig struct {
 	UpdatedAt int64  `json:"updated_at"`
 }
 
-// LoginReq 控制台登录鉴权请求
+// LoginReq 控制台验证码登录请求
 type LoginReq struct {
-	Password string `json:"password"`
-}
-
-// ChangePasswordReq 修改控制台密码请求
-type ChangePasswordReq struct {
-	OldPassword string `json:"old_password"`
-	NewPassword string `json:"new_password"`
+	Code string `json:"code"` // 用户在公众号索取的 6 位通行码
 }
 
 // AddProjectReq 新增项目请求
@@ -77,6 +74,7 @@ type AddProjectReq struct {
 	CustomAdTitle string `json:"custom_ad_title"`
 	CustomAd      string `json:"custom_ad"`
 	IncludeGlobal bool   `json:"include_global"`
+	LicenseCode   string `json:"license_code"` // 普通用户创建项目必须携带的有效激活码
 }
 
 // ToggleProjectReq 切换项目启停状态请求
@@ -97,6 +95,11 @@ type UpdateProjectReq struct {
 
 // DeleteProjectReq 删除项目请求
 type DeleteProjectReq struct {
+	ID string `json:"id"`
+}
+
+// RotateKeyReq 轮换项目密钥请求
+type RotateKeyReq struct {
 	ID string `json:"id"`
 }
 

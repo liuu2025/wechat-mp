@@ -36,13 +36,18 @@ func main() {
 	// 3. 业务服务层
 	projectService := service.NewProjectService("./config")
 	verifyService := service.NewVerifyService(cfg, store, projectService)
+	licenseService := service.NewLicenseService("./config")
+	accountService := service.NewAccountService("./config", store, verifyService)
 	wechatService := service.NewWechatService(cfg, store, verifyService, projectService)
 
 	// 4. 控制器层
 	verifyHandler := handler.NewVerifyHandler(verifyService)
 	wechatHandler := handler.NewWechatHandler(wechatService)
 	menuHandler := handler.NewMenuHandler(store)
-	projectHandler := handler.NewProjectHandler(projectService)
+	rulesHandler := handler.NewRulesHandler(projectService, wechatService, accountService)
+	consoleHandler := handler.NewConsoleHandler(accountService)
+	licenseHandler := handler.NewLicenseHandler(licenseService, accountService)
+	projectHandler := handler.NewProjectHandler(projectService, accountService, licenseService)
 
 	// 5. 路由注册
 	mux := http.NewServeMux()
@@ -66,13 +71,25 @@ func main() {
 	mux.HandleFunc("/health", verifyHandler.Health)
 
 	// 控制台与项目管理 API 接口
-	mux.HandleFunc("/api/console/login", projectHandler.Login)
-	mux.HandleFunc("/api/console/change-password", projectHandler.ChangePassword)
+	mux.HandleFunc("/api/console/login", consoleHandler.Login)
+	mux.HandleFunc("/api/console/logout", consoleHandler.Logout)
+	mux.HandleFunc("/api/console/bootstrap-status", consoleHandler.BootstrapStatus)
+	mux.HandleFunc("/api/console/bootstrap-session", consoleHandler.BootstrapSession)
+	mux.HandleFunc("/api/console/preview-session", consoleHandler.PreviewSession)
+	mux.HandleFunc("/api/console/me", consoleHandler.Me)
+	mux.HandleFunc("/api/accounts", consoleHandler.ListAccounts)
+	mux.HandleFunc("/api/accounts/set-status", consoleHandler.SetAccountStatus)
+	mux.HandleFunc("/api/accounts/set-role", consoleHandler.SetAccountRole)
+	mux.HandleFunc("/api/licenses", licenseHandler.ListCodes)
+	mux.HandleFunc("/api/licenses/generate", licenseHandler.GenerateCodes)
+	mux.HandleFunc("/api/licenses/void", licenseHandler.VoidCode)
 	mux.HandleFunc("/api/projects", projectHandler.ListProjects)
 	mux.HandleFunc("/api/projects/add", projectHandler.AddProject)
 	mux.HandleFunc("/api/projects/update", projectHandler.UpdateProject)
 	mux.HandleFunc("/api/projects/toggle", projectHandler.ToggleProject)
 	mux.HandleFunc("/api/projects/delete", projectHandler.DeleteProject)
+	mux.HandleFunc("/api/projects/renew", projectHandler.RenewProject)
+	mux.HandleFunc("/api/projects/rotate-key", projectHandler.RotateProjectKey)
 
 	// 系统全局默认尾注模版管理 API 接口
 	mux.HandleFunc("/api/footers", projectHandler.ListFooters)
@@ -85,6 +102,11 @@ func main() {
 	// 全场景自动回复文案配置 API 接口
 	mux.HandleFunc("/api/replies", projectHandler.GetReplies)
 	mux.HandleFunc("/api/replies/update", projectHandler.UpdateReplies)
+
+	// 关键词规则引擎接口（仅管理员）
+	mux.HandleFunc("/api/rules", rulesHandler.GetRules)
+	mux.HandleFunc("/api/rules/update", rulesHandler.UpdateRules)
+	mux.HandleFunc("/api/rules/test", rulesHandler.TestRule)
 
 	// 自定义菜单配置接口（安全只读，返回 config/menu.json 正式配置）
 	mux.HandleFunc("/api/menu", menuHandler.GetMenu)

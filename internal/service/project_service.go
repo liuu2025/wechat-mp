@@ -28,6 +28,7 @@ type ProjectService struct {
 	authPath     string
 	footersPath  string
 	repliesPath  string
+	rulesPath    string
 }
 
 func NewProjectService(configDir string) *ProjectService {
@@ -36,6 +37,7 @@ func NewProjectService(configDir string) *ProjectService {
 		authPath:     filepath.Join(configDir, "auth.json"),
 		footersPath:  filepath.Join(configDir, "footers.json"),
 		repliesPath:  filepath.Join(configDir, "replies.json"),
+		rulesPath:    filepath.Join(configDir, "rules.json"),
 	}
 
 	// 确保存储文件存在，如不存在则初始化默认值
@@ -61,13 +63,13 @@ func (s *ProjectService) ensureInitialized() {
 	if _, err := os.Stat(s.repliesPath); os.IsNotExist(err) {
 		if !copyFromDefault(s.repliesPath, "replies.json") {
 			initialReplies := model.RepliesConfig{
-				Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：输入网站上显示的 6 位数字直接验证；\n👉 方式 2：回复【验证码】获取 6 位通行码填入网站；\n👉 回复【帮助】或【项目】可查看支持的业务。",
+				Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
 				CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 				CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 				CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 				UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 				Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
-				Help:          "📖【使用指南】\n👉 方式 1（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！\n👉 方式 2（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！",
+				Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 				UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
 				MediaMessage:  "💡 抱歉，本中枢暂不支持语音/图片/表情包识别，请发送 6 位纯数字验证码或文字指令。",
 			}
@@ -149,6 +151,34 @@ func (s *ProjectService) ensureInitialized() {
 			_ = os.WriteFile(s.projectsPath, data, 0644)
 		}
 	}
+
+	// 确保 rules.json 存在（关键词规则引擎）
+	if _, err := os.Stat(s.rulesPath); os.IsNotExist(err) {
+		if !copyFromDefault(s.rulesPath, "rules.json") {
+			factory := model.RulesConfig{
+				UniversalCode: model.BuiltinRule{Enabled: true, Keywords: []string{"验证码", "取码", "登录", "注册", "通行码", "yzm", "code", "1"}},
+				Help:          model.BuiltinRule{Enabled: true, Keywords: []string{"帮助", "help", "?", "？"}},
+				Projects:      model.BuiltinRule{Enabled: true, Keywords: []string{"项目", "业务"}},
+				Custom:        []model.CustomRule{},
+			}
+			data, _ := json.MarshalIndent(factory, "", "  ")
+			_ = os.WriteFile(s.rulesPath, data, 0644)
+		}
+	}
+}
+
+// IsProjectUsable 项目当前是否可用（启用且未到期）——发码、核销、通用码消费全链路统一校验
+func IsProjectUsable(item *model.ProjectItem) bool {
+	if item == nil {
+		return false
+	}
+	if !item.Enabled {
+		return false
+	}
+	if item.ExpiresAt > 0 && item.ExpiresAt < time.Now().Unix() {
+		return false
+	}
+	return true
 }
 
 // CheckPassword 校验管理密码
@@ -226,8 +256,8 @@ func (s *ProjectService) GetProject(idOrName string) (*model.ProjectItem, error)
 	return nil, ErrProjectNotFound
 }
 
-// AddProject 新增接入项目并保存至 projects.json
-func (s *ProjectService) AddProject(req *model.AddProjectReq) (*model.ProjectItem, error) {
+// AddProject 新增接入项目并保存至 projects.json（ownerAccountID 为归属账号，租户项目带到期时间）
+func (s *ProjectService) AddProject(req *model.AddProjectReq, ownerAccountID string, expiresAt int64) (*model.ProjectItem, error) {
 	if req.ID == "" || req.Name == "" {
 		return nil, fmt.Errorf("id and name are required")
 	}
@@ -260,6 +290,8 @@ func (s *ProjectService) AddProject(req *model.AddProjectReq) (*model.ProjectIte
 		CustomAd:      req.CustomAd,
 		IncludeGlobal: req.IncludeGlobal,
 		CreatedAt:     time.Now().Unix(),
+		OwnerAccountID: ownerAccountID,
+		ExpiresAt:      expiresAt,
 	}
 
 	projects = append(projects, item)
@@ -377,6 +409,37 @@ func (s *ProjectService) DeleteProject(id string) error {
 	}
 
 	updatedData, err := json.MarshalIndent(filtered, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.projectsPath, updatedData, 0644)
+}
+
+// SetProjectExpiry 设置项目授权到期时间（0=永久）
+func (s *ProjectService) SetProjectExpiry(id string, expiresAt int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	data, err := os.ReadFile(s.projectsPath)
+	if err != nil {
+		return err
+	}
+	var projects []*model.ProjectItem
+	if err := json.Unmarshal(data, &projects); err != nil {
+		return err
+	}
+	found := false
+	for _, p := range projects {
+		if p.ID == id {
+			p.ExpiresAt = expiresAt
+			found = true
+			break
+		}
+	}
+	if !found {
+		return ErrProjectNotFound
+	}
+	updatedData, err := json.MarshalIndent(projects, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -622,13 +685,13 @@ func (s *ProjectService) UpdateReplies(req *model.RepliesConfig) error {
 
 func (s *ProjectService) defaultReplies() *model.RepliesConfig {
 	return &model.RepliesConfig{
-		Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：输入网站上显示的 6 位数字直接验证；\n👉 方式 2：回复【验证码】获取 6 位通行码填入网站；\n👉 回复【帮助】或【项目】可查看支持的业务。",
+		Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
 		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 		Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
-		Help:          "📖【使用指南】\n👉 方式 1（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！\n👉 方式 2（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！",
+		Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 		UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
 		MediaMessage:  "💡 抱歉，本中枢暂不支持语音/图片/表情包识别，请发送 6 位纯数字验证码或文字指令。",
 	}
@@ -638,4 +701,137 @@ func generateRandomHex(length int) string {
 	b := make([]byte, length)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// ----------------- 关键词规则引擎 -----------------
+
+// GetRules 读取关键词规则配置（文件缺失或损坏返回错误，由调用方兜底）
+func (s *ProjectService) GetRules() (*model.RulesConfig, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	data, err := os.ReadFile(s.rulesPath)
+	if err != nil {
+		return nil, err
+	}
+	var rules model.RulesConfig
+	if err := json.Unmarshal(data, &rules); err != nil {
+		return nil, err
+	}
+	if rules.Custom == nil {
+		rules.Custom = []model.CustomRule{}
+	}
+	return &rules, nil
+}
+
+// SaveRules 整包保存关键词规则（写盘前做完整校验，脏数据在门口拦截）
+func (s *ProjectService) SaveRules(rules *model.RulesConfig) error {
+	if err := validateRules(rules); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 保存前快照，支持一键回滚
+	if prev, err := os.ReadFile(s.rulesPath); err == nil && len(prev) > 0 {
+		_ = os.WriteFile(s.rulesPath+".bak", prev, 0644)
+	}
+
+	if rules.Custom == nil {
+		rules.Custom = []model.CustomRule{}
+	}
+	data, err := json.MarshalIndent(rules, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.rulesPath, data, 0644)
+}
+
+// validateRules 规则合法性校验：关键词去重、跨规则查重、数量上限
+func validateRules(rules *model.RulesConfig) error {
+	seen := make(map[string]string) // 关键词 -> 所属规则
+	add := func(kw, owner string) error {
+		k := strings.ToLower(strings.TrimSpace(kw))
+		if k == "" {
+			return fmt.Errorf("存在空白关键词，请检查后重试")
+		}
+		if prev, dup := seen[k]; dup {
+			return fmt.Errorf("关键词「%s」重复配置（已属于：%s），请先移除重复项", k, prev)
+		}
+		seen[k] = owner
+		return nil
+	}
+
+	builtin := map[string]*model.BuiltinRule{
+		"索取通行码": {Enabled: rules.UniversalCode.Enabled, Keywords: rules.UniversalCode.Keywords},
+		"使用指南": {Enabled: rules.Help.Enabled, Keywords: rules.Help.Keywords},
+		"项目清单": {Enabled: rules.Projects.Enabled, Keywords: rules.Projects.Keywords},
+	}
+	for name, rule := range builtin {
+		if len(rule.Keywords) == 0 && rule.Enabled {
+			return fmt.Errorf("规则「%s」已启用但未配置任何触发词", name)
+		}
+		for _, kw := range rule.Keywords {
+			if err := add(kw, name); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(rules.Custom) > 50 {
+		return fmt.Errorf("自定义规则数量超出上限（最多 50 条）")
+	}
+	for i, cr := range rules.Custom {
+		name := fmt.Sprintf("自定义规则#%d", i+1)
+		if strings.TrimSpace(cr.Reply) == "" && cr.Enabled {
+			return fmt.Errorf("%s已启用但回复内容为空", name)
+		}
+		if len(cr.Keywords) == 0 {
+			return fmt.Errorf("%s未配置任何触发词", name)
+		}
+		if len(cr.Keywords) > 20 {
+			return fmt.Errorf("%s触发词数量超出上限（最多 20 个）", name)
+		}
+		for _, kw := range cr.Keywords {
+			if err := add(kw, name); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ----------------- 密钥轮换 -----------------
+
+// RotateProjectSecret 轮换指定项目密钥：生成新密钥覆盖旧值，旧密钥立即失效
+func (s *ProjectService) RotateProjectSecret(id string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	data, err := os.ReadFile(s.projectsPath)
+	if err != nil {
+		return "", err
+	}
+	var projects []*model.ProjectItem
+	if err := json.Unmarshal(data, &projects); err != nil {
+		return "", err
+	}
+
+	for _, p := range projects {
+		if p.ID == id {
+			newSecret := "sec_" + p.ID + "_" + generateRandomHex(8)
+			p.Secret = newSecret
+			p.SecretRotatedAt = time.Now().Unix()
+			updated, err := json.MarshalIndent(projects, "", "  ")
+			if err != nil {
+				return "", err
+			}
+			if err := os.WriteFile(s.projectsPath, updated, 0644); err != nil {
+				return "", err
+			}
+			return newSecret, nil
+		}
+	}
+	return "", ErrProjectNotFound
 }

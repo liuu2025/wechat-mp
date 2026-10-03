@@ -34,7 +34,6 @@ services:
       - REDIS_ADDR=redis:6379
       - REDIS_DB=0
       - CODE_EXPIRE_SECONDS=${CODE_EXPIRE_SECONDS:-300}
-      - AD_CONTENT=${AD_CONTENT:-------------------\n🌟 推荐站点：实用工具导航站（https://example.com）}
     depends_on:
       redis:
         condition: service_healthy

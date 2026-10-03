@@ -7,8 +7,8 @@
 ## 核心特性
 
 * **双流向验证架构**：
-  * **流向一（网站弹码免填）**：适合电脑与移动端浏览器。网页申请 6 位码，用户在公众号回复该数字，前端轻量轮询自动放行；
-  * **流向二（微信索码填入）**：适合 APP/H5/表单。用户在公众号发送【验证码】获取 6 位通行码，填入网站表单，网站后端向中枢发起单次核销（替代高昂短信费，单次消费防重放）。
+  * **流向一（微信索码填入）**：适合 APP/H5/表单。用户在公众号发送【验证码】获取 6 位通行码，填入网站表单，网站后端向中枢发起单次核销（替代高昂短信费，单次消费防重放）；
+  * **流向二（网站弹码免填）**：适合电脑与移动端浏览器。网页申请 6 位码，用户在公众号回复该数字，前端轻量轮询自动放行。
 * **严格通信密钥（Key）白名单防御**：各业务系统接入必须携带专属 `key`，非白名单或无效密钥一律以 `401 Unauthorized` 拦截，杜绝接口滥用。
 * **清晰机器与展示契约**：接口始终返回规范的英文代号 `project`（供机器比对）与友好中文名 `project_name`（供展示），并支持大小写容错。
 * **四种规范尾注展示模式**：
@@ -90,7 +90,46 @@ docker compose down
 
 所有外部业务系统均通过标准的 RESTful JSON 接口与中枢通信：
 
-### 1. 申请 6 位验证码（流向一）
+> 📌 **编号变更说明（v2.0.0）**：流向编号已对调——原「流向二（微信索码填入）」现为**流向一**，原「流向一（网站弹码免填）」现为**流向二**。所有接口路径、请求参数与响应结构零变化，已对接的业务方无需修改任何代码，重读本教程即可。
+
+### 1. 主动核销通用通行码（流向一）
+* **场景**：用户在公众号回复【验证码】获取 6 位数字，填入网站表单，网站后端向中枢发起核销。
+* **接口**：`POST /api/code/verify-universal`
+* **Headers**：`Content-Type: application/json`
+* **请求体**：
+  ```json
+  {
+    "project": "shop",
+    "key": "sec_shop_8f9a2b1c",
+    "code": "209710"
+  }
+  ```
+* **核销成功响应**：
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "valid": true,
+      "openid": "oXYZ_xxxxxxxxxxxx",
+      "project": "shop",
+      "project_name": "商城系统",
+      "verified_at": 1711234567
+    }
+  }
+  ```
+* **重复提交响应（防重放）**：
+  ```json
+  {
+    "code": 40002,
+    "message": "该验证码已于早前完成核销，请勿重复使用",
+    "data": {
+      "valid": false,
+      "error_type": "code_already_used"
+    }
+  }
+  ```
+### 2. 申请 6 位验证码（流向二）
 * **接口**：`POST /api/code/create`
 * **Headers**：`Content-Type: application/json`
 * **请求体**：
@@ -118,7 +157,7 @@ docker compose down
 
 ---
 
-### 2. 轮询核销状态（流向一）
+### 3. 轮询核销状态（流向二）
 * **接口**：`GET /api/code/check?code=839201`
 * **未核销响应**：
   ```json
@@ -166,40 +205,3 @@ docker compose down
 
 ---
 
-### 3. 主动核销通用通行码（流向二）
-* **场景**：用户在公众号回复【验证码】获取 6 位数字，填入网站表单，网站后端向中枢发起核销。
-* **接口**：`POST /api/code/verify-universal`
-* **Headers**：`Content-Type: application/json`
-* **请求体**：
-  ```json
-  {
-    "project": "shop",
-    "key": "sec_shop_8f9a2b1c",
-    "code": "209710"
-  }
-  ```
-* **核销成功响应**：
-  ```json
-  {
-    "code": 0,
-    "message": "success",
-    "data": {
-      "valid": true,
-      "openid": "oXYZ_xxxxxxxxxxxx",
-      "project": "shop",
-      "project_name": "商城系统",
-      "verified_at": 1711234567
-    }
-  }
-  ```
-* **重复提交响应（防重放）**：
-  ```json
-  {
-    "code": 40002,
-    "message": "该验证码已于早前完成核销，请勿重复使用",
-    "data": {
-      "valid": false,
-      "error_type": "code_already_used"
-    }
-  }
-  ```

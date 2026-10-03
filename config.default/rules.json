@@ -1,0 +1,15 @@
+{
+  "universal_code": {
+    "enabled": true,
+    "keywords": ["验证码", "取码", "登录", "注册", "通行码", "yzm", "code", "1"]
+  },
+  "help": {
+    "enabled": true,
+    "keywords": ["帮助", "help", "?", "？"]
+  },
+  "projects": {
+    "enabled": true,
+    "keywords": ["项目", "业务"]
+  },
+  "custom": []
+}

@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"strconv"
-	"strings"
 )
 
 // Config 统一应用配置
@@ -15,9 +14,7 @@ type Config struct {
 	RedisAddr         string
 	RedisPassword     string
 	RedisDB           int
-	DefaultCodeExpire int    // 验证码默认有效秒数（如 300 秒）
-	AdContent         string // 全局追加广告/推广文案
-	WelcomeMessage    string // 新关注公众号欢迎语
+	DefaultCodeExpire int // 验证码默认有效秒数（如 300 秒）
 }
 
 // Load 从系统环境变量读取配置，提供稳妥的默认值
@@ -31,11 +28,6 @@ func Load() *Config {
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
 		RedisDB:           getEnvAsInt("REDIS_DB", 0),
 		DefaultCodeExpire: getEnvAsInt("CODE_EXPIRE_SECONDS", 300),
-		AdContent: strings.ReplaceAll(getEnv("AD_CONTENT", `------------------
-🌟 推荐站点：实用工具导航站（https://example.com）`), "\\n", "\n"),
-		WelcomeMessage: strings.ReplaceAll(getEnv("WELCOME_MSG", `您好！欢迎关注。
-👉 网站验证：请直接发送网站上显示的 6 位数字验证码；
-👉 帮助指南：回复【帮助】或【项目】查看支持的业务。`), "\\n", "\n"),
 	}
 }
 

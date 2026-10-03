@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"wechat-mp/internal/model"
@@ -97,6 +98,9 @@ func (s *Storage) MarkVerified(ctx context.Context, code, openID string) (*model
 		return nil, err
 	}
 
+	// 核销完成，释放项目活跃码池额度
+	s.ReleaseProjectActiveCode(ctx, record.Project, code)
+
 	return record, nil
 }
 
@@ -143,34 +147,96 @@ func (s *Storage) AllowProjectRateCheck(ctx context.Context, project string, max
 	return count <= int64(maxPerSec), nil
 }
 
-// CheckAndIncrProjectActiveCodes 检查并累加单项目活跃验证码配额硬顶（如最多 300 个未核销活跃码）
-func (s *Storage) CheckAndIncrProjectActiveCodes(ctx context.Context, project string, maxActive int) (bool, error) {
-	if project == "" {
+// projectActiveCodeKey 项目活跃码池（ZSET：member=验证码，score=过期时间戳秒）
+func projectActiveCodeKey(project string) string {
+	return fmt.Sprintf("wx:quota:prj_active:%s", project)
+}
+
+// TryAcquireProjectActiveCode 尝试占用单项目活跃码池额度（上限内才发码）
+// 先按过期时间清理已过期成员，再判容量；额度随核销释放、随过期自动回收，不存在只增不减的泄漏
+func (s *Storage) TryAcquireProjectActiveCode(ctx context.Context, project, code string, ttl time.Duration, maxActive int) (bool, error) {
+	if project == "" || code == "" {
 		return true, nil
 	}
-	key := fmt.Sprintf("wx:quota:prj_active:%s", project)
-	count, err := s.client.Incr(ctx, key).Result()
+	key := projectActiveCodeKey(project)
+	ok, err := s.tryAcquireOnce(ctx, key, code, ttl, maxActive)
 	if err != nil {
+		// 兼容旧版本遗留的 string 计数器（只增不减的泄漏数据）：一次性清除后重试
+		if strings.Contains(strings.ToLower(err.Error()), "wrongtype") {
+			_ = s.client.Del(ctx, key).Err()
+			ok, err = s.tryAcquireOnce(ctx, key, code, ttl, maxActive)
+		}
+	}
+	if err != nil {
+		// Redis 异常时平滑放行，不阻断正常业务
 		return true, nil
 	}
-	if count > int64(maxActive) {
-		// 超过硬顶配额，回退计数
-		_ = s.client.Decr(ctx, key).Err()
+	return ok, nil
+}
+
+func (s *Storage) tryAcquireOnce(ctx context.Context, key, code string, ttl time.Duration, maxActive int) (bool, error) {
+	now := float64(time.Now().Unix())
+	expireAt := now + ttl.Seconds()
+
+	pipe := s.client.TxPipeline()
+	pipe.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%f", now))
+	cardCmd := pipe.ZCard(ctx, key)
+	pipe.ZAdd(ctx, key, redis.Z{Score: expireAt, Member: code})
+	if _, err := pipe.Exec(ctx); err != nil {
+		return false, err
+	}
+	if cardCmd.Val() > int64(maxActive) {
+		_ = s.client.ZRem(ctx, key, code).Err()
 		return false, nil
 	}
 	return true, nil
 }
 
-// DecrProjectActiveCodes 验证码核销或作废时释放配额
-func (s *Storage) DecrProjectActiveCodes(ctx context.Context, project string) {
-	if project == "" {
+// ReleaseProjectActiveCode 验证码核销时释放活跃码池额度
+func (s *Storage) ReleaseProjectActiveCode(ctx context.Context, project, code string) {
+	if project == "" || code == "" {
 		return
 	}
-	key := fmt.Sprintf("wx:quota:prj_active:%s", project)
-	count, _ := s.client.Decr(ctx, key).Result()
-	if count < 0 {
-		_ = s.client.Set(ctx, key, 0, 0).Err()
+	_ = s.client.ZRem(ctx, projectActiveCodeKey(project), code).Err()
+}
+
+// ----------------- 核销防爆破：openid 维度失败频控 -----------------
+
+const verifyFailWindow = 10 * time.Minute
+
+// RecordVerifyFailure 记录一次核销失败（6 位数字不存在或已核销）
+func (s *Storage) RecordVerifyFailure(ctx context.Context, openID string) {
+	if openID == "" {
+		return
 	}
+	key := fmt.Sprintf("wx:rate:verify_fail:%s", openID)
+	count, err := s.client.Incr(ctx, key).Result()
+	if err != nil {
+		return
+	}
+	if count == 1 {
+		_ = s.client.Expire(ctx, key, verifyFailWindow).Err()
+	}
+}
+
+// IsVerifyBlocked 判断该 openid 是否因连续失败被临时拉黑
+func (s *Storage) IsVerifyBlocked(ctx context.Context, openID string, maxFailures int) (bool, error) {
+	if openID == "" {
+		return false, nil
+	}
+	count, err := s.client.Get(ctx, fmt.Sprintf("wx:rate:verify_fail:%s", openID)).Int()
+	if err != nil {
+		return false, nil
+	}
+	return count >= maxFailures, nil
+}
+
+// ClearVerifyFailures 核销成功后清空失败计数
+func (s *Storage) ClearVerifyFailures(ctx context.Context, openID string) {
+	if openID == "" {
+		return
+	}
+	_ = s.client.Del(ctx, fmt.Sprintf("wx:rate:verify_fail:%s", openID)).Err()
 }
 
 func userActiveCodeKey(openid string) string {
@@ -233,6 +299,79 @@ func (s *Storage) ConsumeUniversalCode(ctx context.Context, code, targetProject,
 	_ = s.client.Set(ctx, codeKey(code), data, 1*time.Minute).Err()
 
 	return record, nil
+}
+
+// ----------------- 登录会话 -----------------
+
+func sessionKey(token string) string {
+	return fmt.Sprintf("wx:session:%s", token)
+}
+
+// SaveSession 保存登录会话（含 TTL）
+func (s *Storage) SaveSession(ctx context.Context, info *model.SessionInfo, ttl time.Duration) error {
+	data, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	return s.client.Set(ctx, sessionKey(info.Token), data, ttl).Err()
+}
+
+// GetSession 读取会话（不存在或已过期返回 nil, nil）
+func (s *Storage) GetSession(ctx context.Context, token string) (*model.SessionInfo, error) {
+	val, err := s.client.Get(ctx, sessionKey(token)).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var info model.SessionInfo
+	if err := json.Unmarshal([]byte(val), &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+// DeleteSession 删除单个会话（登出）
+func (s *Storage) DeleteSession(ctx context.Context, token string) {
+	_ = s.client.Del(ctx, sessionKey(token)).Err()
+}
+
+// DeleteAccountSessions 删除某账号的全部会话（禁用账号时踢出）
+func (s *Storage) DeleteAccountSessions(ctx context.Context, accountID string) {
+	var cursor uint64
+	for {
+		keys, next, err := s.client.Scan(ctx, cursor, "wx:session:*", 200).Result()
+		if err != nil {
+			return
+		}
+		for _, key := range keys {
+			val, err := s.client.Get(ctx, key).Result()
+			if err != nil {
+				continue
+			}
+			var info model.SessionInfo
+			if json.Unmarshal([]byte(val), &info) == nil && info.AccountID == accountID {
+				_ = s.client.Del(ctx, key).Err()
+			}
+		}
+		if next == 0 {
+			return
+		}
+		cursor = next
+	}
+}
+
+// RawIncr 通用计数器（INCR + 窗口 TTL），供登录限流等使用
+func (s *Storage) RawIncr(ctx context.Context, key string, window time.Duration) (int64, error) {
+	count, err := s.client.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if count == 1 {
+		_ = s.client.Expire(ctx, key, window).Err()
+	}
+	return count, nil
 }
 
 const menuKey = "wx:custom_menu"

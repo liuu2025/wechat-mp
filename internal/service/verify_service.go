@@ -41,8 +41,8 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		if err != nil {
 			return nil, fmt.Errorf("unauthorized: 项目 '%s' 未在白名单中登记", projectSlug)
 		}
-		if !p.Enabled {
-			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已被管理员停用", p.Name)
+		if !IsProjectUsable(p) {
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已停用或授权到期", p.Name)
 		}
 		// 校验通信密钥 Key
 		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
@@ -66,28 +66,21 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		return nil, fmt.Errorf("rate_limit: 当前项目请求并发已达峰值，请稍后再试")
 	}
 
-	// ---------------- 第三道防线：单项目活跃码池硬顶（每个项目同时最多 300 个未核销活跃码） ----------------
-	allowedQuota, err := s.storage.CheckAndIncrProjectActiveCodes(ctx, projectSlug, 300)
-	if err == nil && !allowedQuota {
-		return nil, fmt.Errorf("quota_limit: 当前项目等待核销的验证码过多，请等待现有验证码核销或过期后再试")
-	}
-
 	expireSec := req.ExpireSeconds
 	if expireSec <= 0 {
 		expireSec = s.cfg.DefaultCodeExpire
 	}
+	ttl := time.Duration(expireSec) * time.Second
 
 	// 保证生成的 6 位数字在当前活跃池中唯一（防碰撞重试）
 	var code string
 	for i := 0; i < 5; i++ {
 		c, err := randomDigits(6)
 		if err != nil {
-			s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 			return nil, err
 		}
 		exists, err := s.storage.Exists(ctx, c)
 		if err != nil {
-			s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 			return nil, err
 		}
 		if !exists {
@@ -96,8 +89,14 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		}
 	}
 	if code == "" {
-		s.storage.DecrProjectActiveCodes(ctx, projectSlug)
 		return nil, fmt.Errorf("system busy, failed to generate unique code")
+	}
+
+	// ---------------- 第三道防线：单项目活跃码池硬顶（每个项目同时最多 300 个未核销活跃码） ----------------
+	// 额度随核销释放、随过期自动回收，不存在只增不减的泄漏
+	allowedQuota, err := s.storage.TryAcquireProjectActiveCode(ctx, projectSlug, code, ttl, 300)
+	if err == nil && !allowedQuota {
+		return nil, fmt.Errorf("quota_limit: 当前项目等待核销的验证码过多，请等待现有验证码核销或过期后再试")
 	}
 
 	record := &model.CodeRecord{
@@ -109,9 +108,8 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		Extra:       req.Extra,
 	}
 
-	ttl := time.Duration(expireSec) * time.Second
 	if err := s.storage.SaveCode(ctx, record, ttl); err != nil {
-		s.storage.DecrProjectActiveCodes(ctx, projectSlug)
+		s.storage.ReleaseProjectActiveCode(ctx, projectSlug, code)
 		return nil, err
 	}
 
@@ -147,7 +145,7 @@ func (s *VerifyService) CheckCode(ctx context.Context, code string) (*model.Chec
 	}, nil
 }
 
-// GenerateUniversalCode 为指定微信用户生成或复用通用的通行验证码（流向二）
+// GenerateUniversalCode 为指定微信用户生成或复用通用的通行验证码（流向一）
 func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string) (string, error) {
 	// 1. 防刷：先检查用户当前是否有尚未过期的有效通用码
 	activeCode, err := s.storage.GetUserActiveUniversalCode(ctx, openID)
@@ -196,7 +194,7 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 	return code, nil
 }
 
-// VerifyUniversalCode 业务网站主动验证并消费用户的通用码（流向二）
+// VerifyUniversalCode 业务网站主动验证并消费用户的通用码（流向一）
 func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.VerifyUniversalReq) (*model.VerifyUniversalResp, error) {
 	reqCode := strings.TrimSpace(req.Code)
 	if reqCode == "" {
@@ -214,8 +212,8 @@ func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.Veri
 		if err != nil {
 			return nil, fmt.Errorf("unauthorized: 项目 '%s' 未在白名单中登记", projectSlug)
 		}
-		if !p.Enabled {
-			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已被管理员停用", p.Name)
+		if !IsProjectUsable(p) {
+			return nil, fmt.Errorf("unauthorized: 项目 '%s' 已停用或授权到期", p.Name)
 		}
 		// 校验通信密钥 Key
 		if strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Key) != p.Secret {
@@ -237,6 +235,20 @@ func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.Veri
 		ProjectName: projectName,
 		VerifiedAt:  record.VerifiedAt,
 	}, nil
+}
+
+// ConsumeLoginCode 控制台登录：消耗一张通用通行码，返回绑定的 openid（一次性防重放）
+func (s *VerifyService) ConsumeLoginCode(ctx context.Context, code string) (string, error) {
+	code = strings.TrimSpace(code)
+	record, err := s.storage.GetCode(ctx, code)
+	if err != nil || record.Project != "universal" || record.Status != model.StatusPending || record.OpenID == "" {
+		return "", storage.ErrCodeNotFound
+	}
+	// 立即作废该码（一次性消费）
+	if _, err := s.storage.ConsumeUniversalCode(ctx, code, "login", "控制台登录"); err != nil {
+		return "", err
+	}
+	return record.OpenID, nil
 }
 
 // randomDigits 生成指定长度的纯数字字符串

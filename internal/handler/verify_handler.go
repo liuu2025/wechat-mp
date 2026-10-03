@@ -120,7 +120,7 @@ func (h *VerifyHandler) CheckCode(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, resp)
 }
 
-// VerifyUniversal 处理业务网站主动提交 6 位通用码核销的请求（流向二）
+// VerifyUniversal 处理业务网站主动提交 6 位通用码核销的请求（流向一）
 // POST /api/code/verify-universal
 func (h *VerifyHandler) VerifyUniversal(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
