@@ -317,9 +317,8 @@
     /* 主内容视口 */
     .main-viewport {
       flex: 1;
-      padding: 24px;
-      max-width: 1400px;
-      margin: 0 auto;
+      padding: 24px 32px;
+      max-width: none;
       width: 100%;
     }
     .tab-content {
@@ -773,7 +772,7 @@
 
     /* ---------------- Tab 5: 接入文档专业升级 ---------------- */
     .doc-container {
-      max-width: 960px;
+      max-width: 1400px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -1234,35 +1233,214 @@
       color: #34d399;
       font-weight: 600;
     }
+
+    /* ---------------- 左侧栏布局（一级导航） ---------------- */
+    body {
+      flex-direction: row;
+      flex-wrap: nowrap;
+    }
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--header-bg);
+      border-right: 1px solid var(--border-color);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: flex-start;
+      max-height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 14px;
+      gap: 10px;
+      z-index: 60;
+    }
+    .side-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .side-nav .tab-btn {
+      display: flex;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .side-foot {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 14px;
+    }
+    .side-foot .btn-action-sm,
+    .side-foot .theme-toggle-btn {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .main-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .mobile-topbar { display: none; }
+
+    /* ---------------- 规则中心 ---------------- */
+    .rules-nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      background: var(--tab-bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .rules-nav-btn {
+      padding: 8px 14px;
+      font-size: 13.5px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .rules-nav-btn:hover { color: var(--text-main); }
+    .rules-nav-btn.active {
+      background: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      font-weight: 600;
+    }
+    .rules-badge {
+      font-size: 11px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .rules-section { display: none; }
+    .rules-section.active { display: block; }
+    .kw-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 4px 6px 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin: 0 6px 6px 0;
+    }
+    .kw-del {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 0 4px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .kw-del:hover { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+    .kw-chip-wrap { line-height: 1.4; }
+    .rules-state-on { color: #34d399; }
+    .rules-state-off { color: #94a3b8; }
+
+    @media (max-width: 900px) {
+      body { flex-direction: column; }
+      .sidebar {
+        position: fixed;
+        left: -250px;
+        top: 0;
+        bottom: 0;
+        width: 232px;
+        max-height: none;
+        transition: left 0.25s ease;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.45);
+      }
+      .sidebar.open { left: 0; }
+      .mobile-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 55;
+      }
+      .mobile-title { font-size: 14.5px; font-weight: 700; color: var(--text-main); }
+    }
+    @media (min-width: 901px) {
+      .mobile-topbar { display: none; }
+    }
+    #rulesSectionScenes textarea {
+      min-height: 220px;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+    .side-nav .tab-btn.active {
+      background: rgba(59, 130, 246, 0.16);
+      color: var(--primary);
+      box-shadow: inset 3px 0 0 var(--primary);
+      font-weight: 700;
+    }
+    body.theme-light .side-nav .tab-btn.active {
+      background: rgba(37, 99, 235, 0.10);
+    }
   </style>
 </head>
 <body>
 
-  <!-- 顶部导航栏 -->
-  <header>
-    <div class="brand-wrap">
-      <div class="brand-title">
-        <span>🟢 微信中枢控制台</span>
-        <span class="badge-status">正常运行</span>
-      </div>
-      <div class="header-actions">
-        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">🌙 深色模式</button>
-        <button class="btn-action-sm" onclick="openChangePasswordModal()">⚙️ 修改密码</button>
-        <button class="btn-action-sm" onclick="logout()" style="color: #ef4444;">🚪 锁屏退出</button>
-      </div>
+  <!-- 左侧导航栏（一级导航） -->
+  <aside class="sidebar" id="sidebarNav">
+    <div class="side-brand">
+      <div class="brand-title"><span>微信中枢控制台</span></div>
+      <div><span class="badge-status" id="viewBadge">正常运行</span></div>
+    </div>
+    <nav class="side-nav">
+      <button class="tab-btn active" id="navBtn-sandbox" onclick="switchTab('sandbox')">仿真调试沙箱</button>
+      <button class="tab-btn" id="navBtn-projects" onclick="switchTab('projects')">业务项目管理</button>
+      <button class="tab-btn" id="navBtn-rules" onclick="switchTab('rules')">规则中心</button>
+      <button class="tab-btn" id="navBtn-accounts" onclick="switchTab('accounts')" style="display:none;">账号与授权</button>
+      <button class="tab-btn" id="navBtn-docs" onclick="switchTab('docs')">接入文档与指南</button>
+    </nav>
+    <div class="side-foot">
+      <button class="btn-action-sm" id="previewToggleBtn" onclick="togglePreview()" style="display:none;">预览普通用户视角</button>
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">深色模式</button>
+      <button class="btn-action-sm" onclick="logout()" style="color: #ef4444;">锁屏退出</button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <!-- 移动端顶栏（汉堡菜单） -->
+    <div class="mobile-topbar">
+      <button class="btn-action-sm" onclick="toggleSidebar()">菜单</button>
+      <span class="mobile-title">微信中枢控制台</span>
     </div>
 
-    <!-- 核心五 Tab 标签 -->
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('sandbox')">📱 仿真调试沙箱</button>
-      <button class="tab-btn" onclick="switchTab('projects')">🗂️ 业务项目管理</button>
-      <button class="tab-btn" onclick="switchTab('footers')">📝 默认尾注模版库</button>
-      <button class="tab-btn" onclick="switchTab('replies')">💬 消息回复与文案</button>
-      <button class="tab-btn" onclick="switchTab('docs')">📖 接入文档与指南</button>
-    </div>
-  </header>
-
-  <div class="main-viewport">
+    <div class="main-viewport">
 
     <!-- ================== Tab 1: 仿真调试沙箱 ================== -->
     <div id="tab-sandbox" class="tab-content active">
@@ -1274,7 +1452,7 @@
             <div class="phone-notch"></div>
             <div class="phone-status-bar">
               <span id="phone-clock">12:00</span>
-              <span>5G 📶 98% 🔋</span>
+              <span>5G 98% </span>
             </div>
             <div class="wx-navbar">
               <div style="font-size: 13px; color:#576b95; cursor:pointer;">‹ 微信</div>
@@ -1285,7 +1463,7 @@
               <div class="wx-time-pill">今日 会话</div>
               <div class="wx-msg-row official">
                 <div class="wx-avatar official">睡</div>
-                <div class="wx-bubble">您好！欢迎使用验证码中枢。<br>👉 方式 1：输入网站上显示的 6 位数字直接验证；<br>👉 方式 2：回复【验证码】获取 6 位通行码填入网站；<br>👉 回复【帮助】或【项目】可查看支持的业务。</div>
+                <div class="wx-bubble">您好！欢迎使用验证码中枢。<br>方式 1：回复【验证码】获取 6 位通行码填入网站；<br>方式 2：输入网站上显示的 6 位数字直接验证；<br>回复【帮助】或【项目】可查看支持的业务。</div>
               </div>
             </div>
             <div class="wx-footer">
@@ -1295,9 +1473,9 @@
           </div>
 
           <div style="display: flex; gap: 8px; width: 100%; justify-content: center; flex-wrap: wrap;">
-            <button class="btn-action-sm" onclick="simulateSubscribe()" style="color: #16a34a;">🔔 模拟关注</button>
-            <button class="btn-action-sm" onclick="simulateUnsubscribe()" style="color: #dc2626;">🔕 模拟取关</button>
-            <button class="btn-action-sm" onclick="clearChat()">🗑️ 清屏</button>
+            <button class="btn-action-sm" onclick="simulateSubscribe()" style="color: #16a34a;">模拟关注</button>
+            <button class="btn-action-sm" onclick="simulateUnsubscribe()" style="color: #dc2626;">模拟取关</button>
+            <button class="btn-action-sm" onclick="clearChat()">清屏</button>
           </div>
         </div>
 
@@ -1306,7 +1484,27 @@
           <!-- 流向一卡片 -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">🖥️【流向一】网站弹码 ➔ 手机回复数字 ➔ 网页自动登录</div>
+              <div class="card-title">【流向一】微信索码 获得通行码 网站表单核销</div>
+              <span class="tag-green">短信替代方案</span>
+            </div>
+            <div class="input-row">
+              <label>核销项目：</label>
+              <select id="universalProjectSelect">
+                <!-- 动态填充项目列表 -->
+              </select>
+            </div>
+            <div class="input-row">
+              <label>填入验证码：</label>
+              <input type="text" id="universalCodeInput" placeholder="输入微信收到的 6 位通行码" maxlength="6">
+              <button class="btn-primary" onclick="submitUniversalVerify()">模拟网站提交校验</button>
+            </div>
+            <div id="universalResultArea" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px;"></div>
+          </div>
+
+          <!-- 流向二卡片 -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">【流向二】网站弹码 手机回复数字 网页自动登录</div>
               <span class="tag-blue">适合 PC 网站</span>
             </div>
             <div class="input-row">
@@ -1320,7 +1518,7 @@
               <input type="text" id="extraParam" value="guest_session_9527" placeholder="session_id 等">
             </div>
             <div>
-              <button class="btn-primary" onclick="generateCodeFromProject()">⚡ 模拟网站生成验证码 (POST /api/code/create)</button>
+              <button class="btn-primary" onclick="generateCodeFromProject()">模拟网站生成验证码 (POST /api/code/create)</button>
             </div>
             <div id="codeDisplayArea" style="display: none; background: var(--panel-soft); border: 2px dashed var(--border-color); border-radius: 8px; padding: 14px; margin-top: 14px; align-items: center; justify-content: space-between;">
               <div>
@@ -1328,43 +1526,23 @@
                 <div style="font-size: 28px; font-weight: 700; color: var(--primary); font-family: monospace; letter-spacing: 4px;" id="generatedCode">------</div>
               </div>
               <div style="text-align: right;">
-                <div id="pollStatus" style="font-size: 13px; color: #f59e0b; font-weight: 500;">⏳ 等待手机回复中...</div>
-                <button class="btn-success" style="margin-top: 6px;" onclick="quickFillAndSend()">📲 模拟手机回复此码</button>
+                <div id="pollStatus" style="font-size: 13px; color: #f59e0b; font-weight: 500;">等待手机回复中...</div>
+                <button class="btn-success" style="margin-top: 6px;" onclick="quickFillAndSend()">模拟手机回复此码</button>
               </div>
             </div>
-          </div>
-
-          <!-- 流向二卡片 -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">📱【流向二】微信索码 ➔ 获得通行码 ➔ 网站表单核销</div>
-              <span class="tag-green">短信替代方案</span>
-            </div>
-            <div class="input-row">
-              <label>核销项目：</label>
-              <select id="universalProjectSelect">
-                <!-- 动态填充项目列表 -->
-              </select>
-            </div>
-            <div class="input-row">
-              <label>填入验证码：</label>
-              <input type="text" id="universalCodeInput" placeholder="输入微信收到的 6 位通行码" maxlength="6">
-              <button class="btn-primary" onclick="submitUniversalVerify()">✔️ 模拟网站提交校验</button>
-            </div>
-            <div id="universalResultArea" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px;"></div>
           </div>
 
           <!-- 常用快捷指令 -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">🚀 快捷常用指令测试</div>
+              <div class="card-title">快捷常用指令测试</div>
               <span style="font-size: 12px; color: #64748b;">点按直达手机</span>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <span class="quick-pill" onclick="sendQuickText('验证码')">🔑 发送「验证码」</span>
-              <span class="quick-pill" onclick="sendQuickText('帮助')">💬 发送「帮助」</span>
-              <span class="quick-pill" onclick="sendQuickText('项目')">🌐 发送「项目」</span>
-              <span class="quick-pill" onclick="sendQuickText('你好')">👋 发送「你好」</span>
+              <span class="quick-pill" onclick="sendQuickText('验证码')">发送「验证码」</span>
+              <span class="quick-pill" onclick="sendQuickText('帮助')">发送「帮助」</span>
+              <span class="quick-pill" onclick="sendQuickText('项目')">发送「项目」</span>
+              <span class="quick-pill" onclick="sendQuickText('你好')">发送「你好」</span>
             </div>
           </div>
         </div>
@@ -1382,39 +1560,238 @@
           </p>
         </div>
         <button class="btn-primary" onclick="openAddProjectModal()" style="display: inline-flex; align-items: center; gap: 6px;">
-          ➕ 新增接入项目
+          新增接入项目
         </button>
       </div>
 
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; background:var(--panel-soft); border:1px solid var(--border-color); border-radius:8px; padding:10px 14px;">
+        <input type="text" id="projFilterKw" placeholder="搜索：项目名 / ID / Key" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderProjectsGrid()">
+        <select id="projFilterStatus" onchange="renderProjectsGrid()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+          <option value="all">全部状态</option>
+          <option value="on">正在运行</option>
+          <option value="off">已暂停</option>
+        </select>
+        <select id="projFilterExpiry" onchange="renderProjectsGrid()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+          <option value="all">全部授权</option>
+          <option value="forever">永久有效</option>
+          <option value="active">未到期</option>
+          <option value="soon">7 天内到期</option>
+          <option value="expired">已到期</option>
+        </select>
+        <select id="projFilterOwner" onchange="renderProjectsGrid()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+          <option value="all">全部归属</option>
+        </select>
+        <select id="projFilterSort" onchange="renderProjectsGrid()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+          <option value="default">默认排序</option>
+          <option value="exp_asc">到期时间升序</option>
+          <option value="exp_desc">到期时间降序</option>
+        </select>
+      </div>
       <div class="projects-grid" id="projectsContainer">
         <!-- 动态渲染项目列表 -->
       </div>
     </div>
 
-    <!-- ================== Tab 3: 默认尾注模版库 ================== -->
-    <div id="tab-footers" class="tab-content">
+    <!-- ================== 规则中心：触发关键词 / 自定义回复 / 场景文案 / 尾注规则 / 规则试跑 ================== -->
+    <div id="tab-rules" class="tab-content">
       <div class="doc-container">
 
-        <!-- 顶部操作栏与介绍 -->
-        <div class="card">
+        <!-- 二级分类导航（顶部横排） -->
+        <div class="rules-nav">
+          <button class="rules-nav-btn active" id="rulesNavBtnScenes" onclick="switchRulesSection('scenes')">回复规则</button>
+          <button class="rules-nav-btn" id="rulesNavBtnFooters" onclick="switchRulesSection('footers')">尾注规则</button>
+          <button class="rules-nav-btn" id="rulesNavBtnTest" onclick="switchRulesSection('test')">规则试跑</button>
+        </div>
+
+        <div class="rules-section active" id="rulesSectionScenes">
+
+        <div class="rules-nav" id="scenePillNav">
+          <button class="rules-nav-btn active" id="sceneBtn_verify" onclick="switchSceneCard('verify')">六位数字核验</button>
+          <button class="rules-nav-btn" id="sceneBtn_universal_code" onclick="switchSceneCard('universal_code')">索取通行码</button>
+          <button class="rules-nav-btn" id="sceneBtn_help" onclick="switchSceneCard('help')">使用指南</button>
+          <button class="rules-nav-btn" id="sceneBtn_projects" onclick="switchSceneCard('projects')">项目清单</button>
+          <button class="rules-nav-btn" id="sceneBtn_custom" onclick="switchSceneCard('custom')">自定义场景</button>
+          <button class="rules-nav-btn" id="sceneBtn_fallback" onclick="switchSceneCard('fallback')">乱发文字</button>
+          <button class="rules-nav-btn" id="sceneBtn_media" onclick="switchSceneCard('media')">表情包/语音</button>
+          <button class="rules-nav-btn" id="sceneBtn_welcome" onclick="switchSceneCard('welcome')">粉丝新关注</button>
+        </div>
+
+
+        <!-- 场景卡：六位数字核销（锁定触发，三种结果） -->
+        <div class="card scene-card" id="sceneCard_verify" style="display:none;">
           <div class="card-header">
             <div>
-              <div class="card-title">📝 系统全局默认尾注池（支持勾选即生效、支持多选/单选叠加）</div>
+              <div class="card-title">六位数字核验（流向二）<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+              <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">用户发送任意 6 位数字即触发本组场景，按结果三选一。触发条件是与业务网站的对接契约，不可修改。</div>
+            </div>
+          </div>
+          <div class="rules-nav" style="margin-bottom:12px;">
+            <button class="rules-nav-btn active" id="digitBtn_code_success" onclick="switchDigitResult('code_success')">验证成功</button>
+            <button class="rules-nav-btn" id="digitBtn_code_invalid" onclick="switchDigitResult('code_invalid')">输错或已过期</button>
+            <button class="rules-nav-btn" id="digitBtn_code_used" onclick="switchDigitResult('code_used')">重复核销</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div id="digitBlock_code_success" style="border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; background:var(--panel-soft);">
+              <div style="font-size:13.5px; font-weight:600; color:#34d399; margin-bottom:6px;">验证成功</div>
+              <textarea id="reply_code_success" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:11.5px; color:var(--text-muted);">变量：<code>{project_name}</code> <code>{project_url}</code>（未填网址时自动微创消融）</span>
+                <button class="btn-action-sm" onclick="saveReplyField('code_success')">保存</button>
+              </div>
+            </div>
+            <div id="digitBlock_code_invalid" style="display:none; border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; background:var(--panel-soft);">
+              <div style="font-size:13.5px; font-weight:600; color:#f59e0b; margin-bottom:6px;">输错或已过期</div>
+              <textarea id="reply_code_invalid" rows="2" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:11.5px; color:var(--text-muted);">变量：<code>{code}</code></span>
+                <button class="btn-action-sm" onclick="saveReplyField('code_invalid')">保存</button>
+              </div>
+            </div>
+            <div id="digitBlock_code_used" style="display:none; border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; background:var(--panel-soft);">
+              <div style="font-size:13.5px; font-weight:600; color:#60a5fa; margin-bottom:6px;">重复核销</div>
+              <textarea id="reply_code_used" rows="2" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:11.5px; color:var(--text-muted);">变量：<code>{code}</code></span>
+                <button class="btn-action-sm" onclick="saveReplyField('code_used')">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 场景卡：索取通行码（关键词可编辑） -->
+        <div class="card scene-card" id="sceneCard_universal_code" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">索取通行码（流向一）<span id="state_universal_code" style="font-size:12px; margin-left:6px;"></span></div>
+            <label style="font-size:12.5px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <input type="checkbox" id="enabled_universal_code" onchange="toggleBuiltin('universal_code', this.checked)"> 启用
+            </label>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">触发：用户发送以下任一关键词 → 回复：生成一个 6 位通行码发给他，填入网站表单核销。</div>
+          <div class="kw-chip-wrap" id="chips_universal_code"></div>
+          <div style="display:flex; gap:8px; margin:8px 0 12px;">
+            <input type="text" id="kwinput_universal_code" placeholder="新增触发词，回车添加" style="flex:1; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" onkeydown="if(event.key==='Enter'){ addBuiltinKeyword('universal_code'); }">
+            <button class="btn-action-sm" onclick="addBuiltinKeyword('universal_code')">添加</button>
+          </div>
+          <textarea id="reply_universal_code" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:11.5px; color:var(--text-muted);">变量：<code>{code}</code></span>
+            <button class="btn-action-sm" onclick="saveReplyField('universal_code')">保存本场景（触发词 + 文案）</button>
+          </div>
+        </div>
+
+        <!-- 场景卡：使用指南 -->
+        <div class="card scene-card" id="sceneCard_help" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">使用指南<span id="state_help" style="font-size:12px; margin-left:6px;"></span></div>
+            <label style="font-size:12.5px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <input type="checkbox" id="enabled_help" onchange="toggleBuiltin('help', this.checked)"> 启用
+            </label>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">触发：用户发送以下任一关键词 → 回复：使用指南文案。</div>
+          <div class="kw-chip-wrap" id="chips_help"></div>
+          <div style="display:flex; gap:8px; margin:8px 0 12px;">
+            <input type="text" id="kwinput_help" placeholder="新增触发词，回车添加" style="flex:1; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" onkeydown="if(event.key==='Enter'){ addBuiltinKeyword('help'); }">
+            <button class="btn-action-sm" onclick="addBuiltinKeyword('help')">添加</button>
+          </div>
+          <textarea id="reply_help" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:11.5px; color:var(--text-muted);">变量：无</span>
+            <button class="btn-action-sm" onclick="saveReplyField('help')">保存本场景（触发词 + 文案）</button>
+          </div>
+        </div>
+
+        <!-- 场景卡：项目清单 -->
+        <div class="card scene-card" id="sceneCard_projects" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">项目清单<span id="state_projects" style="font-size:12px; margin-left:6px;"></span></div>
+            <label style="font-size:12.5px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <input type="checkbox" id="enabled_projects" onchange="toggleBuiltin('projects', this.checked)"> 启用
+            </label>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">触发：用户发送以下任一关键词 → 回复：当前已启用的业务项目列表（自动生成）。</div>
+          <div class="kw-chip-wrap" id="chips_projects"></div>
+          <div style="display:flex; gap:8px; margin:8px 0 12px;">
+            <input type="text" id="kwinput_projects" placeholder="新增触发词，回车添加" style="flex:1; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" onkeydown="if(event.key==='Enter'){ addBuiltinKeyword('projects'); }">
+            <button class="btn-action-sm" onclick="addBuiltinKeyword('projects')">添加</button>
+          </div>
+          <textarea id="reply_projects" rows="2" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:11.5px; color:var(--text-muted);">变量：<code>{project_list}</code></span>
+            <button class="btn-action-sm" onclick="saveReplyField('projects')">保存本场景（触发词 + 文案）</button>
+          </div>
+        </div>
+
+        <!-- 场景卡：自定义场景 -->
+        <div class="card scene-card" id="sceneCard_custom" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">自定义场景</div>
+            <button class="btn-primary" onclick="openCustomRuleModal()">新增场景</button>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">自由添加的场景：自己定触发词和回复内容，优先级排在内置关键词之后、兜底之前。</div>
+          <div id="customRulesContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
+        <!-- 场景卡：兜底（锁定） -->
+        <div class="card scene-card" id="sceneCard_fallback" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">乱发文字（兜底）<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">文字消息未命中以上任何规则时回复本内容。</div>
+          <textarea id="reply_unknown_text" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+            <button class="btn-action-sm" onclick="saveReplyField('unknown_text')">保存</button>
+          </div>
+        </div>
+
+        <!-- 场景卡：非文字消息（锁定） -->
+        <div class="card scene-card" id="sceneCard_media" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">表情包 / 语音 / 图片<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">用户发送非文字消息时回复本内容。</div>
+          <textarea id="reply_media_message" rows="2" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+            <button class="btn-action-sm" onclick="saveReplyField('media_message')">保存</button>
+          </div>
+        </div>
+
+        <!-- 场景卡：粉丝新关注（锁定） -->
+        <div class="card scene-card" id="sceneCard_welcome" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">粉丝新关注<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">用户关注公众号时自动回复本内容。</div>
+          <textarea id="reply_welcome" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+            <button class="btn-action-sm" onclick="saveReplyField('welcome')">保存</button>
+          </div>
+        </div>
+
+        </div>
+
+                <div class="rules-section" id="rulesSectionFooters">
+      <div class="doc-container" style="display:flex; flex-direction:row; flex-wrap:wrap; gap:16px; align-items:flex-start; max-width:none;">
+
+        <!-- 顶部操作栏与介绍 -->
+        <div class="card" style="flex:1; min-width:360px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">系统全局默认尾注池（支持勾选即生效、支持多选/单选叠加）</div>
               <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
                 当公众号下发通行码、关注欢迎语、帮助指南，或业务项目选择了【叠加系统默认尾注】时，勾选的模版内容将作为尾注自动附加在微信回复末尾。
               </div>
             </div>
-            <button class="btn-primary" onclick="openAddFooterModal()">➕ 新建尾注模版</button>
+            <button class="btn-primary" onclick="openAddFooterModal()">新建尾注模版</button>
           </div>
 
           <!-- 模式切换与当前生效状态提示 -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 10px 14px; background: var(--panel-soft); border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
             <div style="font-size: 13px; color: var(--text-main);">
-              🔘 选择模式：
+              选择模式：
               <label style="margin-right: 14px; cursor: pointer;"><input type="radio" name="footerSelectMode" value="multi" checked onchange="switchFooterMode('multi')"> 自由多选（组合追加）</label>
               <label style="cursor: pointer;"><input type="radio" name="footerSelectMode" value="single" onchange="switchFooterMode('single')"> 互斥单选（唯一指定）</label>
             </div>
-            <button class="btn-action-sm" onclick="clearAllFooters()">🚫 一键全不选（清空尾注）</button>
+            <button class="btn-action-sm" onclick="clearAllFooters()">一键全不选（清空尾注）</button>
           </div>
 
           <!-- 尾注列表 -->
@@ -1424,9 +1801,9 @@
         </div>
 
         <!-- 实时回复预览卡片 -->
-        <div class="card">
+        <div class="card" style="flex:1.5; min-width:400px;">
           <div class="card-header">
-            <div class="card-title">📱 当前默认尾注在微信中的实际回复预览（勾选状态实时联动）</div>
+            <div class="card-title">当前默认尾注在微信中的实际回复预览（勾选状态实时联动）</div>
             <span style="font-size: 12px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 4px;">所见即所得</span>
           </div>
           <div style="background: var(--preview-wrap-bg); border-radius: 10px; padding: 16px; border: 1px solid var(--border-color);">
@@ -1440,78 +1817,84 @@
         </div>
 
       </div>
-    </div>
+    
+        </div>
 
-    <!-- ================== Tab 4: 全场景回复文案与各类型消息预览 ================== -->
-    <div id="tab-replies" class="tab-content">
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        
-        <!-- 顶部：场景选择控制器 -->
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-            <div>
-              <div class="card-title">💬 公众号全场景消息回复与实时仿真预览</div>
-              <div style="font-size: 13px; color: #64748b; margin-top: 2px;">
-                选择下方的消息类型进行针对性配置，右侧实时呈现该场景在微信公众号中的 1:1 回复形态。
+        <div class="rules-section" id="rulesSectionTest">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">规则试跑</div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">模拟一条用户消息，立刻看到命中哪条规则、机器人实际回复什么。改完规则先在这里验证。</div>
               </div>
             </div>
-            <button class="btn-primary" onclick="saveRepliesConfig()" style="display: flex; align-items: center; gap: 6px;">
-              💾 保存全部回复配置
-            </button>
-          </div>
-
-          <!-- 9 个大药丸场景切换选项卡 -->
-          <div class="scenario-pill-wrap" id="scenarioPillWrap">
-            <button class="scenario-pill active" onclick="switchPreviewScenario('welcome')">🔔 粉丝新关注</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('code_success')">✅ 验证成功</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('code_invalid')">⚠️ 输错/已过期</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('code_used')">ℹ️ 重复核销</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('universal_code')">🔑 索取通行码</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('projects')">🌐 查询项目</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('help')">📖 发送帮助</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('unknown_text')">🤖 乱发文字/非6位数字</button>
-            <button class="scenario-pill" onclick="switchPreviewScenario('media_message')">🖼️ 扔表情包/语音</button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <input type="text" id="testMsgInput" placeholder="输入模拟的用户消息，如：验证码 / 帮助 / 你好 / 6 位数字" style="flex: 1; min-width: 220px; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main);" onkeydown="if(event.key==='Enter') runRuleTest()">
+              <button class="btn-primary" onclick="runRuleTest()">试跑</button>
+            </div>
+            <div id="testResultArea" style="display: none; margin-top: 14px;"></div>
           </div>
         </div>
 
-        <!-- 下方左右分栏：左专注编辑，右所见即所得仿真 -->
-        <div class="sandbox-layout" style="align-items: flex-start;">
-          
-          <!-- 左侧：当前选中场景的专注编辑面板 -->
-          <div style="flex: 1.2;">
-            <div class="card" style="min-height: 420px; display: flex; flex-direction: column;">
-              <div id="activeScenarioEditor" style="flex: 1; display: flex; flex-direction: column;">
-                <!-- 动态切换渲染当前场景的编辑表单 -->
-              </div>
+      </div>
+    </div>
+
+    <!-- ================== 账号与授权（仅管理员） ================== -->
+    <div id="tab-accounts" class="tab-content">
+      <div class="doc-container">
+
+        <div class="rules-nav">
+          <button class="rules-nav-btn" id="authNavBtnLicenses" onclick="switchAuthSection('licenses')">项目激活码</button>
+          <button class="rules-nav-btn" id="authNavBtnAccounts" onclick="switchAuthSection('accounts')">平台账号</button>
+        </div>
+
+        <div class="rules-section" id="authSectionAccounts">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">平台账号</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 openid 为唯一身份，登录即注册。禁用账号将立即踢出其全部会话并阻止再次登录。</div>
             </div>
+            <button class="btn-action-sm" onclick="loadAccounts()">刷新</button>
           </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <input type="text" id="accFilterKw" placeholder="搜索 openid / 账号ID" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderAccounts()">
+            <select id="accFilterRole" onchange="renderAccounts()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+              <option value="all">全部角色</option>
+              <option value="admin">管理员</option>
+              <option value="tenant">普通用户</option>
+            </select>
+            <select id="accFilterStatus" onchange="renderAccounts()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+              <option value="all">全部状态</option>
+              <option value="active">正常</option>
+              <option value="disabled">已禁用</option>
+            </select>
+          </div>
+          <div id="accountsContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+        </div>
 
-          <!-- 右侧：当前选中场景的仿真微信实时预览 -->
-          <div style="flex: 1; position: sticky; top: 80px;">
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">📱 微信端真实回复效果预览</div>
-                <span style="font-size: 12px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 4px;">所见即所得</span>
-              </div>
-
-              <!-- 当前场景说明 notice -->
-              <div style="font-size: 12.5px; color: var(--text-main); background: var(--panel-soft); border-left: 3px solid var(--primary); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; border: 1px solid var(--border-color); border-left-width: 3px;" id="scenarioDescNotice">
-                <!-- 动态说明文字 -->
-              </div>
-
-              <!-- 微信聊天仿真气泡 -->
-              <div style="background: var(--preview-wrap-bg); border-radius: 12px; padding: 18px 14px; border: 1px solid var(--border-color); min-height: 240px;">
-                <div style="display:flex; flex-direction:column; gap:12px;" id="scenarioChatSimulation">
-                  <!-- 动态模拟微信对话 -->
-                </div>
-              </div>
-
-              <div style="font-size: 11.5px; color: #94a3b8; margin-top: 10px; line-height: 1.5;">
-                💡 预览会调用：当前激活的默认尾注 + 实际开启的项目列表 + 未填网址时的微创安全消融规则。
-              </div>
+        <div class="rules-section active" id="authSectionLicenses">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">项目激活码</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">普通用户创建项目必须消耗一枚激活码；项目到期 = 兑换日 + 可用天数，提前续期自动顺延，过期续期从当天重算。码一经使用立即销毁。</div>
             </div>
+            <button class="btn-primary" onclick="openGenLicenseModal()">批量生成</button>
           </div>
-
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <input type="text" id="licFilterKw" placeholder="搜索激活码 / 用于项目" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderLicenses()">
+            <select id="licFilterStatus" onchange="renderLicenses()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+              <option value="all">全部状态</option>
+              <option value="未使用">未使用</option>
+              <option value="已使用">已使用</option>
+              <option value="已过期">已过期</option>
+              <option value="已作废">已作废</option>
+            </select>
+          </div>
+          <div id="licensesContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
         </div>
 
       </div>
@@ -1527,13 +1910,13 @@
             <span class="doc-nav-title">AI 对接说明生成器</span>
             <span class="doc-nav-sub">一键生成对接 Prompt · 直接投喂 AI 助手</span>
           </button>
-          <button class="doc-nav-btn" id="btnDocNavFlow1" onclick="switchDocSection('flow1')">
-            <span class="doc-nav-title">流向一：网站弹码登录</span>
-            <span class="doc-nav-sub">浏览器弹码 · 手机微信发送数字 · 网站自动放行</span>
-          </button>
           <button class="doc-nav-btn" id="btnDocNavFlow2" onclick="switchDocSection('flow2')">
-            <span class="doc-nav-title">流向二：微信索码核销</span>
+            <span class="doc-nav-title">流向一：微信索码核销</span>
             <span class="doc-nav-sub">微信回复索码 · 网站表单填入 · 零短信费</span>
+          </button>
+          <button class="doc-nav-btn" id="btnDocNavFlow1" onclick="switchDocSection('flow1')">
+            <span class="doc-nav-title">流向二：网站弹码登录</span>
+            <span class="doc-nav-sub">浏览器弹码 · 手机微信发送数字 · 网站自动放行</span>
           </button>
           <button class="doc-nav-btn" id="btnDocNavGuide" onclick="switchDocSection('guide')">
             <span class="doc-nav-title">架构认知与 3 步指南</span>
@@ -1571,8 +1954,8 @@
                 <label>拟接入的验证流向：</label>
                 <select id="aiFlowSelect" onchange="regenerateAiPrompt()">
                   <option value="both">双流向全接入（网站弹码轮询 + 微信索码表单核销）</option>
-                  <option value="flow1">仅流向一：网站弹码 ➔ 微信发送数字 ➔ 自动放行</option>
-                  <option value="flow2">仅流向二：微信索取 6 位通行码 ➔ 网站表单核销</option>
+                  <option value="flow1">仅流向二：网站弹码 微信发送数字 自动放行</option>
+                  <option value="flow2">仅流向一：微信索取 6 位通行码 网站表单核销</option>
                 </select>
               </div>
             </div>
@@ -1585,16 +1968,99 @@
                 </span>
                 <span style="font-size: 11.5px; color: var(--text-muted);" id="aiPromptWordCount">约 1000 字</span>
               </div>
-              <textarea id="aiPromptPreviewArea" readonly style="width: 100%; height: 210px; font-family: Consolas, Monaco, monospace; font-size: 12.5px; line-height: 1.6; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--code-block-bg); color: #e2e8f0; resize: vertical;"></textarea>
+              <textarea id="aiPromptPreviewArea" readonly style="width: 100%; min-height: 260px; font-family: Consolas, Monaco, monospace; font-size: 12.5px; line-height: 1.6; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--code-block-bg); color: #e2e8f0; resize: vertical;"></textarea>
             </div>
           </div>
         </div>
 
-        <!-- ================== 分组 2: 流向一 网站弹码登录 ================== -->
+        <!-- ================== 分组 2: 流向一 微信索码核销 ================== -->
+        <div class="doc-section" id="docSectionFlow2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">【流向一说明】微信索码 获得通行码 网站表单填码核销</div>
+              <span class="tag-green">适合 APP/H5/表单 (零短信费)</span>
+            </div>
+
+            <div style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px; opacity: 0.9;">
+              <b>适用场景</b>：替代传统短信验证码。表单提示用户在公众号回复【验证码】，公众号回复 6 位数字，用户将数字填入表单提交，实际项目后端向中枢核销。
+            </div>
+
+            <div class="doc-flow-diagram">
+【用户微信公众号】                         【中枢服务平台】                       【实际业务网站后端】
+      │                                       │                                        │
+      │ 1. 用户发送: "验证码"                  │                                        │
+      │──────────────────────────────────────>│                                        │
+      │                                       │ 检查该用户 5 分钟内是否有活跃码        │
+      │   <-- 回复: 【209710】(有效期5分钟)    │ 绑定关系: 209710 <---> openID          │
+      │                                       │                                        │
+      │ 2. 用户将 209710 填入网站输入框并提交                                          │
+      │───────────────────────────────────────────────────────────────────────────────>│
+      │                                       │                                        │
+      │                                       │ 3. 网站后端调: /api/code/verify-universal
+      │                                       │<───────────────────────────────────────│
+      │                                       │    {"project":"your_project", "code":"209710"}
+      │                                       │                                        │
+      │                                       │ 4. 校验存在 标记核销 立即消费销毁  │
+      │                                       │──> 返回: valid: true, openid: xxx ─────>│
+      │                                       │                                        ▼
+      │                                       │              [实际系统核销成功，执行后续逻辑]
+            </div>
+
+            <h4 style="margin: 14px 0 8px; font-size: 14px; color: var(--text-main);">涉及接口：</h4>
+            <table class="doc-table">
+              <tr>
+                <th style="width: 25%;">接口与方法</th>
+                <th style="width: 35%;">请求参数</th>
+                <th>业务说明</th>
+              </tr>
+              <tr>
+                <td><code>POST /api/code/verify-universal</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "code": "209710"}</code></td>
+                <td>
+                  1. <b>严格密钥校验</b>：项目必须在白名单启用且 key 正确；<br>
+                  2. <b>单次消费</b>：核销成功后立即销毁，防止重放；<br>
+                  3. <b>过期保护</b>：超过有效时间自动失效；<br>
+                  4. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，英文代号 <code>project</code>，中文名称 <code>project_name</code>；<br>
+                  5. <b>细分状态</b>：若重复核销返回 <code>error_type: "code_already_used"</code>，未找到或过期返回 <code>code_not_found</code>。
+                </td>
+              </tr>
+            </table>
+
+            <div class="code-block">
+              <button class="code-block-btn" onclick="copySnippet('codeFlow2')">复制代码</button>
+              <pre id="codeFlow2"># 【流向一后端核销调用示例】（以 Python 为例）
+import requests
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/user/login-by-wechat', methods=['POST'])
+def login_by_wechat():
+    user_code = request.json.get('code')
+
+    # 请求中枢平台进行核销
+    verify_resp = requests.post('https://中枢域名/api/code/verify-universal', json={
+        'project': 'your_project',
+        'key': 'sec_your_key',
+        'code': user_code
+    })
+    res_data = verify_resp.json()
+
+    if res_data.get('code') == 0 and res_data['data']['valid']:
+        wx_openid = res_data['data']['openid']
+        # 核销成功，拿着 openid 处理业务系统自身的用户登录或注册
+        return jsonify({'status': 'success', 'openid': wx_openid})
+    else:
+        return jsonify({'status': 'fail', 'msg': res_data.get('message', '验证码无效')}), 400</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================== 分组 3: 流向二 网站弹码登录 ================== -->
         <div class="doc-section" id="docSectionFlow1">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">【流向一说明】网站弹码 ➔ 微信发送纯数字 ➔ 网站免操作自动放行</div>
+              <div class="card-title">【流向二说明】网站弹码 微信发送纯数字 网站免操作自动放行</div>
               <span class="tag-blue">电脑与手机浏览器完全通用</span>
             </div>
 
@@ -1655,7 +2121,7 @@
 
             <div class="code-block">
               <button class="code-block-btn" onclick="copySnippet('codeFlow1')">复制代码</button>
-              <pre id="codeFlow1">// 【流向一标准调用示例】
+              <pre id="codeFlow1">// 【流向二标准调用示例】
 async function handleWechatScanLogin() {
   // 步骤 1: 申请 6 位验证码（传入项目标识与安全密钥）
   const createRes = await fetch('https://中枢域名/api/code/create', {
@@ -1682,89 +2148,6 @@ async function handleWechatScanLogin() {
     }
   }, 1500);
 }</pre>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================== 分组 3: 流向二 微信索码核销 ================== -->
-        <div class="doc-section" id="docSectionFlow2">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">【流向二说明】微信索码 ➔ 获得通行码 ➔ 网站表单填码核销</div>
-              <span class="tag-green">适合 APP/H5/表单 (零短信费)</span>
-            </div>
-
-            <div style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px; opacity: 0.9;">
-              <b>适用场景</b>：替代传统短信验证码。表单提示用户在公众号回复【验证码】，公众号回复 6 位数字，用户将数字填入表单提交，实际项目后端向中枢核销。
-            </div>
-
-            <div class="doc-flow-diagram">
-【用户微信公众号】                         【中枢服务平台】                       【实际业务网站后端】
-      │                                       │                                        │
-      │ 1. 用户发送: "验证码"                  │                                        │
-      │──────────────────────────────────────>│                                        │
-      │                                       │ 检查该用户 5 分钟内是否有活跃码        │
-      │   <-- 回复: 【209710】(有效期5分钟)    │ 绑定关系: 209710 <---> openID          │
-      │                                       │                                        │
-      │ 2. 用户将 209710 填入网站输入框并提交                                          │
-      │───────────────────────────────────────────────────────────────────────────────>│
-      │                                       │                                        │
-      │                                       │ 3. 网站后端调: /api/code/verify-universal
-      │                                       │<───────────────────────────────────────│
-      │                                       │    {"project":"your_project", "code":"209710"}
-      │                                       │                                        │
-      │                                       │ 4. 校验存在 ➔ 标记核销 ➔ 立即消费销毁  │
-      │                                       │──> 返回: valid: true, openid: xxx ─────>│
-      │                                       │                                        ▼
-      │                                       │              [实际系统核销成功，执行后续逻辑]
-            </div>
-
-            <h4 style="margin: 14px 0 8px; font-size: 14px; color: var(--text-main);">涉及接口：</h4>
-            <table class="doc-table">
-              <tr>
-                <th style="width: 25%;">接口与方法</th>
-                <th style="width: 35%;">请求参数</th>
-                <th>业务说明</th>
-              </tr>
-              <tr>
-                <td><code>POST /api/code/verify-universal</code></td>
-                <td><code>{"project": "your_project", "key": "项目安全密钥", "code": "209710"}</code></td>
-                <td>
-                  1. <b>严格密钥校验</b>：项目必须在白名单启用且 key 正确；<br>
-                  2. <b>单次消费</b>：核销成功后立即销毁，防止重放；<br>
-                  3. <b>过期保护</b>：超过有效时间自动失效；<br>
-                  4. <b>成功返回</b>：返回验证码对应的微信 <code>openid</code>，英文代号 <code>project</code>，中文名称 <code>project_name</code>；<br>
-                  5. <b>细分状态</b>：若重复核销返回 <code>error_type: "code_already_used"</code>，未找到或过期返回 <code>code_not_found</code>。
-                </td>
-              </tr>
-            </table>
-
-            <div class="code-block">
-              <button class="code-block-btn" onclick="copySnippet('codeFlow2')">复制代码</button>
-              <pre id="codeFlow2"># 【流向二后端核销调用示例】（以 Python 为例）
-import requests
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-@app.route('/api/user/login-by-wechat', methods=['POST'])
-def login_by_wechat():
-    user_code = request.json.get('code')
-
-    # 请求中枢平台进行核销
-    verify_resp = requests.post('https://中枢域名/api/code/verify-universal', json={
-        'project': 'your_project',
-        'key': 'sec_your_key',
-        'code': user_code
-    })
-    res_data = verify_resp.json()
-
-    if res_data.get('code') == 0 and res_data['data']['valid']:
-        wx_openid = res_data['data']['openid']
-        # 核销成功，拿着 openid 处理业务系统自身的用户登录或注册
-        return jsonify({'status': 'success', 'openid': wx_openid})
-    else:
-        return jsonify({'status': 'fail', 'msg': res_data.get('message', '验证码无效')}), 400</pre>
             </div>
           </div>
         </div>
@@ -1808,8 +2191,8 @@ def login_by_wechat():
               <div style="font-size: 14px; line-height: 1.6;">
                 <span class="doc-step-badge">2</span>
                 <b>第二步：根据实际系统场景，选择对接流向（或两者兼备）</b><br>
-                • 浏览器端弹码免输入 ➔ 选择【流向一】；<br>
-                • 微信获取 6 位数字填表单 ➔ 选择【流向二】。
+                • 浏览器端弹码免输入 选择【流向二】；<br>
+                • 微信获取 6 位数字填表单 选择【流向一】。
               </div>
 
               <div style="font-size: 14px; line-height: 1.6;">
@@ -1826,14 +2209,123 @@ def login_by_wechat():
 
   </div>
 
+  </div>
+  </div>
+
+  <!-- 自定义规则编辑弹窗 -->
+  <div class="modal-overlay" id="customRuleModal">
+    <div class="modal-card" style="width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title" id="customRuleModalTitle">新增自定义回复规则</div>
+        <button class="modal-close" onclick="closeModal('customRuleModal')">×</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">触发词（多个用逗号或空格分隔）：</label>
+          <input type="text" id="customRuleKeywords" placeholder="如：价格, 收费, 多少钱" style="width:100%; height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px;">
+        </div>
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">回复内容：</label>
+          <textarea id="customRuleReply" rows="5" placeholder="用户命中这些词时，机器人回复的内容" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px; resize:vertical;"></textarea>
+        </div>
+        <label style="font-size:13px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="customRuleFooter" checked> 回复末尾追加系统默认尾注
+        </label>
+        <label style="font-size:13px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="customRuleEnabled" checked> 立即启用此规则
+        </label>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn-action-sm" onclick="closeModal('customRuleModal')">取消</button>
+        <button class="btn-primary" onclick="saveCustomRule()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 密钥轮换弹窗 -->
+  <div class="modal-overlay" id="rotateKeyModal">
+    <div class="modal-card" style="width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title">更换项目密钥</div>
+        <button class="modal-close" onclick="closeModal('rotateKeyModal')">×</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <input type="hidden" id="rotateKeyId">
+        <div style="font-size:13px; color:var(--text-main); line-height:1.6; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); padding:10px 12px; border-radius:8px;">
+          更换后<b>旧密钥立即失效</b>，所有使用旧密钥的业务系统将立刻收到 401，需要同步更新它们的配置。核销中的验证码不受影响。
+        </div>
+        <div id="rotateKeyResult" style="display:none;"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn-action-sm" onclick="closeModal('rotateKeyModal')">关闭</button>
+        <button class="btn-primary" onclick="submitRotateKey()" style="background:#dc2626; border-color:#dc2626;">确认更换密钥</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="globalToast" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9999; padding:10px 18px; border-radius:8px; font-size:13.5px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,0.35);"></div>
+
   <!-- ================== 锁屏密码层 ================== -->
+  <!-- 批量生成激活码弹窗 -->
+  <div class="modal-overlay" id="genLicenseModal">
+    <div class="modal-card" style="width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">批量生成激活码</div>
+        <button class="modal-close" onclick="closeModal('genLicenseModal')">×</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">生成数量：</label>
+          <input type="number" id="genLicenseCount" value="1" min="1" max="100" style="width:100%; height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px;">
+        </div>
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">可用天数（兑换后项目能用多久）：</label>
+          <input type="number" id="genLicenseDays" value="30" min="1" max="3650" style="width:100%; height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px;">
+        </div>
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">兑换期天数（生成后多少天内必须兑换）：</label>
+          <input type="number" id="genLicenseRedeem" value="90" min="1" max="3650" style="width:100%; height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px;">
+        </div>
+        <div id="genLicenseResult" style="display:none;"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn-action-sm" onclick="closeModal('genLicenseModal')">关闭</button>
+        <button class="btn-primary" onclick="submitGenLicense()">生成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 项目续期弹窗 -->
+  <div class="modal-overlay" id="renewModal">
+    <div class="modal-card" style="width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title">项目续期</div>
+        <button class="modal-close" onclick="closeModal('renewModal')">×</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
+        <input type="hidden" id="renewProjectId">
+        <div style="font-size:13px; color:var(--text-main); line-height:1.6; background:var(--panel-soft); padding:10px 12px; border-radius:8px;">
+          未到期续期将在原到期时间上顺延；已到期项目从今天重新起算。
+        </div>
+        <div>
+          <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">激活码：</label>
+          <input type="text" id="renewLicenseCode" placeholder="输入新的激活码" style="width:100%; height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px;">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn-action-sm" onclick="closeModal('renewModal')">取消</button>
+        <button class="btn-primary" onclick="submitRenew()">确认续期</button>
+      </div>
+    </div>
+  </div>
+
   <div id="lockScreen">
     <div class="lock-card">
-      <div class="lock-icon">🔐</div>
-      <div class="lock-title">中枢控制台安全锁</div>
-      <div class="lock-desc">本项目已开启公网访问保护。请输入管理密码解锁控制台（默认密码保存在 <code>config/auth.json</code>）。</div>
-      <input type="password" class="lock-input" id="adminPasswordInput" placeholder="输入控制台管理密码 (默认: admin)" onkeydown="if(event.key==='Enter') unlockConsole()">
-      <button class="lock-btn" onclick="unlockConsole()">解锁并进入控制台</button>
+      <div class="lock-title">中枢控制台 · 微信验证码登录</div>
+      <div class="lock-desc" id="lockDescMain">请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录。首个登录的账号将自动成为管理员。</div>
+      <input type="text" class="lock-input" id="loginCodeInput" placeholder="输入公众号收到的 6 位通行码" maxlength="6" onkeydown="if(event.key==='Enter') unlockConsole()">
+      <button class="lock-btn" onclick="unlockConsole()">登录控制台</button>
+      <button class="lock-btn" id="devInitBtn" onclick="devBootstrap()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地测试通道：一键初始化（本浏览器成为管理员）</button>
       <div id="lockErrorMsg" style="color: #ef4444; font-size: 13px; margin-top: 12px; display: none;"></div>
     </div>
   </div>
@@ -1842,8 +2334,8 @@ def login_by_wechat():
   <div class="modal-overlay" id="addProjectModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <div class="modal-title">➕ 接入新的业务项目</div>
-        <button class="modal-close" onclick="closeModal('addProjectModal')">✕</button>
+        <div class="modal-title">接入新的业务项目</div>
+        <button class="modal-close" onclick="closeModal('addProjectModal')"></button>
       </div>
 
       <div class="modal-two-col">
@@ -1856,6 +2348,10 @@ def login_by_wechat():
           <div class="input-row">
             <label><span class="req-star">*</span>项目中文名称:</label>
             <input type="text" id="newProjectName" placeholder="如 私人网盘, 技术论坛 (必填)" oninput="updateAddPreview()">
+          </div>
+          <div class="input-row" id="licenseRow" style="display:none;">
+            <label><span class="req-star">*</span>激活码:</label>
+            <input type="text" id="newProjectLicense" placeholder="向管理员获取的项目激活码，如 AB2C-3DEF-4GH5">
           </div>
           <div class="input-row">
             <label>项目网站网址:</label>
@@ -1876,14 +2372,14 @@ def login_by_wechat():
             </label>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; padding-left: 20px;">
-            💡 勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
+            勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
           </div>
         </div>
 
         <!-- 右侧实时微信回复预览 -->
         <div class="modal-col-preview">
           <div class="preview-header">
-            <span>📱 微信粉丝核销后实际收到的回复效果：</span>
+            <span>微信粉丝核销后实际收到的回复效果：</span>
           </div>
           <div class="preview-bubble-wrap">
             <div class="wx-avatar official" style="width:32px; height:32px; font-size:14px;">睡</div>
@@ -1905,8 +2401,8 @@ def login_by_wechat():
   <div class="modal-overlay" id="editProjectModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <div class="modal-title">✏️ 编辑业务项目</div>
-        <button class="modal-close" onclick="closeModal('editProjectModal')">✕</button>
+        <div class="modal-title">编辑业务项目</div>
+        <button class="modal-close" onclick="closeModal('editProjectModal')"></button>
       </div>
 
       <div class="modal-two-col">
@@ -1939,14 +2435,14 @@ def login_by_wechat():
             </label>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; padding-left: 20px;">
-            💡 勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
+            勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
           </div>
         </div>
 
         <!-- 右侧实时微信回复预览 -->
         <div class="modal-col-preview">
           <div class="preview-header">
-            <span>📱 微信粉丝核销后实际收到的回复效果：</span>
+            <span>微信粉丝核销后实际收到的回复效果：</span>
           </div>
           <div class="preview-bubble-wrap">
             <div class="wx-avatar official" style="width:32px; height:32px; font-size:14px;">睡</div>
@@ -1968,8 +2464,8 @@ def login_by_wechat():
   <div class="modal-overlay" id="footerModal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title" id="footerModalTitle">➕ 新建默认尾注模版</div>
-        <button class="modal-close" onclick="closeModal('footerModal')">✕</button>
+        <div class="modal-title" id="footerModalTitle">新建默认尾注模版</div>
+        <button class="modal-close" onclick="closeModal('footerModal')"></button>
       </div>
       <input type="hidden" id="modalFooterId" value="">
       <div class="input-row">
@@ -1978,7 +2474,7 @@ def login_by_wechat():
       </div>
       <div class="input-row" style="align-items: flex-start;">
         <label style="margin-top: 6px;"><span class="req-star">*</span>尾注文案:</label>
-        <textarea id="modalFooterContent" rows="4" placeholder="支持多行回车换行。&#10;如：🌟 推荐站点：实用工具导航站（https://example.com）"></textarea>
+        <textarea id="modalFooterContent" rows="4" placeholder="支持多行回车换行。&#10;如：推荐站点：实用工具导航站（https://example.com）"></textarea>
       </div>
       <div class="input-row" style="margin-bottom: 4px;">
         <label style="width: auto; cursor: pointer; display: flex; align-items: center; gap: 6px;">
@@ -1994,26 +2490,6 @@ def login_by_wechat():
   </div>
 
   <!-- ================== 模态弹窗：修改管理密码 ================== -->
-  <div class="modal-overlay" id="changePasswordModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">⚙️ 修改控制台管理密码</div>
-        <button class="modal-close" onclick="closeModal('changePasswordModal')">✕</button>
-      </div>
-      <div class="input-row">
-        <label>原管理密码:</label>
-        <input type="password" id="oldPasswordInput" placeholder="输入当前密码">
-      </div>
-      <div class="input-row">
-        <label>新管理密码:</label>
-        <input type="password" id="newPasswordInput" placeholder="输入新密码">
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-        <button class="btn-action-sm" onclick="closeModal('changePasswordModal')">取消</button>
-        <button class="btn-primary" onclick="submitChangePassword()">确认修改</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     function getSavedToken() {
@@ -2039,7 +2515,11 @@ def login_by_wechat():
     }
 
     let currentAuthPassword = getSavedToken();
-    const currentOpenID = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
+    let currentOpenID = localStorage.getItem('sandbox_openid');
+    if (!currentOpenID) {
+      currentOpenID = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
+      localStorage.setItem('sandbox_openid', currentOpenID);
+    }
     let currentPollingTimer = null;
     let latestActiveCode = "";
     let cachedProjects = [];
@@ -2066,10 +2546,10 @@ def login_by_wechat():
       const btn = document.getElementById('themeToggleBtn');
       if (theme === 'light') {
         document.body.classList.add('theme-light');
-        if (btn) btn.innerHTML = '☀️ 日间模式';
+        if (btn) btn.innerHTML = '日间模式';
       } else {
         document.body.classList.remove('theme-light');
-        if (btn) btn.innerHTML = '🌙 深色模式';
+        if (btn) btn.innerHTML = '深色模式';
       }
       if (typeof renderScenarioPreview === 'function') {
         renderScenarioPreview();
@@ -2095,68 +2575,221 @@ def login_by_wechat():
       }
       regenerateAiPrompt();
 
+      await resumeSessionOrLock();
+    };
+
+    let currentRole = '';
+    let needsInit = false;
+
+    async function resumeSessionOrLock() {
+      try {
+        const bs = await fetch('/api/console/bootstrap-status');
+        const bsj = await bs.json();
+        needsInit = !!(bsj.code === 0 && bsj.data && bsj.data.needs_init);
+      } catch (e) { needsInit = false; }
+      const devBtn = document.getElementById('devInitBtn');
+      if (devBtn) devBtn.style.display = needsInit ? 'block' : 'none';
+
       if (currentAuthPassword) {
-        const ok = await testPassword(currentAuthPassword);
-        if (ok) {
-          hideLockScreen();
-          loadProjects();
-          loadFooters();
-          loadReplies();
-          return;
+        try {
+          const res = await fetch('/api/console/me', { headers: { 'X-Session-Token': currentAuthPassword } });
+          const json = await res.json();
+          if (json.code === 0 && json.data) {
+            currentRole = json.data.role;
+            hideLockScreen();
+            applyRoleUI();
+            loadProjects(); loadFooters(); loadReplies(); loadRules();
+            return;
+          }
+        } catch (e) {}
+        if (adminToken && adminToken !== currentAuthPassword) {
+          try {
+            const res2 = await fetch('/api/console/me', { headers: { 'X-Session-Token': adminToken } });
+            const json2 = await res2.json();
+            if (json2.code === 0 && json2.data) {
+              currentAuthPassword = adminToken;
+              currentRole = json2.data.role;
+              saveToken(adminToken);
+              localStorage.removeItem('admin_token');
+              adminToken = '';
+              hideLockScreen();
+              applyRoleUI();
+              loadProjects(); loadFooters(); loadReplies(); loadRules();
+              return;
+            }
+          } catch (e2) {}
         }
+        clearSavedToken();
+        currentAuthPassword = '';
+        adminToken = '';
+        localStorage.removeItem('admin_token');
       }
       showLockScreen();
-    };
+    }
+
+    async function devBootstrap() {
+      // 与沙箱共用同一个固定 openid，初始化后沙箱消息即被识别为管理员本人
+      let openid = localStorage.getItem('sandbox_openid');
+      if (!openid) {
+        openid = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
+        localStorage.setItem('sandbox_openid', openid);
+      }
+      try {
+        const res = await fetch('/api/console/bootstrap-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ openid: openid })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data && json.data.token) {
+          currentAuthPassword = json.data.token;
+          currentRole = json.data.role;
+          adminToken = '';
+          localStorage.removeItem('admin_token');
+          saveToken(json.data.token);
+          hideLockScreen();
+          applyRoleUI();
+          loadProjects(); loadFooters(); loadReplies(); loadRules();
+        } else {
+          const errEl = document.getElementById('lockErrorMsg');
+          errEl.textContent = json.message || '初始化失败';
+          errEl.style.display = 'block';
+        }
+      } catch (e) {
+        const errEl = document.getElementById('lockErrorMsg');
+        errEl.textContent = '无法连接到后端服务';
+        errEl.style.display = 'block';
+      }
+    }
+
+    let adminToken = localStorage.getItem('admin_token') || '';
+
+    function applyRoleUI() {
+      const isAdmin = currentRole === 'admin';
+      ['navBtn-accounts', 'navBtn-rules'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isAdmin ? 'flex' : 'none';
+      });
+      const addBtn = document.getElementById('openAddProjectBtn');
+      if (addBtn) addBtn.textContent = isAdmin ? '新增接入项目' : '创建项目（需激活码）';
+      const licenseRow = document.getElementById('licenseRow');
+      if (licenseRow) licenseRow.style.display = isAdmin ? 'none' : 'flex';
+
+      const badge = document.getElementById('viewBadge');
+      const btn = document.getElementById('previewToggleBtn');
+      const previewing = currentRole === 'tenant' && !!adminToken;
+      if (badge) {
+        if (previewing) {
+          badge.textContent = '普通用户视角预览中';
+          badge.style.background = '#78350f';
+          badge.style.color = '#fcd34d';
+        } else {
+          badge.textContent = '正常运行';
+          badge.style.background = '';
+          badge.style.color = '';
+        }
+      }
+      if (btn) {
+        if (isAdmin) {
+          btn.style.display = 'flex';
+          btn.textContent = '预览普通用户视角';
+        } else if (previewing) {
+          btn.style.display = 'flex';
+          btn.textContent = '返回管理员视角';
+        } else {
+          btn.style.display = 'none';
+        }
+      }
+    }
+
+    async function togglePreview() {
+      if (currentRole === 'admin') {
+        try {
+          const res = await fetch('/api/console/preview-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+            body: '{}'
+          });
+          const json = await res.json();
+          if (json.code === 0 && json.data && json.data.token) {
+            adminToken = currentAuthPassword;
+            localStorage.setItem('admin_token', adminToken);
+            currentAuthPassword = json.data.token;
+            currentRole = 'tenant';
+            applyRoleUI();
+            switchTab('projects');
+            showToast('已切换到普通用户视角（服务端真实按租户权限响应）');
+          } else {
+            showToast('' + (json.message || '切换失败'), false);
+          }
+        } catch (e) { showToast('请求异常: ' + e, false); }
+      } else if (adminToken) {
+        currentAuthPassword = adminToken;
+        currentRole = 'admin';
+        applyRoleUI();
+        switchTab('projects');
+        showToast('已返回管理员视角');
+      }
+    }
 
     // 锁屏控制
     function showLockScreen() {
       document.getElementById('lockScreen').style.display = 'flex';
-      document.getElementById('adminPasswordInput').focus();
+      const inp = document.getElementById('loginCodeInput');
+      if (inp) inp.focus();
     }
     function hideLockScreen() {
       document.getElementById('lockScreen').style.display = 'none';
     }
 
     async function unlockConsole() {
-      const pwd = document.getElementById('adminPasswordInput').value.trim();
-      const btn = document.querySelector('.lock-btn');
       const errEl = document.getElementById('lockErrorMsg');
-      if (!pwd) {
-        errEl.textContent = '请输入管理密码';
+      const code = document.getElementById('loginCodeInput').value.trim();
+      errEl.style.display = 'none';
+      if (!code) {
+        errEl.textContent = '请输入公众号收到的 6 位通行码';
         errEl.style.display = 'block';
         return;
       }
 
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '正在验证中...';
-      }
-
-      const res = await testPasswordWithDetail(pwd);
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = '解锁并进入控制台';
-      }
-
-      if (res.ok) {
-        currentAuthPassword = pwd;
-        saveToken(pwd);
-        errEl.style.display = 'none';
-        hideLockScreen();
-        loadProjects();
-        loadFooters();
-        loadReplies();
-      } else {
-        errEl.textContent = res.msg || '密码错误，请查验 config/auth.json 中的密码';
+      try {
+        const path = '/api/console/login';
+        const body = { code: code };
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data && json.data.token) {
+          currentAuthPassword = json.data.token;
+          currentRole = json.data.role;
+          adminToken = '';
+          localStorage.removeItem('admin_token');
+          saveToken(json.data.token);
+          hideLockScreen();
+          applyRoleUI();
+          loadProjects(); loadFooters(); loadReplies(); loadRules();
+        } else {
+          errEl.textContent = json.message || '登录失败';
+          errEl.style.display = 'block';
+        }
+      } catch (e) {
+        errEl.textContent = '无法连接到后端服务，请确认服务已启动';
         errEl.style.display = 'block';
-        document.getElementById('adminPasswordInput').focus();
-        document.getElementById('adminPasswordInput').select();
       }
     }
 
-    function logout() {
+    async function logout() {
+      try { await fetch('/api/console/logout', { method: 'POST', headers: { 'X-Session-Token': currentAuthPassword } }); } catch (e) {}
+      if (adminToken && adminToken !== currentAuthPassword) {
+        try { await fetch('/api/console/logout', { method: 'POST', headers: { 'X-Session-Token': adminToken } }); } catch (e) {}
+      }
       clearSavedToken();
+      localStorage.removeItem('admin_token');
       currentAuthPassword = '';
+      adminToken = '';
+      currentRole = '';
       showLockScreen();
     }
 
@@ -2166,20 +2799,11 @@ def login_by_wechat():
     }
 
     async function testPasswordWithDetail(pwd) {
+      // 兼容保留：现以会话令牌校验
       try {
-        const res = await fetch('/api/console/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pwd })
-        });
-        if (!res.ok) {
-          return { ok: false, msg: `网络连接异常 (HTTP ${res.status})` };
-        }
+        const res = await fetch('/api/console/me', { headers: { 'X-Session-Token': pwd } });
         const json = await res.json();
-        if (json.code === 0) {
-          return { ok: true };
-        }
-        return { ok: false, msg: json.message || '密码不正确' };
+        return { ok: json.code === 0 };
       } catch (e) {
         return { ok: false, msg: '无法连接到后端服务，请确认服务已启动' };
       }
@@ -2190,26 +2814,24 @@ def login_by_wechat():
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-      if (tabId === 'sandbox') {
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        document.getElementById('tab-sandbox').classList.add('active');
-      } else if (tabId === 'projects') {
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
-        document.getElementById('tab-projects').classList.add('active');
-        loadProjects();
-      } else if (tabId === 'footers') {
-        document.querySelectorAll('.tab-btn')[2].classList.add('active');
-        document.getElementById('tab-footers').classList.add('active');
-        loadFooters();
-      } else if (tabId === 'replies') {
-        document.querySelectorAll('.tab-btn')[3].classList.add('active');
-        document.getElementById('tab-replies').classList.add('active');
-        loadReplies();
-      } else if (tabId === 'docs') {
-        document.querySelectorAll('.tab-btn')[4].classList.add('active');
-        document.getElementById('tab-docs').classList.add('active');
-        regenerateAiPrompt();
-      }
+      const btn = document.getElementById('navBtn-' + tabId);
+      if (btn) btn.classList.add('active');
+      const content = document.getElementById('tab-' + tabId);
+      if (content) content.classList.add('active');
+
+      if (tabId === 'projects') loadProjects();
+      if (tabId === 'rules') loadRules();
+      if (tabId === 'accounts') { loadAccounts(); loadLicenses(); }
+      if (tabId === 'docs') regenerateAiPrompt();
+
+      // 移动端：切换后自动收起抽屉
+      const sb = document.getElementById('sidebarNav');
+      if (sb) sb.classList.remove('open');
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebarNav');
+      if (sb) sb.classList.toggle('open');
     }
 
     // Tab 5 文档内部子分组切换
@@ -2245,10 +2867,15 @@ def login_by_wechat():
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function openAddProjectModal() {
+      const row = document.getElementById('licenseRow');
+      if (row) row.style.display = (currentRole === 'admin') ? 'none' : 'flex';
       openModal('addProjectModal');
       updateAddPreview();
     }
-    function openChangePasswordModal() { openModal('changePasswordModal'); }
+    function licenseCodeValue() {
+      const el = document.getElementById('newProjectLicense');
+      return el ? el.value.trim() : '';
+    }
 
     function openEditProjectModal(id) {
       const p = cachedProjects.find(item => item.id === id);
@@ -2311,7 +2938,7 @@ def login_by_wechat():
         footerStr = '\n\n-------------------\n' + gFooter;
       }
 
-      const tpl = (cachedReplies && cachedReplies.code_success) ? cachedReplies.code_success : '✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。';
+      const tpl = (cachedReplies && cachedReplies.code_success) ? cachedReplies.code_success : '恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。';
       const rawText = formatSuccessText(tpl, projectName, projectURL) + footerStr;
       return linkify(escapeHtml(rawText));
     }
@@ -2349,9 +2976,9 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -2361,7 +2988,7 @@ def login_by_wechat():
           if (document.getElementById('newProjectUrl')) document.getElementById('newProjectUrl').value = '';
           document.getElementById('newProjectAdTitle').value = '';
           document.getElementById('newProjectAd').value = '';
-          alert("🎉 新增项目成功并已保存至 config/projects.json！");
+          alert("新增项目成功并已保存至 config/projects.json！");
           loadProjects();
         } else {
           alert("添加失败: " + json.message);
@@ -2389,14 +3016,14 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
           closeModal('editProjectModal');
-          alert("🎉 项目已修改并更新写入 config/projects.json！");
+          alert("项目已修改并更新写入 config/projects.json！");
           loadProjects();
         } else {
           alert("修改失败: " + json.message);
@@ -2407,38 +3034,12 @@ def login_by_wechat():
     }
 
     // 修改密码
-    async function submitChangePassword() {
-      const oldPassword = document.getElementById('oldPasswordInput').value.trim();
-      const newPassword = document.getElementById('newPasswordInput').value.trim();
-      if (!oldPassword || !newPassword) {
-        alert("请填写原密码与新密码！");
-        return;
-      }
-      try {
-        const res = await fetch('/api/console/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
-        });
-        const json = await res.json();
-        if (json.code === 0) {
-          alert("🎉 " + json.data.message);
-          currentAuthPassword = newPassword;
-          saveToken(newPassword);
-          closeModal('changePasswordModal');
-        } else {
-          alert("修改失败: " + json.message);
-        }
-      } catch (e) {
-        alert("请求异常: " + e);
-      }
-    }
 
     // 加载并渲染业务项目列表
     async function loadProjects() {
       try {
         const res = await fetch('/api/projects', {
-          headers: { 'X-Console-Password': currentAuthPassword }
+          headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -2452,19 +3053,72 @@ def login_by_wechat():
     }
 
     function renderProjectsGrid(projects) {
+      projects = projects || cachedProjects || [];
       const container = document.getElementById('projectsContainer');
       container.innerHTML = '';
-      if (!projects || projects.length === 0) {
-        container.innerHTML = '<div style="color:#64748b; font-size:14px;">暂无接入项目，点击右上角添加。</div>';
+      const nowSec = Math.floor(Date.now() / 1000);
+      const kwEl = document.getElementById('projFilterKw');
+      const stEl = document.getElementById('projFilterStatus');
+      const exEl = document.getElementById('projFilterExpiry');
+      const owEl = document.getElementById('projFilterOwner');
+      const sortEl = document.getElementById('projFilterSort');
+
+      let list = [...projects];
+      if (kwEl && kwEl.value.trim()) {
+        const kw = kwEl.value.trim().toLowerCase();
+        list = list.filter(p => ((p.id || '') + ' ' + (p.name || '') + ' ' + (p.secret || '')).toLowerCase().includes(kw));
+      }
+      if (stEl && stEl.value !== 'all') list = list.filter(p => stEl.value === 'on' ? p.enabled : !p.enabled);
+      if (exEl && exEl.value !== 'all') {
+        list = list.filter(p => {
+          const exp = p.expires_at || 0;
+          if (exEl.value === 'forever') return exp === 0;
+          if (exEl.value === 'expired') return exp > 0 && exp <= nowSec;
+          if (exEl.value === 'soon') return exp > nowSec && exp - nowSec < 7 * 86400;
+          return exp > nowSec || exp === 0;
+        });
+      }
+      if (owEl) {
+        const cur = owEl.value;
+        const owners = [];
+        projects.forEach(p => {
+          const o = p.owner_account_id || 'admin';
+          if (owners.indexOf(o) === -1) owners.push(o);
+        });
+        owEl.innerHTML = '<option value="all">全部归属</option>' + owners.map(o => o === 'admin' ? '<option value="admin">管理员创建</option>' : '<option value="' + o + '">' + o + '</option>').join('');
+        if (cur === 'all' || owners.indexOf(cur) !== -1) owEl.value = cur;
+        if (owEl.value !== 'all') list = list.filter(p => owEl.value === 'admin' ? !p.owner_account_id : p.owner_account_id === owEl.value);
+      }
+      if (sortEl && sortEl.value === 'exp_asc') list.sort((a, b) => (a.expires_at || Infinity) - (b.expires_at || Infinity));
+      if (sortEl && sortEl.value === 'exp_desc') list.sort((a, b) => (b.expires_at || 0) - (a.expires_at || 0));
+
+      if (list.length === 0) {
+        container.innerHTML = '<div style="color:#64748b; font-size:14px;">没有符合条件的项目。</div>';
         return;
       }
 
-      projects.forEach(p => {
+      list.forEach(p => {
         const card = document.createElement('div');
         card.className = `project-card ${p.enabled ? '' : 'disabled'}`;
 
         const hasCustomAd = !!(p.custom_ad && p.custom_ad.trim());
         const isIncludeGlobal = (p.include_global !== false);
+        const nowSec = Math.floor(Date.now() / 1000);
+        let expiryText = '有效期：永久';
+        let expiryStyle = 'color:var(--text-muted); background:var(--panel-soft); border:1px solid var(--border-color);';
+        if (p.expires_at) {
+          const d = new Date(p.expires_at * 1000);
+          const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          if (p.expires_at < nowSec) {
+            expiryText = '已到期（' + ds + '），填码续期即可恢复';
+            expiryStyle = 'color:#f87171; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);';
+          } else if (p.expires_at - nowSec < 7 * 86400) {
+            expiryText = '' + ds + ' 到期（不足 7 天）';
+            expiryStyle = 'color:#f59e0b; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35);';
+          } else {
+            expiryText = '授权到期：' + ds;
+          }
+        }
 
         let footerModeText = '';
         let footerModeColor = '#94a3b8';
@@ -2499,6 +3153,7 @@ def login_by_wechat():
             <span>Key: ${escapeHtml(p.secret)}</span>
             <button class="copy-btn" onclick="copyText('${p.secret}')">复制</button>
           </div>
+          <div style="font-size:12px; padding:6px 10px; border-radius:6px; margin-bottom:8px; ${expiryStyle}">${expiryText}</div>
 
           ${p.url ? `
           <div style="font-size:12px; color:var(--text-muted); background:var(--panel-soft); border:1px solid var(--border-color); padding:6px 10px; border-radius:6px; margin-bottom:8px; display:flex; align-items:center; gap:6px; word-break:break-all;">
@@ -2522,6 +3177,8 @@ def login_by_wechat():
             </span>
             <div style="display: flex; gap: 8px;">
               <button onclick="openEditProjectModal('${p.id}')" style="color:var(--primary); border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">编辑</button>
+              <button onclick="openRenewModal('${p.id}')" style="color:#38bdf8; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">续期</button>
+              <button onclick="openRotateKeyModal('${p.id}')" style="color:#f59e0b; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">换Key</button>
               <button onclick="deleteProject('${p.id}')" style="color:#ef4444; border:none; background:none; font-size:12.5px; cursor:pointer;">删除</button>
             </div>
           </div>
@@ -2568,7 +3225,7 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
           body: JSON.stringify({ id, enabled })
         });
@@ -2593,9 +3250,9 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, custom_ad })
+          body: JSON.stringify({ id, name, custom_ad, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -2603,7 +3260,7 @@ def login_by_wechat():
           document.getElementById('newProjectId').value = '';
           document.getElementById('newProjectName').value = '';
           document.getElementById('newProjectAd').value = '';
-          alert("🎉 新增项目成功并已保存至 config/projects.json！");
+          alert("新增项目成功并已保存至 config/projects.json！");
           loadProjects();
         } else {
           alert("添加失败: " + json.message);
@@ -2617,7 +3274,7 @@ def login_by_wechat():
     async function loadFooters() {
       try {
         const res = await fetch('/api/footers', {
-          headers: { 'X-Console-Password': currentAuthPassword }
+          headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -2669,8 +3326,8 @@ def login_by_wechat():
             </div>
           </div>
           <div style="display:flex; gap:10px; flex-shrink:0;">
-            <button onclick="openEditFooterModal('${f.id}')" style="color:var(--primary); border:none; background:none; font-size:13px; cursor:pointer; font-weight:500;">✏️ 编辑</button>
-            <button onclick="deleteFooter('${f.id}')" style="color:#ef4444; border:none; background:none; font-size:13px; cursor:pointer;">🗑️ 删除</button>
+            <button onclick="openEditFooterModal('${f.id}')" style="color:var(--primary); border:none; background:none; font-size:13px; cursor:pointer; font-weight:500;">编辑</button>
+            <button onclick="deleteFooter('${f.id}')" style="color:#ef4444; border:none; background:none; font-size:13px; cursor:pointer;">删除</button>
           </div>
         `;
         container.appendChild(row);
@@ -2687,7 +3344,7 @@ def login_by_wechat():
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-Console-Password': currentAuthPassword
+              'X-Session-Token': currentAuthPassword
             },
             body: JSON.stringify({ id, active: isChecked })
           });
@@ -2708,7 +3365,7 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
           body: JSON.stringify({ active_ids: ids })
         });
@@ -2725,12 +3382,12 @@ def login_by_wechat():
       if (activeText) {
         footerPart = '\n\n-------------------\n' + activeText;
       }
-      const rawText = `🔑 您的通用通行码为：【209710】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！${footerPart}`;
+      const rawText = `您的通用通行码为：【209710】\n\n有效期：5 分钟（一次性有效）\n使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！${footerPart}`;
       previewEl.innerHTML = linkify(escapeHtml(rawText));
     }
 
     function openAddFooterModal() {
-      document.getElementById('footerModalTitle').textContent = '➕ 新建默认尾注模版';
+      document.getElementById('footerModalTitle').textContent = '新建默认尾注模版';
       document.getElementById('modalFooterId').value = '';
       document.getElementById('modalFooterTitle').value = '';
       document.getElementById('modalFooterContent').value = '';
@@ -2741,7 +3398,7 @@ def login_by_wechat():
     function openEditFooterModal(id) {
       const f = cachedFooters.find(item => item.id === id);
       if (!f) return;
-      document.getElementById('footerModalTitle').textContent = '✏️ 编辑默认尾注模版';
+      document.getElementById('footerModalTitle').textContent = '编辑默认尾注模版';
       document.getElementById('modalFooterId').value = f.id;
       document.getElementById('modalFooterTitle').value = f.title;
       document.getElementById('modalFooterContent').value = f.content;
@@ -2768,14 +3425,14 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
           body: JSON.stringify(body)
         });
         const json = await res.json();
         if (json.code === 0) {
           closeModal('footerModal');
-          alert("🎉 尾注模版已成功保存至 config/footers.json！");
+          alert("尾注模版已成功保存至 config/footers.json！");
           loadFooters();
         } else {
           alert("保存失败: " + json.message);
@@ -2792,7 +3449,7 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
           body: JSON.stringify({ id })
         });
@@ -2867,7 +3524,7 @@ def login_by_wechat():
         const replyXml = await res.text();
         parseAndAppendOfficialReply(replyXml);
       } catch (err) {
-        appendOfficialMsg("⚠️ 无法连接到后端服务器");
+        appendOfficialMsg("无法连接到后端服务器");
       }
     }
 
@@ -2912,7 +3569,7 @@ def login_by_wechat():
       document.getElementById('chatView').innerHTML = '<div class="wx-time-pill">聊天记录已清空</div>';
     }
 
-    // ---------------- 流向一验证逻辑 ----------------
+    // ---------------- 流向二验证逻辑 ----------------
     async function generateCodeFromProject() {
       const project = document.getElementById('projectSelect').value;
       const extra = document.getElementById('extraParam').value;
@@ -2935,7 +3592,7 @@ def login_by_wechat():
           latestActiveCode = json.data.code;
           document.getElementById('codeDisplayArea').style.display = 'flex';
           document.getElementById('generatedCode').textContent = latestActiveCode;
-          document.getElementById('pollStatus').innerHTML = '<span style="color:#d97706;">⏳ 等待手机回复中...</span>';
+          document.getElementById('pollStatus').innerHTML = '<span style="color:#d97706;">等待手机回复中...</span>';
           startPolling(latestActiveCode);
         } else {
           alert("生成验证码失败: " + (json.message || "未知原因"));
@@ -2959,13 +3616,13 @@ def login_by_wechat():
           const json = await res.json();
           if (json.code === 0 && json.data && json.data.verified) {
             clearInterval(currentPollingTimer);
-            document.getElementById('pollStatus').innerHTML = `<span style="color:#16a34a; font-weight:700;">🎉【核销成功】OpenID: ${json.data.openid}</span>`;
+            document.getElementById('pollStatus').innerHTML = `<span style="color:#16a34a; font-weight:700;">【核销成功】OpenID: ${json.data.openid}</span>`;
           }
         } catch (e) {}
       }, 1000);
     }
 
-    // ---------------- 流向二验证逻辑 ----------------
+    // ---------------- 流向一验证逻辑 ----------------
     async function submitUniversalVerify() {
       const code = document.getElementById('universalCodeInput').value.trim();
       const project = document.getElementById('universalProjectSelect').value;
@@ -2980,7 +3637,7 @@ def login_by_wechat():
       resArea.style.background = 'var(--panel-soft)';
       resArea.style.border = '1px solid var(--border-color)';
       resArea.style.color = 'var(--text-main)';
-      resArea.innerHTML = '⏳ 正在向中枢核销校验...';
+      resArea.innerHTML = '正在向中枢核销校验...';
 
       // 提取项目 secret
       let key = "";
@@ -3000,7 +3657,7 @@ def login_by_wechat():
           resArea.style.background = 'rgba(16, 185, 129, 0.15)';
           resArea.style.border = '1px solid #10b981';
           resArea.style.color = '#34d399';
-          resArea.innerHTML = `<b>🎉【核销登录成功】</b><br>
+          resArea.innerHTML = `<b>【核销登录成功】</b><br>
             • 绑定微信 OpenID: <code>${json.data.openid}</code><br>
             • 目标项目英文标识: <code>${json.data.project}</code><br>
             • 业务系统【${json.data.project_name || json.data.project}】已为该微信用户下发 Token / 放行登录！`;
@@ -3008,13 +3665,13 @@ def login_by_wechat():
           resArea.style.background = 'rgba(239, 68, 68, 0.15)';
           resArea.style.border = '1px solid #ef4444';
           resArea.style.color = '#f87171';
-          resArea.innerHTML = `<b>❌ 核销失败</b>: ${json.message || '验证码无效或已过期'}`;
+          resArea.innerHTML = `<b>核销失败</b>: ${json.message || '验证码无效或已过期'}`;
         }
       } catch (err) {
         resArea.style.background = 'rgba(239, 68, 68, 0.15)';
         resArea.style.border = '1px solid #ef4444';
         resArea.style.color = '#f87171';
-        resArea.innerHTML = `<b>⚠️ 接口请求异常</b>: ${err}`;
+        resArea.innerHTML = `<b>接口请求异常</b>: ${err}`;
       }
     }
 
@@ -3022,7 +3679,7 @@ def login_by_wechat():
     // 各场景的元数据配置（标题、触发说明、变量清单与支持）
     const SCENARIO_META = {
       welcome: {
-        title: '🔔 新粉丝关注欢迎语',
+        title: '新粉丝关注欢迎语',
         badge: '用户关注时下发',
         trigger: '当用户首次微信扫码或搜索关注公众号时，系统下发的首条问候语。',
         desc: '场景：用户首次扫码或搜索关注公众号，系统自动推送欢迎语',
@@ -3032,7 +3689,7 @@ def login_by_wechat():
         field: 'welcome'
       },
       code_success: {
-        title: '✅ 验证成功通知',
+        title: '验证成功通知',
         badge: '6 位数字核销成功',
         trigger: '当用户在聊天框发送网站显示的 6 位有效数字，且系统在 Redis 核销成功后下发。',
         desc: '场景：用户在网页看到 6 位验证码，发给公众号完成核销',
@@ -3045,7 +3702,7 @@ def login_by_wechat():
         field: 'code_success'
       },
       code_invalid: {
-        title: '⚠️ 验证码不存在或已过期',
+        title: '验证码不存在或已过期',
         badge: '6 位数字查无记录',
         trigger: '当用户发送了 6 位数字，但验证码已超过 5 分钟失效，或输错了数字。',
         desc: '场景：用户输错了 6 位验证码，或者超过 5 分钟验证码已过期',
@@ -3057,7 +3714,7 @@ def login_by_wechat():
         field: 'code_invalid'
       },
       code_used: {
-        title: 'ℹ️ 验证码已核销（防重复使用）',
+        title: '验证码已核销（防重复使用）',
         badge: '状态已为 verified',
         trigger: '当用户已经完成核销，但由于不确定又在公众号重新发送了一次该数字。',
         desc: '场景：用户已经验证成功，但在微信里重新发送了一次相同数字',
@@ -3069,8 +3726,8 @@ def login_by_wechat():
         field: 'code_used'
       },
       universal_code: {
-        title: '🔑 索取通用通行码',
-        badge: '流向二：微信索码',
+        title: '索取通用通行码',
+        badge: '流向一：微信索码',
         trigger: '用户回复关键词：【验证码】【取码】【登录】【注册】【通行码】【code】【1】。',
         desc: '场景：用户在微信发送【验证码】或【登录】，索取 5 分钟有效通用通行码',
         simUserMsg: '验证码',
@@ -3081,7 +3738,7 @@ def login_by_wechat():
         field: 'universal_code'
       },
       projects: {
-        title: '🌐 支持的业务平台清单',
+        title: '支持的业务平台清单',
         badge: '动态拉取项目库',
         trigger: '用户回复关键词：【项目】或【业务】。',
         desc: '场景：用户发送【项目】或【业务】，查询当前中枢已支持哪些平台',
@@ -3093,7 +3750,7 @@ def login_by_wechat():
         field: 'projects'
       },
       help: {
-        title: '📖 帮助使用指引',
+        title: '帮助使用指引',
         badge: '双向核销指南',
         trigger: '用户回复关键词：【帮助】【help】【?】【？】。',
         desc: '场景：用户发送【帮助】或【？】，获取公众号双向核销使用指引',
@@ -3103,7 +3760,7 @@ def login_by_wechat():
         field: 'help'
       },
       unknown_text: {
-        title: '🤖 未知文字 / 乱发内容兜底（含非6位数字）',
+        title: '未知文字 / 乱发内容兜底（含非6位数字）',
         badge: '默认兜底回复',
         trigger: '用户发送了未识别的文字闲聊（如“你好”、“在吗”），或发送了非 6 位的数字（如“123”、“13800138000”）。',
         desc: '场景：用户发送文字闲聊或发送了非 6 位数字（少位、多位或手机号）',
@@ -3113,7 +3770,7 @@ def login_by_wechat():
         field: 'unknown_text'
       },
       media_message: {
-        title: '🖼️ 非文本消息提示（表情包 / 语音 / 图片）',
+        title: '非文本消息提示（表情包 / 语音 / 图片）',
         badge: '非文本事件拦截',
         trigger: '用户向公众号发送了表情包、语音语音条、图片照、位置定位等非文本消息。',
         desc: '场景：用户发送表情包、语音消息或随手扔了一张图片',
@@ -3127,13 +3784,12 @@ def login_by_wechat():
     async function loadReplies() {
       try {
         const res = await fetch('/api/replies', {
-          headers: { 'X-Console-Password': currentAuthPassword }
+          headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
           cachedReplies = json.data;
-          renderActiveScenarioEditor();
-          renderScenarioPreview();
+          fillReplyTextareas();
         }
       } catch (err) {
         console.error("加载回复配置失败:", err);
@@ -3153,15 +3809,15 @@ def login_by_wechat():
         varsHtml = `
           <div style="background: var(--panel-soft); border: 1px dashed var(--border-color); border-radius: 8px; padding: 10px 14px; margin-top: 12px;">
             <div style="font-size: 12.5px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
-              🧩 本场景支持的动态变量（点击即可复制，直接粘贴到文案中）：
+              本场景支持的动态变量（点击即可复制，直接粘贴到文案中）：
             </div>
             <div style="display: flex; flex-direction: column; gap: 6px;">
               ${meta.vars.map(v => `
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <button class="copy-var-pill" onclick="copyVarTag('${v.key}', this)">
-                    📋 点击复制 ${v.key}
+                    点击复制 ${v.key}
                   </button>
-                  <span style="font-size: 12px; color: var(--text-muted);">➔ ${v.desc}</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">${v.desc}</span>
                 </div>
               `).join('')}
             </div>
@@ -3170,7 +3826,7 @@ def login_by_wechat():
       } else {
         varsHtml = `
           <div style="background: var(--panel-soft); border: 1px dashed var(--border-color); border-radius: 8px; padding: 8px 12px; margin-top: 12px; font-size: 12px; color: var(--text-muted);">
-            ℹ️ 本场景文案为纯文本回复，无需插入变量。支持多行换行与各种 Emoji 表情。
+            本场景文案为纯文本回复，无需插入变量。支持多行换行与各种 Emoji 表情。
           </div>
         `;
       }
@@ -3195,9 +3851,9 @@ def login_by_wechat():
 
         <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
           <span style="font-size: 12px; color: var(--text-muted);">
-            💾 修改任一场景后，点击右上角【保存全部回复配置】即可生效写入服务器。
+            修改任一场景后，点击右上角【保存全部回复配置】即可生效写入服务器。
           </span>
-          <button class="btn-primary" onclick="saveRepliesConfig()">💾 保存此项与全部配置</button>
+          <button class="btn-primary" onclick="saveRepliesConfig()">保存此项与全部配置</button>
         </div>
       `;
     }
@@ -3215,7 +3871,7 @@ def login_by_wechat():
       navigator.clipboard.writeText(varKey).then(() => {
         const originalText = btn.innerHTML;
         btn.classList.add('copied');
-        btn.innerHTML = `✓ 已复制 ${varKey}`;
+        btn.innerHTML = `已复制 ${varKey}`;
         setTimeout(() => {
           btn.classList.remove('copied');
           btn.innerHTML = originalText;
@@ -3234,13 +3890,13 @@ def login_by_wechat():
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Console-Password': currentAuthPassword
+            'X-Session-Token': currentAuthPassword
           },
           body: JSON.stringify(cachedReplies)
         });
         const json = await res.json();
         if (json.code === 0) {
-          alert("🎉 " + json.data.message);
+          alert("" + json.data.message);
           renderScenarioPreview();
         } else {
           alert("保存失败: " + json.message);
@@ -3285,7 +3941,7 @@ def login_by_wechat():
           const trimmed = line.trim();
           let isStandalone = false;
           for (let pfx of prefixes) {
-            if (trimmed === pfx || trimmed === '• ' + pfx || trimmed === '👉 ' + pfx || trimmed === '🔗 ' + pfx) {
+            if (trimmed === pfx || trimmed === '• ' + pfx || trimmed === '' + pfx || trimmed === '' + pfx) {
               isStandalone = true;
               break;
             }
@@ -3313,6 +3969,7 @@ def login_by_wechat():
     }
 
     function renderScenarioPreview() {
+      if (!document.getElementById('scenarioChatSimulation')) return;
       const container = document.getElementById('scenarioChatSimulation');
       if (!container) return;
 
@@ -3336,7 +3993,7 @@ def login_by_wechat():
           break;
 
         case 'code_success':
-          const sampleProject = (cachedProjects && cachedProjects.length > 0) ? cachedProjects[0] : { name: '商城系统', url: 'https://shop.example.com', custom_ad_title: '商城特惠', custom_ad: '🛒 全场商品首单 8 折，限时抢购！' };
+          const sampleProject = (cachedProjects && cachedProjects.length > 0) ? cachedProjects[0] : { name: '商城系统', url: 'https://shop.example.com', custom_ad_title: '商城特惠', custom_ad: '全场商品首单 8 折，限时抢购！' };
           const pName = sampleProject.name || '商城系统';
           const pUrl = sampleProject.url || '';
           const pTitle = sampleProject.custom_ad_title || '';
@@ -3400,7 +4057,7 @@ def login_by_wechat():
 
       let html = '';
       if (isSystemNotice) {
-        html += `<div style="text-align:center; font-size:11.5px; color:#94a3b8; margin: 4px 0;">🔔 ${escapeHtml(userMsg)}</div>`;
+        html += `<div style="text-align:center; font-size:11.5px; color:#94a3b8; margin: 4px 0;">${escapeHtml(userMsg)}</div>`;
       } else {
         html += `
           <div class="wx-msg-row user" style="align-self: flex-end; display:flex; justify-content:flex-end; gap:8px;">
@@ -3462,7 +4119,7 @@ def login_by_wechat():
 
       if (flowSel === 'both' || flowSel === 'flow1') {
         prompt += `
-#### 【流向一】网站前端弹码 ➔ 用户微信发送数字 ➔ 自动放行
+#### 【流向二】网站前端弹码 用户微信发送数字 自动放行
 适合电脑或手机浏览器。前端展示 6 位数字，用户在公众号回复该数字后，前端轮询检测到验证通过自动放行。
 
 - **申请 6 位验证码**：
@@ -3483,7 +4140,7 @@ def login_by_wechat():
 
       if (flowSel === 'both' || flowSel === 'flow2') {
         prompt += `
-#### 【流向二】微信索取通行码 ➔ 网站表单填码核销
+#### 【流向一】微信索取通行码 网站表单填码核销
 适合 APP/H5/表单替代短信验证码。用户在公众号发送【验证码】获取 6 位通行码，填入当前系统表单，当前系统后端向中枢发起单次核销。
 
 - **后端核销接口**：
@@ -3509,6 +4166,14 @@ def login_by_wechat():
       if (countEl) {
         countEl.textContent = `共约 ${prompt.length} 字`;
       }
+      autoGrowAiPrompt();
+    }
+
+    function autoGrowAiPrompt() {
+      const el = document.getElementById('aiPromptPreviewArea');
+      if (!el || el.offsetParent === null) return;
+      const top = el.getBoundingClientRect().top;
+      el.style.height = Math.max(260, Math.floor(window.innerHeight - top - 100)) + 'px';
     }
 
     function copyAiPrompt() {
@@ -3520,7 +4185,7 @@ def login_by_wechat():
         if (btn) {
           const original = btn.innerHTML;
           btn.classList.add('copied');
-          btn.innerHTML = '<span>✓ 已成功复制 AI 对接 Prompt！直接粘贴给 AI</span>';
+          btn.innerHTML = '<span>已成功复制 AI 对接 Prompt！直接粘贴给 AI</span>';
           setTimeout(() => {
             btn.classList.remove('copied');
             btn.innerHTML = original;
@@ -3548,6 +4213,596 @@ def login_by_wechat():
       const urlRegex = /(https?:\/\/[^\s]+)/g;
       return str.replace(urlRegex, url => `<a href="${url}" target="_blank">${url}</a>`);
     }
-  </script>
+  
+    // ================= 规则中心 =================
+    let cachedRules = null;
+    let editingCustomRuleId = null;
+
+    function switchRulesSection(name) {
+      document.querySelectorAll('.rules-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.rules-nav-btn').forEach(el => el.classList.remove('active'));
+      const sec = document.getElementById('rulesSection' + name.charAt(0).toUpperCase() + name.slice(1));
+      const btn = document.getElementById('rulesNavBtn' + name.charAt(0).toUpperCase() + name.slice(1));
+      if (sec) sec.classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    function showToast(msg, ok = true) {
+      const el = document.getElementById('globalToast');
+      el.textContent = msg;
+      el.style.background = ok ? '#065f46' : '#7f1d1d';
+      el.style.color = ok ? '#6ee7b7' : '#fecaca';
+      el.style.display = 'block';
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.style.display = 'none'; }, 2400);
+    }
+
+    async function loadRules() {
+      try {
+        const res = await fetch('/api/rules', { headers: { 'X-Session-Token': currentAuthPassword } });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          if (!json.data.custom) json.data.custom = [];
+          cachedRules = json.data;
+          renderBuiltinRules();
+          renderCustomRules();
+          renderRulesTree();
+        }
+      } catch (e) {}
+    }
+
+    async function persistRules() {
+      try {
+        const res = await fetch('/api/rules/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ rules: cachedRules })
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('已保存并即时生效');
+          renderRulesTree();
+          return true;
+        }
+        showToast('' + (json.message || '保存失败'), false);
+        await loadRules(); // 服务端拒绝时回滚到当前生效状态
+        return false;
+      } catch (e) {
+        showToast('请求异常: ' + e, false);
+        return false;
+      }
+    }
+
+    const builtinMeta = [
+      { key: 'universal_code', title: '索取通行码（流向一）', desc: '用户发送这些词时，机器人给他发一个 6 位通行码，用于在网站表单填入核销。' },
+      { key: 'help', title: '使用指南', desc: '用户发送这些词时，机器人回复使用指南文案。' },
+      { key: 'projects', title: '项目清单', desc: '用户发送这些词时，机器人回复当前已启用的业务项目列表。' }
+    ];
+
+    function renderBuiltinRules() {
+      builtinMeta.forEach(m => {
+        const rule = cachedRules[m.key];
+        if (!rule) return;
+        const chips = (rule.keywords || []).map((kw, i) =>
+          `<span class="kw-chip">${escapeHtml(kw)}<a class="kw-del" title="删除该触发词" onclick="removeBuiltinKeyword('${m.key}', ${i})">×</a></span>`
+        ).join('');
+        const chipWrap = document.getElementById('chips_' + m.key);
+        if (chipWrap) chipWrap.innerHTML = chips || '<span style="font-size:12.5px; color:#f59e0b;">未配置任何触发词，该场景当前无法被触发</span>';
+        const st = document.getElementById('state_' + m.key);
+        if (st) {
+          st.textContent = rule.enabled ? '生效中' : '已停用';
+          st.style.color = rule.enabled ? '#34d399' : '#94a3b8';
+        }
+        const en = document.getElementById('enabled_' + m.key);
+        if (en) en.checked = !!rule.enabled;
+      });
+    }
+
+    function fillReplyTextareas() {
+      if (!cachedReplies) return;
+      ['welcome', 'code_success', 'code_invalid', 'code_used', 'universal_code', 'projects', 'help', 'unknown_text', 'media_message'].forEach(f => {
+        const el = document.getElementById('reply_' + f);
+        if (el) el.value = cachedReplies[f] || '';
+      });
+      autoGrowReplyTextareas();
+    }
+
+    async function saveReplyField(field) {
+      const el = document.getElementById('reply_' + field);
+      if (!el) return;
+      if (!el.value.trim()) { showToast('回复内容不能为空', false); return; }
+      cachedReplies[field] = el.value;
+      try {
+        const res = await fetch('/api/replies/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify(cachedReplies)
+        });
+        const json = await res.json();
+        if (json.code === 0) showToast('已保存并即时生效');
+        else showToast('' + (json.message || '保存失败'), false);
+      } catch (e) { showToast('请求异常: ' + e, false); }
+    }
+
+    function addBuiltinKeyword(key) {
+      const input = document.getElementById('kwinput_' + key);
+      const kw = (input.value || '').trim();
+      if (!kw) return;
+      if (cachedRules[key].keywords.some(k => k.toLowerCase() === kw.toLowerCase())) {
+        showToast('该触发词已存在', false);
+        return;
+      }
+      cachedRules[key].keywords.push(kw);
+      input.value = '';
+      renderBuiltinRules();
+      persistRules();
+    }
+
+    function removeBuiltinKeyword(key, idx) {
+      cachedRules[key].keywords.splice(idx, 1);
+      renderBuiltinRules();
+      persistRules();
+    }
+
+    function toggleBuiltin(key, on) {
+      cachedRules[key].enabled = on;
+      renderBuiltinRules();
+      persistRules();
+    }
+
+    function renderCustomRules() {
+      const c = document.getElementById('customRulesContainer');
+      if (!c) return;
+      if (!cachedRules.custom || cachedRules.custom.length === 0) {
+        c.innerHTML = '<div style="font-size:13px; color:var(--text-muted); padding:16px; border:1px dashed var(--border-color); border-radius:8px;">还没有自定义规则。点击右上角「新增规则」创建第一条——比如用户发「价格」就自动回复你的报价说明。</div>';
+        return;
+      }
+      c.innerHTML = '';
+      cachedRules.custom.forEach(cr => {
+        const item = document.createElement('div');
+        item.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; background:var(--panel-soft);';
+        const chips = (cr.keywords || []).map(k => `<span class="kw-chip">${escapeHtml(k)}</span>`).join('');
+        const preview = (cr.reply || '').length > 80 ? escapeHtml(cr.reply.slice(0, 80)) + '…' : escapeHtml(cr.reply || '');
+        const stateCls = cr.enabled ? 'rules-state-on' : 'rules-state-off';
+        const stateText = cr.enabled ? '生效中' : '已停用';
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="kw-chip-wrap">${chips} <span class="${stateCls}" style="font-size:12px;">${stateText}</span></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label style="font-size:12.5px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" ${cr.enabled ? 'checked' : ''} onchange="toggleCustomRule('${cr.id}', this.checked)"> 启用
+              </label>
+              <button class="btn-action-sm" onclick="openCustomRuleModal('${cr.id}')">编辑</button>
+              <button class="btn-action-sm" onclick="deleteCustomRule('${cr.id}')" style="color:#ef4444;">删除</button>
+            </div>
+          </div>
+          <div style="font-size:13px; color:var(--text-muted); margin-top:8px; line-height:1.6;">↳ ${preview}${cr.append_footer ? ' <span class="badge-tag">+尾注</span>' : ''}</div>`;
+        c.appendChild(item);
+      });
+    }
+
+    function openCustomRuleModal(id) {
+      editingCustomRuleId = id || null;
+      const modal = document.getElementById('customRuleModal');
+      document.getElementById('customRuleModalTitle').textContent = id ? '编辑自定义回复规则' : '新增自定义回复规则';
+      const rule = id ? cachedRules.custom.find(r => r.id === id) : null;
+      document.getElementById('customRuleKeywords').value = rule ? (rule.keywords || []).join(', ') : '';
+      document.getElementById('customRuleReply').value = rule ? rule.reply : '';
+      document.getElementById('customRuleFooter').checked = rule ? !!rule.append_footer : true;
+      document.getElementById('customRuleEnabled').checked = rule ? !!rule.enabled : true;
+      modal.style.display = 'flex';
+    }
+
+    function saveCustomRule() {
+      const keywords = document.getElementById('customRuleKeywords').value.split(/[,，、\s]+/).map(s => s.trim()).filter(s => s);
+      const reply = document.getElementById('customRuleReply').value;
+      const footer = document.getElementById('customRuleFooter').checked;
+      const enabled = document.getElementById('customRuleEnabled').checked;
+      if (keywords.length === 0) { showToast('请至少填写一个触发词', false); return; }
+      if (!reply.trim()) { showToast('请填写回复内容', false); return; }
+
+      if (editingCustomRuleId) {
+        const rule = cachedRules.custom.find(r => r.id === editingCustomRuleId);
+        if (rule) { rule.keywords = keywords; rule.reply = reply; rule.append_footer = footer; rule.enabled = enabled; }
+      } else {
+        cachedRules.custom.push({
+          id: 'cr_' + Date.now().toString(36),
+          keywords: keywords, reply: reply, append_footer: footer, enabled: enabled,
+          created_at: Math.floor(Date.now() / 1000)
+        });
+      }
+      closeModal('customRuleModal');
+      renderCustomRules();
+      persistRules();
+    }
+
+    function toggleCustomRule(id, on) {
+      const rule = cachedRules.custom.find(r => r.id === id);
+      if (rule) { rule.enabled = on; renderCustomRules(); persistRules(); }
+    }
+
+    function deleteCustomRule(id) {
+      if (!confirm('确认删除这条自定义规则？')) return;
+      cachedRules.custom = cachedRules.custom.filter(r => r.id !== id);
+      renderCustomRules();
+      persistRules();
+    }
+
+    function renderRulesTree() {
+      const el = document.getElementById('rulesTreeView');
+      if (!el || !cachedRules) return;
+      const r = cachedRules;
+      const kw = a => (a && a.length ? a.length + ' 个词' : '无');
+      const mark = on => on ? '[启用中]' : '[已停用]';
+      const lines = [
+        '用户发来一条消息',
+        '├─ 图片/语音/表情包 ──→ 「暂不支持」提示',
+        '├─ 事件（关注/取关/菜单点击）──→ 欢迎语 / 菜单应答',
+        '└─ 文字消息，自上而下匹配，先到先得：',
+        '    1.  是 6 位纯数字 ──→ 六位数字核销（锁定）',
+        '    2.  ' + mark(r.universal_code.enabled) + ' 索取通行码（流向一）── ' + kw(r.universal_code.keywords),
+        '    3.  ' + mark(r.help.enabled) + ' 使用指南 ── ' + kw(r.help.keywords),
+        '    4.  ' + mark(r.projects.enabled) + ' 项目清单 ── ' + kw(r.projects.keywords),
+        '    5.  自定义规则 ── ' + r.custom.filter(c => c.enabled).length + ' 条生效 / 共 ' + r.custom.length + ' 条',
+        '    6.  都不命中 ──→ 兜底回复（文字可在「场景文案」调整）'
+      ];
+      el.textContent = lines.join('\n');
+    }
+
+    async function runRuleTest() {
+      const msg = document.getElementById('testMsgInput').value.trim();
+      if (!msg) { showToast('请输入模拟的用户消息', false); return; }
+      const area = document.getElementById('testResultArea');
+      area.style.display = 'block';
+      area.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">正在按当前规则真实处理这条消息...</div>';
+      try {
+        const res = await fetch('/api/rules/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ message: msg })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const testMsg = msg;
+          const replyHtml = escapeHtml(json.data.reply || '').replace(/\n/g, '<br>');
+          area.innerHTML = `
+            <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+              <div style="flex:1; min-width:260px;">
+                <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                  <div style="padding:8px 12px; background:var(--panel-soft); font-size:12.5px; color:var(--text-main);">命中规则：<b>${escapeHtml(json.data.matched_zh)}</b> <span style="color:var(--text-muted);">（${escapeHtml(json.data.matched)}）</span></div>
+                  <div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); line-height:1.7;">该回复由真实消息处理管道输出，与线上公众号实际发送一致（含尾注与项目动态内容）。</div>
+                </div>
+              </div>
+              <div style="width:320px; max-width:100%; border:1px solid var(--border-color); border-radius:18px; background:var(--preview-wrap-bg); padding:14px 12px; display:flex; flex-direction:column; gap:10px;">
+                <div style="text-align:center; font-size:11px; color:var(--text-muted);">— 模拟微信对话 —</div>
+                <div style="align-self:flex-end; max-width:80%; background:#95ec69; color:#0f172a; padding:8px 12px; border-radius:10px 2px 10px 10px; font-size:13px; word-break:break-all;">${escapeHtml(testMsg)}</div>
+                <div style="align-self:flex-start; max-width:88%; display:flex; gap:8px; align-items:flex-start;">
+                  <div style="width:34px; height:34px; border-radius:6px; background:#1aad19; color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">睡</div>
+                  <div style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-main); padding:9px 12px; border-radius:2px 10px 10px 10px; font-size:13px; line-height:1.7; word-break:break-all;">${replyHtml}</div>
+                </div>
+              </div>
+            </div>`;
+        } else {
+          area.innerHTML = '<div style="font-size:13px; color:#ef4444;">试跑失败: ' + escapeHtml(json.message || '未知错误') + '</div>';
+        }
+      } catch (e) {
+        area.innerHTML = '<div style="font-size:13px; color:#ef4444;">请求异常: ' + e + '</div>';
+      }
+    }
+
+    // ================= 密钥轮换 =================
+    function openRotateKeyModal(id) {
+      document.getElementById('rotateKeyId').value = id;
+      const area = document.getElementById('rotateKeyResult');
+      area.style.display = 'none';
+      area.innerHTML = '';
+      openModal('rotateKeyModal');
+    }
+
+    async function submitRotateKey() {
+      const id = document.getElementById('rotateKeyId').value;
+      const area = document.getElementById('rotateKeyResult');
+      area.style.display = 'block';
+      area.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">正在更换...</div>';
+      try {
+        const res = await fetch('/api/projects/rotate-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ id: id })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          area.innerHTML = '<div style="color:#34d399; font-weight:600;">' + escapeHtml(json.data.message) + '</div>' +
+            '<div style="margin-top:8px; font-size:18px; font-family:monospace; color:var(--primary); word-break:break-all;">' + escapeHtml(json.data.secret) + '</div>';
+          loadProjects();
+        } else {
+          area.innerHTML = '<div style="color:#ef4444;">' + escapeHtml(json.message || '更换失败') + '</div>';
+        }
+      } catch (e) {
+        area.innerHTML = '<div style="color:#ef4444;">请求异常: ' + e + '</div>';
+      }
+    }
+
+    // ================= 账号与授权（管理员） =================
+    let cachedAccounts = [];
+    let cachedLicenses = [];
+
+    function maskOpenid(o) { return o && o.length > 10 ? o.slice(0, 8) + '****' : (o || '-'); }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch('/api/accounts', { headers: { 'X-Session-Token': currentAuthPassword } });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          cachedAccounts = json.data;
+          renderAccounts();
+        }
+      } catch (e) {}
+    }
+
+    function renderAccounts() {
+      const c = document.getElementById('accountsContainer');
+      if (!c) return;
+      const kwEl = document.getElementById('accFilterKw');
+      const roleEl = document.getElementById('accFilterRole');
+      const stEl = document.getElementById('accFilterStatus');
+      const kw = kwEl ? kwEl.value.trim().toLowerCase() : '';
+      const roleV = roleEl ? roleEl.value : 'all';
+      const stV = stEl ? stEl.value : 'all';
+      let list = cachedAccounts.filter(a => {
+        if (kw && !((a.openid || '') + ' ' + (a.id || '')).toLowerCase().includes(kw)) return false;
+        if (roleV !== 'all' && a.role !== roleV) return false;
+        if (stV !== 'all' && a.status !== stV) return false;
+        return true;
+      });
+      if (cachedAccounts.length === 0) {
+        c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">暂无账号。</div>';
+        return;
+      }
+      c.innerHTML = '';
+      if (list.length === 0) {
+        c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">没有符合条件的账号。</div>';
+        return;
+      }
+      list.forEach(a => {
+        const isAdminAcc = a.role === 'admin';
+        const item = document.createElement('div');
+        item.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; background:var(--panel-soft); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+        const created = new Date(a.created_at * 1000).toLocaleDateString();
+        const statusHtml = a.status === 'active'
+          ? '<span style="color:#34d399; font-weight:600;">正常</span>'
+          : '<span style="color:#ef4444; font-weight:600;">已禁用</span>';
+        const roleHtml = isAdminAcc
+          ? '<span style="color:#a78bfa; font-weight:600;">管理员</span>'
+          : '<span style="color:#60a5fa;">普通用户</span>';
+        item.innerHTML = `
+          <div style="font-size:13px; color:var(--text-main);">
+            ${roleHtml} ｜ 微信：<code>${maskOpenid(a.openid)}</code> ｜ 注册：${created}
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${statusHtml}
+            ${(!isAdminAcc && a.status === 'active') ? `<button class="btn-action-sm" onclick="setAccountRole('${a.id}', 'admin')" style="color:#a78bfa;">设为管理员</button>` : ''}
+            ${(!isAdminAcc && a.role === 'admin') ? `<button class="btn-action-sm" onclick="setAccountRole('${a.id}', 'tenant')" style="color:#f59e0b;">降为普通用户</button>` : ''}
+            ${(!isAdminAcc) ? `<button class="btn-action-sm" onclick="toggleAccount('${a.id}', '${a.status === 'active' ? 'disabled' : 'active'}')">${a.status === 'active' ? '禁用' : '启用'}</button>` : ''}
+          </div>`;
+        c.appendChild(item);
+      });
+    }
+
+    async function setAccountRole(id, role) {
+      const res = await fetch('/api/accounts/set-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+        body: JSON.stringify({ id, role })
+      });
+      const json = await res.json();
+      if (json.code === 0) { showToast('角色已调整'); loadAccounts(); }
+      else showToast('' + (json.message || '操作失败'), false);
+    }
+
+    async function toggleAccount(id, status) {
+      const res = await fetch('/api/accounts/set-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+        body: JSON.stringify({ id, status })
+      });
+      const json = await res.json();
+      if (json.code === 0) { showToast('账号状态已更新'); loadAccounts(); }
+      else showToast('' + (json.message || '操作失败'), false);
+    }
+
+    async function loadLicenses() {
+      try {
+        const res = await fetch('/api/licenses', { headers: { 'X-Session-Token': currentAuthPassword } });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          cachedLicenses = json.data;
+          renderLicenses();
+        }
+      } catch (e) {}
+    }
+
+    function renderLicenses() {
+      const c = document.getElementById('licensesContainer');
+      if (!c) return;
+      const kwEl = document.getElementById('licFilterKw');
+      const stEl = document.getElementById('licFilterStatus');
+      const kw = kwEl ? kwEl.value.trim().toLowerCase() : '';
+      const stV = stEl ? stEl.value : 'all';
+      let list = cachedLicenses.filter(l => {
+        const stText = serviceLicenseStatus(l);
+        if (stV !== 'all' && stText !== stV) return false;
+        if (kw && !(l.code + ' ' + (l.project_id || '')).toLowerCase().includes(kw)) return false;
+        return true;
+      });
+      if (cachedLicenses.length === 0) {
+        c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">还没有激活码，点击右上角「批量生成」。</div>';
+        return;
+      }
+      c.innerHTML = '';
+      if (list.length === 0) {
+        c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">没有符合条件的状态。</div>';
+        return;
+      }
+      const sorted = [...list].reverse();
+      sorted.forEach(l => {
+        const item = document.createElement('div');
+        item.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:10px 14px; background:var(--panel-soft); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+        const st = serviceLicenseStatus(l);
+        const stColor = st === '未使用' ? '#34d399' : (st === '已使用' ? '#94a3b8' : '#ef4444');
+        const usedInfo = l.status === 'used' ? `｜用于 <b>${escapeHtml(l.project_id || '-')}</b>` : '';
+        const ddl = new Date(l.redeem_deadline * 1000).toLocaleDateString();
+        item.innerHTML = `
+          <div style="font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="display:inline-flex; align-items:center; gap:6px;">
+              <code style="font-size:14px; font-weight:700;">${escapeHtml(l.code)}</code>
+              <button class="copy-btn" onclick="copyText('${l.code}')">复制</button>
+            </span>
+            ｜ ${l.duration_days} 天 ｜ 兑换期至 ${ddl}${usedInfo}
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="color:${stColor}; font-weight:600;">${st}</span>
+            ${l.status === 'unused' ? `<button class="btn-action-sm" onclick="voidLicense('${l.code}')" style="color:#ef4444;">作废</button>` : ''}
+          </div>`;
+        c.appendChild(item);
+      });
+    }
+
+    function serviceLicenseStatus(l) {
+      const now = Math.floor(Date.now() / 1000);
+      if (l.status === 'unused' && l.redeem_deadline > 0 && now > l.redeem_deadline) return '已过期';
+      return { unused: '未使用', used: '已使用', void: '已作废' }[l.status] || l.status;
+    }
+
+    function openGenLicenseModal() {
+      document.getElementById('genLicenseResult').style.display = 'none';
+      openModal('genLicenseModal');
+    }
+
+    async function submitGenLicense() {
+      const count = parseInt(document.getElementById('genLicenseCount').value) || 0;
+      const days = parseInt(document.getElementById('genLicenseDays').value) || 0;
+      const redeem = parseInt(document.getElementById('genLicenseRedeem').value) || 0;
+      const area = document.getElementById('genLicenseResult');
+      area.style.display = 'block';
+      area.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">生成中...</div>';
+      try {
+        const res = await fetch('/api/licenses/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ count, duration_days: days, redeem_days: redeem })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const codes = json.data.codes.map(c =>
+            '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:3px 0;">' +
+            '<code style="font-size:14px; font-weight:700;">' + escapeHtml(c) + '</code>' +
+            "<button class=\"copy-btn\" onclick=\"copyText('" + c + "')\">复制</button>" +
+            '</div>'
+          ).join('');
+          area.innerHTML = '<div style="color:#34d399; font-weight:600;">已生成 ' + json.data.count + ' 枚（' + json.data.days + ' 天 / 兑换期 ' + json.data.redeem + ' 天）：</div>' + codes;
+          loadLicenses();
+        } else {
+          area.innerHTML = '<div style="color:#ef4444;">' + escapeHtml(json.message || '生成失败') + '</div>';
+        }
+      } catch (e) {
+        area.innerHTML = '<div style="color:#ef4444;">请求异常: ' + e + '</div>';
+      }
+    }
+
+    async function voidLicense(code) {
+      if (!confirm('确认作废激活码 ' + code + '？')) return;
+      const res = await fetch('/api/licenses/void', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+        body: JSON.stringify({ code })
+      });
+      const json = await res.json();
+      if (json.code === 0) { showToast('已作废'); loadLicenses(); }
+      else showToast('' + (json.message || '操作失败'), false);
+    }
+
+    // ================= 项目续期 =================
+    function openRenewModal(id) {
+      document.getElementById('renewProjectId').value = id;
+      document.getElementById('renewLicenseCode').value = '';
+      openModal('renewModal');
+    }
+
+    async function submitRenew() {
+      const id = document.getElementById('renewProjectId').value;
+      const code = document.getElementById('renewLicenseCode').value.trim();
+      if (!code) { showToast('请输入激活码', false); return; }
+      try {
+        const res = await fetch('/api/projects/renew', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ id, license_code: code })
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          closeModal('renewModal');
+          showToast('续期成功');
+          loadProjects();
+        } else {
+          showToast('' + (json.message || '续期失败'), false);
+        }
+      } catch (e) {
+        showToast('请求异常: ' + e, false);
+      }
+    }
+
+    // ================= 场景卡切换 =================
+    function switchSceneCard(key) {
+      document.querySelectorAll('#rulesSectionScenes .scene-card').forEach(c => c.style.display = 'none');
+      document.querySelectorAll('#scenePillNav .rules-nav-btn').forEach(b => b.classList.remove('active'));
+      const card = document.getElementById('sceneCard_' + key);
+      if (card) card.style.display = 'block';
+      const btn = document.getElementById('sceneBtn_' + key);
+      if (btn) btn.classList.add('active');
+      localStorage.setItem('scene_card', key);
+      setTimeout(autoGrowReplyTextareas, 30);
+    }
+    if (document.getElementById('sceneCard_verify')) {
+      switchSceneCard(localStorage.getItem('scene_card') || 'verify');
+    }
+
+    function switchAuthSection(name) {
+      document.querySelectorAll('#tab-accounts .rules-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#tab-accounts .rules-nav-btn').forEach(el => el.classList.remove('active'));
+      const sec = document.getElementById('authSection' + name.charAt(0).toUpperCase() + name.slice(1));
+      const btn = document.getElementById('authNavBtn' + name.charAt(0).toUpperCase() + name.slice(1));
+      if (sec) sec.classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    function switchDigitResult(key) {
+      ['code_success', 'code_invalid', 'code_used'].forEach(k => {
+        const el = document.getElementById('digitBlock_' + k);
+        if (el) el.style.display = (k === key) ? 'block' : 'none';
+        const b = document.getElementById('digitBtn_' + k);
+        if (b) b.classList.toggle('active', k === key);
+      });
+      setTimeout(autoGrowReplyTextareas, 30);
+    }
+    if (document.getElementById('digitBlock_code_success')) {
+      switchDigitResult('code_success');
+    }
+
+    function autoGrowReplyTextareas() {
+      const section = document.getElementById('rulesSectionScenes');
+      if (!section) return;
+      section.querySelectorAll('textarea[id^="reply_"]').forEach(el => {
+        if (el.offsetParent === null) return; // 隐藏中的场景不处理
+        const top = el.getBoundingClientRect().top;
+        const h = Math.max(220, Math.floor(window.innerHeight - top - 110));
+        el.style.height = h + 'px';
+      });
+    }
+    window.addEventListener('resize', function() {
+      setTimeout(autoGrowReplyTextareas, 50);
+      setTimeout(autoGrowAiPrompt, 50);
+    });
+</script>
 </body>
 </html>
