@@ -59,7 +59,7 @@ type CheckCodeResp struct {
 	Verified    bool   `json:"verified"`
 	OpenID      string `json:"openid,omitempty"`
 	VerifiedAt  int64  `json:"verified_at,omitempty"`
-	Extra       string `json:"extra,omitempty"`
+	SessionTag  string `json:"session_tag,omitempty"` // 会话标识（与请求中的 session_tag 呼应）
 	ErrorType   string `json:"error_type,omitempty"` // 当异常时携带机器错误代号
 }
 

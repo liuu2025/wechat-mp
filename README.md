@@ -190,7 +190,7 @@ docker compose down
       "verified": true,
       "openid": "oXYZ_xxxxxxxxxxxx",
       "verified_at": 1711234567,
-      "extra": "user_session_10086"
+      "session_tag": "user_session_10086"
     }
   }
   ```

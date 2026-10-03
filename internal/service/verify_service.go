@@ -195,7 +195,7 @@ func (s *VerifyService) CheckCodeByPollToken(ctx context.Context, pollToken, cli
 		Verified:    record.Status == model.StatusVerified,
 		OpenID:      record.OpenID,
 		VerifiedAt:  record.VerifiedAt,
-		Extra:       record.Extra,
+		SessionTag:  record.Extra, // 存储字段沿用旧名，对外统一 session_tag
 	}, nil
 }
 
