@@ -62,8 +62,13 @@ func (h *VerifyHandler) CreateCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clientIP := getClientIP(r)
-	resp, err := h.verifyService.GenerateCode(r.Context(), &req, clientIP)
+	hasForwardedIP := r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Real-IP") != ""
+	resp, err := h.verifyService.GenerateCode(r.Context(), &req, clientIP, hasForwardedIP)
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "admission:") {
+			writeError(w, http.StatusForbidden, 403, strings.TrimPrefix(err.Error(), "admission: "))
+			return
+		}
 		if strings.HasPrefix(err.Error(), "rate_limit:") || strings.HasPrefix(err.Error(), "quota_limit:") {
 			msg := strings.TrimSpace(strings.SplitN(err.Error(), ":", 2)[1])
 			writeError(w, http.StatusTooManyRequests, 429, msg)
@@ -81,31 +86,39 @@ func (h *VerifyHandler) CreateCode(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, resp)
 }
 
-// CheckCode 处理各项目查询验证码状态的请求
-// GET /api/code/check?code=xxxxxx
+// CheckCode 处理业务后端轮询验证码状态的请求（凭 create 返回的 poll_token）
+// GET /api/code/check?poll_token=xxxxxx
 func (h *VerifyHandler) CheckCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
 		return
 	}
 
-	code := strings.TrimSpace(r.URL.Query().Get("code"))
-	if code == "" {
-		writeError(w, http.StatusBadRequest, 400, "缺少必填参数 'code'（验证码）")
+	pollToken := strings.TrimSpace(r.URL.Query().Get("poll_token"))
+	if pollToken == "" {
+		if r.URL.Query().Get("code") != "" {
+			writeError(w, http.StatusBadRequest, 400, "轮询方式已升级：请改用 create 返回的 poll_token 查询（旧 code 轮询已关闭）")
+			return
+		}
+		writeError(w, http.StatusBadRequest, 400, "缺少必填参数 'poll_token'（轮询密钥）")
 		return
 	}
 
-	resp, err := h.verifyService.CheckCode(r.Context(), code)
+	clientIP := getClientIP(r)
+	resp, err := h.verifyService.CheckCodeByPollToken(r.Context(), pollToken, clientIP)
 	if err != nil {
+		if errors.Is(err, service.ErrPollSlowDown) {
+			writeError(w, http.StatusTooManyRequests, 429, "轮询过于频繁，请稍后再试")
+			return
+		}
 		if errors.Is(err, storage.ErrCodeNotFound) {
 			// 返回 200 携带明确的业务状态，避免浏览器控制台爆红且方便业务端直接判断
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(model.APIResponse{
 				Code:    404,
-				Message: "验证码已失效或不存在",
+				Message: "轮询密钥无效或已过期",
 				Data: map[string]interface{}{
-					"code":       code,
 					"status":     model.StatusExpired,
 					"verified":   false,
 					"error_type": model.ErrTypeNotFound,

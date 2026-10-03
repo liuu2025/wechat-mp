@@ -24,22 +24,27 @@ type CodeRecord struct {
 	ProjectName string `json:"project_name"` // 项目中文展示名称
 	Status      string `json:"status"`       // pending | verified | used
 	OpenID      string `json:"openid,omitempty"`
+	SessionTag  string `json:"session_tag,omitempty"` // 业务后端签发的会话标识（并发分桶与归属依据）
+	IP          string `json:"ip,omitempty"`          // 发码时的用户 IP（X-Forwarded-For，审计与 IP 桶）
+	PollToken   string `json:"poll_token,omitempty"`  // 轮询密钥（高熵随机，业务后端凭此查询状态）
 	CreatedAt   int64  `json:"created_at"`
 	VerifiedAt  int64  `json:"verified_at,omitempty"`
-	Extra       string `json:"extra,omitempty"` // 业务自传字段（如前端 session_id、用户临时ID等）
+	Extra       string `json:"extra,omitempty"` // 兼容保留（旧字段名，新数据与 SessionTag 同值）
 }
 
 // CreateCodeReq 项目方请求生成验证码的参数
 type CreateCodeReq struct {
-	Project       string `json:"project"`        // 项目标识（如 "blog", "shop"）
-	Key           string `json:"key"`            // 项目安全通信密钥（必须与后台配置一致）
-	Extra         string `json:"extra"`          // 业务透传信息
-	ExpireSeconds int    `json:"expire_seconds"` // 自定义过期秒数（可选）
+	Project     string `json:"project"`      // 项目标识（如 "blog", "shop"）
+	Key         string `json:"key"`          // 项目安全通信密钥（必须与后台配置一致）
+	SessionTag  string `json:"session_tag"`  // 会话标识：业务后端签发的本次尝试/访客标识（准入契约要求）
+	Extra       string `json:"extra"`        // 旧字段名（兼容别名，session_tag 为空时作为其值）
+	ExpireSeconds int  `json:"expire_seconds"` // 自定义过期秒数（可选）
 }
 
 // CreateCodeResp 生成验证码的响应结构
 type CreateCodeResp struct {
 	Code          string `json:"code"`
+	PollToken     string `json:"poll_token"`   // 轮询密钥：业务后端凭此查询核销状态（高熵随机，替代 6 位码查询）
 	Project       string `json:"project"`      // 始终返回项目英文代号（用于机器比对）
 	ProjectName   string `json:"project_name"` // 项目中文展示名称
 	ExpireSeconds int    `json:"expire_seconds"`

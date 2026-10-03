@@ -417,10 +417,10 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 		if strings.HasPrefix(eventKey, "GET_CODE_") {
 			projectName := strings.TrimPrefix(eventKey, "GET_CODE_")
 			resp, err := s.verifyService.GenerateCode(ctx, &model.CreateCodeReq{
-				Project:       projectName,
-				Extra:         "menu_click:" + openID,
+				Project:      projectName,
+				SessionTag:   "menu:" + openID,
 				ExpireSeconds: s.cfg.DefaultCodeExpire,
-			}, "wechat_internal")
+			}, "menu:"+openID, true)
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"
 			}

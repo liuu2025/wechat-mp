@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"wechat-mp/internal/model"
 	"wechat-mp/internal/storage"
 )
+
+var ErrPollSlowDown = errors.New("poll_slow_down") // 导出：handler 映射 429
 
 type VerifyService struct {
 	cfg            *config.Config
@@ -27,12 +30,22 @@ func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectSer
 	}
 }
 
-// GenerateCode 为业务项目生成唯一的 6 位数字验证码（集成三道防线限流与配额保护）
-func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq, clientIP string) (*model.CreateCodeResp, error) {
+// GenerateCode 为业务项目生成唯一的 6 位数字验证码（集成准入契约、四道防线与轮询密钥）
+func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq, clientIP string, hasForwardedIP bool) (*model.CreateCodeResp, error) {
 	projectSlug := strings.TrimSpace(req.Project)
 	if projectSlug == "" {
 		return nil, fmt.Errorf("field 'project' is required")
 	}
+
+	// 会话标识归一：新字段 session_tag，旧字段 extra 作为兼容别名
+	sessionTag := strings.TrimSpace(req.SessionTag)
+	if sessionTag == "" {
+		sessionTag = strings.TrimSpace(req.Extra)
+	}
+	if len(sessionTag) > 64 {
+		return nil, fmt.Errorf("field 'session_tag' 过长（最多 64 字符）")
+	}
+	req.Extra = sessionTag // 归一存储
 
 	projectName := projectSlug
 	// 严格白名单与密钥鉴权校验
@@ -50,6 +63,11 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		}
 		projectSlug = p.ID   // 始终保持标准英文标识
 		projectName = p.Name // 项目中文展示名称
+	}
+
+	// ---------------- 准入契约：会话标识（session_tag）或转发用户 IP，二者必居其一 ----------------
+	if sessionTag == "" && !hasForwardedIP {
+		return nil, fmt.Errorf("admission: 缺少会话标识：请在请求体中加入 session_tag（业务后端签发的访客/本次尝试标识），或在请求头设置 X-Forwarded-For 转发用户真实 IP 后重试")
 	}
 
 	// ---------------- 第一道防线：单 IP 频控（2秒内最多申请 2 次，防机器疯狂连点） ----------------
@@ -99,6 +117,29 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		return nil, fmt.Errorf("quota_limit: 当前项目等待核销的验证码过多，请等待现有验证码核销或过期后再试")
 	}
 
+	// ---------------- 第四道防线：会话标识桶（同一访客并发上限 3）与 IP 桶（同一 IP 并发上限 10） ----------------
+	tagTaken := false
+	if sessionTag != "" {
+		ok, _ := s.storage.TryAcquireSlot(ctx, "tag", sessionTag, code, ttl, 3)
+		if !ok {
+			s.storage.ReleaseProjectActiveCode(ctx, projectSlug, code)
+			return nil, fmt.Errorf("rate_limit: 同一会话标识下的待核销验证码过多（上限 3 个），请等待核销或过期后再试")
+		}
+		tagTaken = true
+	}
+	if clientIP != "" {
+		ok, _ := s.storage.TryAcquireSlot(ctx, "ip", clientIP, code, ttl, 10)
+		if !ok {
+			if tagTaken {
+				s.storage.ReleaseCodeSlots(ctx, sessionTag, "", code)
+			}
+			s.storage.ReleaseProjectActiveCode(ctx, projectSlug, code)
+			return nil, fmt.Errorf("rate_limit: 同一 IP 下的待核销验证码过多（上限 10 个），请等待核销或过期后再试")
+		}
+	}
+
+	pollToken := generateRandomHex(24)
+
 	record := &model.CodeRecord{
 		Code:        code,
 		Project:     projectSlug,
@@ -106,25 +147,38 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		Status:      model.StatusPending,
 		CreatedAt:   time.Now().Unix(),
 		Extra:       req.Extra,
+		SessionTag:  sessionTag,
+		IP:          clientIP,
+		PollToken:   pollToken,
 	}
 
-	if err := s.storage.SaveCode(ctx, record, ttl); err != nil {
+	// 码记录与轮询密钥索引同管道原子写入
+	if err := s.storage.SaveCodeWithPollToken(ctx, record, ttl); err != nil {
+		s.storage.ReleaseCodeSlots(ctx, sessionTag, clientIP, code)
 		s.storage.ReleaseProjectActiveCode(ctx, projectSlug, code)
 		return nil, err
 	}
 
 	return &model.CreateCodeResp{
 		Code:          code,
+		PollToken:     pollToken,
 		Project:       projectSlug,
 		ProjectName:   projectName,
 		ExpireSeconds: expireSec,
 	}, nil
 }
 
-// CheckCode 查询指定验证码的核销状态
-func (s *VerifyService) CheckCode(ctx context.Context, code string) (*model.CheckCodeResp, error) {
-	record, err := s.storage.GetCode(ctx, code)
+// CheckCodeByPollToken 以轮询密钥查询码状态（旧 code 查询已关闭；RFC 8628：轮询端点必须限流）
+func (s *VerifyService) CheckCodeByPollToken(ctx context.Context, pollToken, clientIP string) (*model.CheckCodeResp, error) {
+	if cnt, _ := s.storage.RawIncr(ctx, "wx:rate:poll:"+pollToken, time.Minute); cnt > 120 {
+		return nil, ErrPollSlowDown
+	}
+	record, err := s.storage.GetCodeByPollToken(ctx, pollToken)
 	if err != nil {
+		// 无效轮询密钥按来源 IP 计失败次数（防爆破枚举，超限临时拒绝）
+		if cnt, _ := s.storage.RawIncr(ctx, "wx:rate:pollmiss:"+clientIP, time.Minute); cnt > 30 {
+			return nil, ErrPollSlowDown
+		}
 		return nil, err
 	}
 

@@ -55,6 +55,19 @@ func (s *Storage) SaveCode(ctx context.Context, record *model.CodeRecord, ttl ti
 	return s.client.Set(ctx, codeKey(record.Code), data, ttl).Err()
 }
 
+// SaveCodeWithPollToken 保存码记录并建立轮询密钥索引（同管道原子写入）
+func (s *Storage) SaveCodeWithPollToken(ctx context.Context, record *model.CodeRecord, ttl time.Duration) error {
+	data, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	pipe := s.client.TxPipeline()
+	pipe.Set(ctx, codeKey(record.Code), data, ttl)
+	pipe.Set(ctx, pollKey(record.PollToken), record.Code, ttl)
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
 // GetCode 获取验证码记录
 func (s *Storage) GetCode(ctx context.Context, code string) (*model.CodeRecord, error) {
 	val, err := s.client.Get(ctx, codeKey(code)).Result()
@@ -100,6 +113,11 @@ func (s *Storage) MarkVerified(ctx context.Context, code, openID string) (*model
 
 	// 核销完成，释放项目活跃码池额度
 	s.ReleaseProjectActiveCode(ctx, record.Project, code)
+	// 释放会话/IP 并发桶，并刷新轮询密钥索引有效期（与码记录同步）
+	s.ReleaseCodeSlots(ctx, record.SessionTag, record.IP, code)
+	if record.PollToken != "" {
+		_ = s.SavePollToken(ctx, record.PollToken, code, ttl)
+	}
 
 	return record, nil
 }
@@ -177,7 +195,6 @@ func (s *Storage) TryAcquireProjectActiveCode(ctx context.Context, project, code
 func (s *Storage) tryAcquireOnce(ctx context.Context, key, code string, ttl time.Duration, maxActive int) (bool, error) {
 	now := float64(time.Now().Unix())
 	expireAt := now + ttl.Seconds()
-
 	pipe := s.client.TxPipeline()
 	pipe.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%f", now))
 	cardCmd := pipe.ZCard(ctx, key)
@@ -185,7 +202,7 @@ func (s *Storage) tryAcquireOnce(ctx context.Context, key, code string, ttl time
 	if _, err := pipe.Exec(ctx); err != nil {
 		return false, err
 	}
-	if cardCmd.Val() > int64(maxActive) {
+	if cardCmd.Val() >= int64(maxActive) {
 		_ = s.client.ZRem(ctx, key, code).Err()
 		return false, nil
 	}
@@ -298,6 +315,10 @@ func (s *Storage) ConsumeUniversalCode(ctx context.Context, code, targetProject,
 	// 验证成功后保留 1 分钟作为防重复提交标记，随后自动清理
 	_ = s.client.Set(ctx, codeKey(code), data, 1*time.Minute).Err()
 
+	// 释放会话/IP 桶与轮询密钥索引（码已消费）
+	s.ReleaseCodeSlots(ctx, record.SessionTag, record.IP, code)
+	s.DeletePollToken(ctx, record.PollToken)
+
 	return record, nil
 }
 
@@ -372,6 +393,71 @@ func (s *Storage) RawIncr(ctx context.Context, key string, window time.Duration)
 		_ = s.client.Expire(ctx, key, window).Err()
 	}
 	return count, nil
+}
+
+// ----------------- 会话标识 / IP 并发桶 -----------------
+
+func bucketKey(kind, id string) string {
+	return fmt.Sprintf("wx:bucket:%s:%s", kind, id)
+}
+
+// TryAcquireSlot 在限容桶中占一个坑位（ZSET：member=验证码，score=过期时间；过期自动回收）
+func (s *Storage) TryAcquireSlot(ctx context.Context, kind, id, code string, ttl time.Duration, max int) (bool, error) {
+	key := bucketKey(kind, id)
+	now := float64(time.Now().Unix())
+	pipe := s.client.TxPipeline()
+	pipe.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%f", now))
+	cardCmd := pipe.ZCard(ctx, key)
+	pipe.ZAdd(ctx, key, redis.Z{Score: now + ttl.Seconds(), Member: code})
+	if _, err := pipe.Exec(ctx); err != nil {
+		// Redis 异常时平滑放行，不阻断正常业务
+		return true, nil
+	}
+	if cardCmd.Val() >= int64(max) {
+		_ = s.client.ZRem(ctx, key, code).Err()
+		return false, nil
+	}
+	return true, nil
+}
+
+// ReleaseCodeSlots 核销时释放码占用的全部分桶（会话标识桶与 IP 桶）
+func (s *Storage) ReleaseCodeSlots(ctx context.Context, tag, ip, code string) {
+	if tag != "" {
+		_ = s.client.ZRem(ctx, bucketKey("tag", tag), code).Err()
+	}
+	if ip != "" {
+		_ = s.client.ZRem(ctx, bucketKey("ip", ip), code).Err()
+	}
+}
+
+// ----------------- 轮询密钥（poll_token）索引 -----------------
+
+func pollKey(token string) string {
+	return fmt.Sprintf("wx:poll:%s", token)
+}
+
+// SavePollToken 建立轮询密钥 → 码 的索引（TTL 与码一致）
+func (s *Storage) SavePollToken(ctx context.Context, token, code string, ttl time.Duration) error {
+	return s.client.Set(ctx, pollKey(token), code, ttl).Err()
+}
+
+// GetCodeByPollToken 以轮询密钥换取码记录（6 位码本身不再是查询句柄）
+func (s *Storage) GetCodeByPollToken(ctx context.Context, token string) (*model.CodeRecord, error) {
+	code, err := s.client.Get(ctx, pollKey(token)).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, ErrCodeNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.GetCode(ctx, code)
+}
+
+// DeletePollToken 删除轮询密钥索引（码被消费时）
+func (s *Storage) DeletePollToken(ctx context.Context, token string) {
+	if token != "" {
+		_ = s.client.Del(ctx, pollKey(token)).Err()
+	}
 }
 
 const menuKey = "wx:custom_menu"

@@ -130,6 +130,9 @@ docker compose down
   }
   ```
 ### 2. 申请 6 位验证码（流向二）
+
+> 接入契约：请求必须携带 `session_tag`（后端签发的会话标识，同一访客/尝试保持稳定）或转发 `X-Forwarded-For` 用户真实 IP，二者缺一返回 403；轮询必须使用响应中的 `poll_token`，6 位码本身不可用于查询。
+
 * **接口**：`POST /api/code/create`
 * **Headers**：`Content-Type: application/json`
 * **请求体**：
@@ -137,8 +140,8 @@ docker compose down
   {
     "project": "shop",
     "key": "sec_shop_8f9a2b1c",
-    "expire_seconds": 300,
-    "extra": "user_session_10086"
+    "session_tag": "user_session_10086",
+    "expire_seconds": 300
   }
   ```
 * **成功响应**：
@@ -148,6 +151,7 @@ docker compose down
     "message": "success",
     "data": {
       "code": "839201",
+      "poll_token": "9f2c7a1e8b3d4f6a9c0e1d2b3a4f5c6d",
       "project": "shop",
       "project_name": "商城系统",
       "expire_seconds": 300
@@ -158,7 +162,7 @@ docker compose down
 ---
 
 ### 3. 轮询核销状态（流向二）
-* **接口**：`GET /api/code/check?code=839201`
+* **接口**：`GET /api/code/check?poll_token=9f2c7a1e8b3d4f6a9c0e1d2b3a4f5c6d`
 * **未核销响应**：
   ```json
   {

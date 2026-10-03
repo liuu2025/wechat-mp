@@ -1514,8 +1514,8 @@
               </select>
             </div>
             <div class="input-row">
-              <label>透传参数：</label>
-              <input type="text" id="extraParam" value="guest_session_9527" placeholder="session_id 等">
+              <label>会话标识：</label>
+              <input type="text" id="extraParam" value="guest_session_9527" placeholder="后端签发的 session_tag（必填）">
             </div>
             <div>
               <button class="btn-primary" onclick="generateCodeFromProject()">模拟网站生成验证码 (POST /api/code/create)</button>
@@ -2063,6 +2063,9 @@ def login_by_wechat():
               <div class="card-title">【流向二说明】网站弹码 微信发送纯数字 网站免操作自动放行</div>
               <span class="tag-blue">电脑与手机浏览器完全通用</span>
             </div>
+              <div style="font-size:12.5px; color:#f59e0b; background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.35); padding:8px 12px; border-radius:6px; margin:10px 0;">
+                接入契约：创建时必须携带 session_tag（后端签发的会话标识）或转发 X-Forwarded-For 用户真实 IP，二者缺一返回 403；轮询必须使用 create 响应中的 poll_token（高熵轮询密钥，6 位码本身不可用于查询）。
+              </div>
 
             <div style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px; opacity: 0.9;">
               <b>适用场景</b>：用户在网站点击“微信快速验证/登录”，网页弹出一个 6 位纯数字，用户用微信发给公众号，网页前端定时轮询检测到已验证，瞬间自动放行。
@@ -2083,7 +2086,7 @@ def login_by_wechat():
       │                                       │──> 回复: 验证成功                    │
       │                                       │    (Redis 状态置为 verified)          │
       │                                       │                                      │
-      │ 4. 轮询 GET /api/code/check?code=640798│                                      │
+      │ 4. 轮询 GET /api/code/check?poll_token│                                      │
       │──────────────────────────────────────>│                                      │
       │   <-- 返回 verified: true, openid: xxx│                                      │
       │                                       │                                      │
@@ -2100,7 +2103,7 @@ def login_by_wechat():
               </tr>
               <tr>
                 <td><code>POST /api/code/create</code></td>
-                <td><code>{"project": "your_project", "key": "项目安全密钥", "extra": "可选自定义会话参数", "expire_seconds": 300}</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "session_tag": "会话标识（必填，后端签发）", "expire_seconds": 300}</code></td>
                 <td>
                   1. 严格白名单与密钥核验，项目必须已启用且密钥匹配；<br>
                   2. 生成 6 位不重复的随机数字，默认 5 分钟有效；<br>
@@ -2108,7 +2111,7 @@ def login_by_wechat():
                 </td>
               </tr>
               <tr>
-                <td><code>GET /api/code/check?code=640798</code></td>
+                <td><code>GET /api/code/check?poll_token=<create 返回的 poll_token></code></td>
                 <td>URL 参数：<code>code</code> (6 位数字)</td>
                 <td>
                   1. 初始状态为 <code>verified: false</code>；<br>
@@ -2127,17 +2130,18 @@ async function handleWechatScanLogin() {
   const createRes = await fetch('https://中枢域名/api/code/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', expire_seconds: 300 })
+    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', session_tag: 'sess_abc123', expire_seconds: 300 })
   });
   const { data } = await createRes.json();
   const code = data.code;
+  const pollToken = data.poll_token; // 轮询密钥：业务后端凭此查询状态
 
   // 网页展示该验证码，引导用户发给公众号
   document.getElementById('code-view').innerText = code;
 
-  // 步骤 2: 定时器轮询状态 (每 1.5 秒查一次)
+  // 步骤 2: 定时器轮询状态 (每 1.5 秒查一次，携带 poll_token)
   const timer = setInterval(async () => {
-    const checkRes = await fetch(`http://中枢域名/api/code/check?code=${code}`);
+    const checkRes = await fetch(`http://中枢域名/api/code/check?poll_token=${pollToken}`);
     const { data: result } = await checkRes.json();
 
     if (result && result.verified) {
@@ -2522,6 +2526,7 @@ async function handleWechatScanLogin() {
     }
     let currentPollingTimer = null;
     let latestActiveCode = "";
+    let latestPollToken = "";
     let cachedProjects = [];
 
     // 初始化时钟
@@ -3585,15 +3590,16 @@ async function handleWechatScanLogin() {
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, key, extra, expire_seconds: 300 })
+          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 300 })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
           latestActiveCode = json.data.code;
+          latestPollToken = json.data.poll_token || '';
           document.getElementById('codeDisplayArea').style.display = 'flex';
           document.getElementById('generatedCode').textContent = latestActiveCode;
           document.getElementById('pollStatus').innerHTML = '<span style="color:#d97706;">等待手机回复中...</span>';
-          startPolling(latestActiveCode);
+          startPolling(latestActiveCode, latestPollToken);
         } else {
           alert("生成验证码失败: " + (json.message || "未知原因"));
         }
@@ -3608,11 +3614,11 @@ async function handleWechatScanLogin() {
       sendTextMessage();
     }
 
-    function startPolling(code) {
+    function startPolling(code, token) {
       if (currentPollingTimer) clearInterval(currentPollingTimer);
       currentPollingTimer = setInterval(async () => {
         try {
-          const res = await fetch(`/api/code/check?code=${code}`);
+          const res = await fetch(`/api/code/check?poll_token=${token}`);
           const json = await res.json();
           if (json.code === 0 && json.data && json.data.verified) {
             clearInterval(currentPollingTimer);
@@ -4125,12 +4131,12 @@ async function handleWechatScanLogin() {
 - **申请 6 位验证码**：
   * 请求：\`POST ${baseUrl}/api/code/create\`
   * Headers: \`Content-Type: application/json\`
-  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 300, "extra": "<可选自定义参数>" }\`
-  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "project": "your_project", "project_name": "项目名称", "expire_seconds": 300 } }\`
+  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 300, "session_tag": "<后端签发的会话标识，必填>" }\`
+  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "poll_token": "<轮询密钥>", "project": "your_project", "project_name": "项目名称", "expire_seconds": 300 } }\`
   * 规范约定：返回的 \`project\` 为英文唯一代号（用于代码逻辑校验），\`project_name\` 为中文展示名。
 
 - **前端轮询状态**：
-  * 请求：\`GET ${baseUrl}/api/code/check?code=640798\`（建议间隔 1.5 秒）
+  * 请求：\`GET ${baseUrl}/api/code/check?poll_token=<create 返回的 poll_token>\`（建议间隔 1.5 秒）
   * 响应（未验证）：\`{ "code": 0, "data": { "verified": false, "status": "pending" } }\`
   * 响应（已验证）：\`{ "code": 0, "data": { "verified": true, "openid": "oXYZ_xxx", "project": "your_project", "project_name": "项目名称" } }\`
   * 响应（已失效/过期）：\`{ "code": 404, "data": { "verified": false, "status": "expired", "error_type": "code_not_found" } }\`
