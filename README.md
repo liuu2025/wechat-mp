@@ -141,7 +141,7 @@ docker compose down
     "project": "shop",
     "key": "sec_shop_8f9a2b1c",
     "session_tag": "user_session_10086",
-    "expire_seconds": 300
+    "expire_seconds": 180
   }
   ```
 * **成功响应**：
@@ -154,7 +154,7 @@ docker compose down
       "poll_token": "9f2c7a1e8b3d4f6a9c0e1d2b3a4f5c6d",
       "project": "shop",
       "project_name": "商城系统",
-      "expire_seconds": 300
+      "expire_seconds": 180
     }
   }
   ```

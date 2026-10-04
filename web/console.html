@@ -1990,8 +1990,8 @@
       │                                       │                                        │
       │ 1. 用户发送: "验证码"                  │                                        │
       │──────────────────────────────────────>│                                        │
-      │                                       │ 检查该用户 5 分钟内是否有活跃码        │
-      │   <-- 回复: 【209710】(有效期5分钟)    │ 绑定关系: 209710 <---> openID          │
+      │                                       │ 检查该用户 3 分钟内是否有活跃码        │
+      │   <-- 回复: 【209710】(有效期3分钟)    │ 绑定关系: 209710 <---> openID          │
       │                                       │                                        │
       │ 2. 用户将 209710 填入网站输入框并提交                                          │
       │───────────────────────────────────────────────────────────────────────────────>│
@@ -2103,10 +2103,10 @@ def login_by_wechat():
               </tr>
               <tr>
                 <td><code>POST /api/code/create</code></td>
-                <td><code>{"project": "your_project", "key": "项目安全密钥", "session_tag": "会话标识（必填，后端签发）", "expire_seconds": 300}</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "session_tag": "会话标识（必填，后端签发）", "expire_seconds": 180}</code></td>
                 <td>
                   1. 严格白名单与密钥核验，项目必须已启用且密钥匹配；<br>
-                  2. 生成 6 位不重复的随机数字，默认 5 分钟有效；<br>
+                  2. 生成 6 位不重复的随机数字，默认 3 分钟有效；<br>
                   3. 响应包含 <code>project</code> (项目英文标识) 与 <code>project_name</code> (中文名)。
                 </td>
               </tr>
@@ -2130,7 +2130,7 @@ async function handleWechatScanLogin() {
   const createRes = await fetch('https://中枢域名/api/code/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', session_tag: 'sess_abc123', expire_seconds: 300 })
+    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', session_tag: 'sess_abc123', expire_seconds: 180 })
   });
   const { data } = await createRes.json();
   const code = data.code;
@@ -2172,7 +2172,7 @@ async function handleWechatScanLogin() {
             </p>
 
             <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
-              <span class="rule-tag ttl">验证码默认寿命：5 分钟 (300秒)</span>
+              <span class="rule-tag ttl">验证码默认寿命：3 分钟 (180秒)</span>
               <span class="rule-tag safe">单次消费：核销成功后立即销毁防重放</span>
               <span class="rule-tag rate">防刷机制：未过期前重复索取返回相同码</span>
             </div>
@@ -3387,7 +3387,7 @@ async function handleWechatScanLogin() {
       if (activeText) {
         footerPart = '\n\n-------------------\n' + activeText;
       }
-      const rawText = `您的通用通行码为：【209710】\n\n有效期：5 分钟（一次性有效）\n使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！${footerPart}`;
+      const rawText = `您的通用通行码为：【209710】\n\n有效期：3 分钟（一次性有效）\n使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！${footerPart}`;
       previewEl.innerHTML = linkify(escapeHtml(rawText));
     }
 
@@ -3590,7 +3590,7 @@ async function handleWechatScanLogin() {
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 300 })
+          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 180 })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -3710,8 +3710,8 @@ async function handleWechatScanLogin() {
       code_invalid: {
         title: '验证码不存在或已过期',
         badge: '6 位数字查无记录',
-        trigger: '当用户发送了 6 位数字，但验证码已超过 5 分钟失效，或输错了数字。',
-        desc: '场景：用户输错了 6 位验证码，或者超过 5 分钟验证码已过期',
+        trigger: '当用户发送了 6 位数字，但验证码已超过 3 分钟失效，或输错了数字。',
+        desc: '场景：用户输错了 6 位验证码，或者超过 3 分钟验证码已过期',
         simUserMsg: '123456',
         isSystemNotice: false,
         vars: [
@@ -3735,11 +3735,11 @@ async function handleWechatScanLogin() {
         title: '索取通用通行码',
         badge: '流向一：微信索码',
         trigger: '用户回复关键词：【验证码】【取码】【登录】【注册】【通行码】【code】【1】。',
-        desc: '场景：用户在微信发送【验证码】或【登录】，索取 5 分钟有效通用通行码',
+        desc: '场景：用户在微信发送【验证码】或【登录】，索取 3 分钟有效通用通行码',
         simUserMsg: '验证码',
         isSystemNotice: false,
         vars: [
-          { key: '{code}', desc: '系统动态生成的 6 位通用通行码（5分钟有效）' }
+          { key: '{code}', desc: '系统动态生成的 6 位通用通行码（3分钟有效）' }
         ],
         field: 'universal_code'
       },
@@ -4131,8 +4131,8 @@ async function handleWechatScanLogin() {
 - **申请 6 位验证码**：
   * 请求：\`POST ${baseUrl}/api/code/create\`
   * Headers: \`Content-Type: application/json\`
-  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 300, "session_tag": "<后端签发的会话标识，必填>" }\`
-  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "poll_token": "<轮询密钥>", "project": "your_project", "project_name": "项目名称", "expire_seconds": 300 } }\`
+  * Body: \`{ "project": "<项目英文标识>", "key": "<项目通信密钥>", "expire_seconds": 180, "session_tag": "<后端签发的会话标识，必填>" }\`
+  * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "poll_token": "<轮询密钥>", "project": "your_project", "project_name": "项目名称", "expire_seconds": 180 } }\`
   * 规范约定：返回的 \`project\` 为英文唯一代号（用于代码逻辑校验），\`project_name\` 为中文展示名。
 
 - **前端轮询状态**：

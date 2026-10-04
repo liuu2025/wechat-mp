@@ -55,6 +55,7 @@ func matchKeyword(keywords []string, lowerText string) bool {
 // matchTextRule 消息路由：返回命中的规则标识
 // 优先级固定：六位数字（契约锁死）→ 内置规则 → 自定义规则（先配先中）→ 兜底
 func (s *WechatService) matchTextRule(rules *model.RulesConfig, text string) string {
+	text = strings.TrimSpace(text) // 与 ProcessMessage 的裁剪契约保持一致，单元自身也要健壮
 	if digitRegex.MatchString(text) {
 		return "verify_code"
 	}
@@ -188,7 +189,7 @@ func (s *WechatService) getRepliesConfig() *model.RepliesConfig {
 		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
-		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：5 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
+		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：3 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 		Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
 		Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 		UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
@@ -424,7 +425,7 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"
 			}
-			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 5 分钟，请在对应网页输入完成验证)%s", projectName, resp.Code, s.getActiveGlobalFooter())
+			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 3 分钟，请在对应网页输入完成验证)%s", projectName, resp.Code, s.getActiveGlobalFooter())
 		}
 
 		switch eventKey {

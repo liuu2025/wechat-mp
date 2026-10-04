@@ -27,7 +27,7 @@ func Load() *Config {
 		RedisAddr:         getEnv("REDIS_ADDR", "redis:6379"),
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
 		RedisDB:           getEnvAsInt("REDIS_DB", 0),
-		DefaultCodeExpire: getEnvAsInt("CODE_EXPIRE_SECONDS", 300),
+		DefaultCodeExpire: getEnvAsInt("CODE_EXPIRE_SECONDS", 180),
 	}
 }
 

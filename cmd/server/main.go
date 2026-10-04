@@ -40,6 +40,14 @@ func main() {
 	accountService := service.NewAccountService("./config", store, verifyService)
 	wechatService := service.NewWechatService(cfg, store, verifyService, projectService)
 
+	// 3.5 数据保险：config/ 目录快照（启动一次 + 每 24 小时一次 + 优雅退出前一次，保留最近 7 份）
+	backupService := service.NewBackupService("./config", "./backups/config", 7, 24*time.Hour)
+	if _, err := backupService.SnapshotNow(); err != nil {
+		log.Printf("[Backup] 启动快照失败: %v", err)
+	}
+	backupCtx, backupCancel := context.WithCancel(context.Background())
+	go backupService.Run(backupCtx)
+
 	// 4. 控制器层
 	verifyHandler := handler.NewVerifyHandler(verifyService)
 	wechatHandler := handler.NewWechatHandler(wechatService)
@@ -160,6 +168,12 @@ func main() {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server forced shutdown: %v", err)
+	}
+
+	// 退出前最后一份数据快照
+	backupCancel()
+	if _, err := backupService.SnapshotNow(); err != nil {
+		log.Printf("[Backup] 退出快照失败: %v", err)
 	}
 
 	fmt.Println(">>> 服务已完全停止。")

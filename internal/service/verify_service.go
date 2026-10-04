@@ -238,7 +238,7 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 
 	ttl := time.Duration(s.cfg.DefaultCodeExpire) * time.Second
 	if ttl <= 0 {
-		ttl = 300 * time.Second
+		ttl = 180 * time.Second
 	}
 
 	if err := s.storage.SaveUserUniversalCode(ctx, openID, record, ttl); err != nil {

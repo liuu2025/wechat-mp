@@ -699,7 +699,7 @@
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, extra, expire_seconds: 300 })
+          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 180 })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -724,7 +724,7 @@
       if (currentPollingTimer) clearInterval(currentPollingTimer);
       currentPollingTimer = setInterval(async () => {
         try {
-          const res = await fetch(`/api/code/check?code=${code}`);
+          const res = await fetch(`/api/code/check?poll_token=${code}`);
           const json = await res.json();
           if (json.code === 0 && json.data && json.data.verified) {
             clearInterval(currentPollingTimer);
