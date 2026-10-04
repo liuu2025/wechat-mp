@@ -23,3 +23,6 @@ Thumbs.db
 # 生产/测试运行时数据（避免本地测试产生的脏数据被推送到 GitHub）
 config/
 .env
+
+# AI 助手协作规则（仅本地，不入库）
+AGENTS.md
