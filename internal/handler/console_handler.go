@@ -77,6 +77,60 @@ func (h *ConsoleHandler) PreviewSession(w http.ResponseWriter, r *http.Request) 
 	writeSuccess(w, sess)
 }
 
+// DevStatus 本机开发登录通道是否启用（公开接口，仅返回一个布尔）
+// GET /api/console/dev-status
+func (h *ConsoleHandler) DevStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+		return
+	}
+	allowed := h.accountService.DevLoginAllowed()
+	writeSuccess(w, map[string]bool{"dev_login": allowed})
+}
+
+// DevLogin 本机开发登录：免通行码，直接以指定 openid 登录已有账号
+// POST /api/console/dev-login
+func (h *ConsoleHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+		return
+	}
+
+	var req struct {
+		OpenID string `json:"openid"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, 400, "invalid body")
+		return
+	}
+	defer r.Body.Close()
+
+	sess, err := h.accountService.DevLogin(r.Context(), req.OpenID)
+	if err != nil {
+		if err == service.ErrDevLoginDisabled {
+			writeError(w, http.StatusForbidden, 403, "本机开发登录通道未启用")
+			return
+		}
+		if err == service.ErrAccountNotFound {
+			writeError(w, http.StatusUnauthorized, 401, "该设备身份没有已注册账号，请先完成首次初始化")
+			return
+		}
+		if err == service.ErrAccountDisabled {
+			writeError(w, http.StatusForbidden, 403, "该账号已被停用")
+			return
+		}
+		writeError(w, http.StatusUnauthorized, 401, err.Error())
+		return
+	}
+
+	writeSuccess(w, map[string]interface{}{
+		"token":   sess.Token,
+		"role":    sess.Role,
+		"openid":  sess.OpenID,
+		"message": "本机开发登录成功",
+	})
+}
+
 // Login 验证码登录：消耗公众号通行码 → 解析 openid → 发会话
 // POST /api/console/login
 func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +152,7 @@ func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.accountService.LoginWithCode(r.Context(), req.Code)
+	sess, isNew, err := h.accountService.LoginWithCode(r.Context(), req.Code)
 	if err != nil {
 		if err == service.ErrAccountDisabled {
 			writeError(w, http.StatusForbidden, 403, "该账号已被停用，请联系管理员")
@@ -109,7 +163,13 @@ func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, sess)
+	writeSuccess(w, map[string]interface{}{
+		"token":    sess.Token,
+		"role":     sess.Role,
+		"openid":   sess.OpenID,
+		"is_new":   isNew,
+		"message":  map[bool]string{true: "账号注册成功，欢迎加入", false: "登录成功"}[isNew],
+	})
 }
 
 // Me 当前会话信息（前端按角色渲染界面）

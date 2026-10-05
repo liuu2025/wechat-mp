@@ -34,6 +34,7 @@ services:
       - REDIS_ADDR=redis:6379
       - REDIS_DB=0
       - CODE_EXPIRE_SECONDS=${CODE_EXPIRE_SECONDS:-180}
+      - DEV_LOCAL_LOGIN=${DEV_LOCAL_LOGIN:-false}
     depends_on:
       redis:
         condition: service_healthy

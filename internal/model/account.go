@@ -28,6 +28,7 @@ type SessionInfo struct {
 	AccountID string `json:"account_id"`
 	OpenID    string `json:"openid"`
 	Role      string `json:"role"`
+	IsNew     bool   `json:"is_new,omitempty"` // 本次登录是否新建了账号（不落 Redis，仅登录响应携带）
 }
 
 // SetAccountStatusReq 管理员启停账号请求

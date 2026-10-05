@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"wechat-mp/internal/config"
 	"wechat-mp/internal/model"
 	"wechat-mp/internal/storage"
 )
@@ -34,17 +35,48 @@ type AccountService struct {
 	accountsPath string
 	store        *storage.Storage
 	verifySvc    *VerifyService
+	cfg          *config.Config
 	accountsMu   sync.Mutex
 }
 
-func NewAccountService(configDir string, store *storage.Storage, verifySvc *VerifyService) *AccountService {
+func NewAccountService(configDir string, store *storage.Storage, verifySvc *VerifyService, cfg *config.Config) *AccountService {
 	s := &AccountService{
 		accountsPath: filepath.Join(configDir, "accounts.json"),
 		store:        store,
 		verifySvc:    verifySvc,
+		cfg:          cfg,
 	}
 	s.ensureInitialized()
 	return s
+}
+
+var ErrDevLoginDisabled = errors.New("dev login disabled")
+
+// DevLogin 本机开发通道：免通行码直接以指定 openid 登录已有账号。
+// 仅当环境变量 DEV_LOCAL_LOGIN 开启时可用（本地开发用）；公开部署不设置该变量，此通道自动关闭。
+// 不创建新账号——openid 必须已注册，防止公开环境下被陌生人利用。
+func (s *AccountService) DevLogin(ctx context.Context, openID string) (*model.SessionInfo, error) {
+	if s.cfg == nil || !s.cfg.DevLocalLogin {
+		return nil, ErrDevLoginDisabled
+	}
+	if openID == "" {
+		return nil, fmt.Errorf("openid 不能为空")
+	}
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return nil, err
+	}
+	for i := range accounts {
+		if accounts[i].OpenID == openID {
+			if accounts[i].Status != model.AccountActive {
+				return nil, ErrAccountDisabled
+			}
+			accounts[i].LastLogin = time.Now().Unix()
+			_ = s.writeAccounts(accounts)
+			return s.createSession(&accounts[i])
+		}
+	}
+	return nil, ErrAccountNotFound
 }
 
 func (s *AccountService) ensureInitialized() {
@@ -87,30 +119,32 @@ func (s *AccountService) NeedsBootstrap() bool {
 }
 
 // LoginWithCode 验证码登录（登录即注册为普通用户；能做什么由激活码决定，账号本身无害）
-// 系统首个注册的账号自动成为管理员
-func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*model.SessionInfo, error) {
+// 系统首个注册的账号自动成为管理员。返回值第二个 bool 表示本次是否新建了账号。
+func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*model.SessionInfo, bool, error) {
 	openID, err := s.consumeLoginCode(ctx, loginCode)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	accounts, err := s.readAccounts()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	for i := range accounts {
 		if accounts[i].OpenID == openID {
 			if accounts[i].Status != model.AccountActive {
-				return nil, ErrAccountDisabled
+				return nil, false, ErrAccountDisabled
 			}
 			accounts[i].LastLogin = time.Now().Unix()
 			_ = s.writeAccounts(accounts)
-			return s.createSession(&accounts[i])
+			info, err := s.createSession(&accounts[i])
+			return info, false, err
 		}
 	}
 
 	// 首个注册的账号自动成为管理员（之后注册的都是普通用户）
 	role := model.RoleTenant
+	isNew := true
 	if s.NeedsBootstrap() {
 		role = model.RoleAdmin
 	}
@@ -124,9 +158,10 @@ func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*
 	}
 	accounts = append(accounts, account)
 	if err := s.writeAccounts(accounts); err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return s.createSession(&account)
+	info, err := s.createSession(&account)
+	return info, isNew, err
 }
 
 // BootstrapSession 本地测试通道：系统未初始化（无任何账号）时，以提供的 openid 直接创建管理员会话。
@@ -159,6 +194,11 @@ func (s *AccountService) BootstrapSession(openID string) (*model.SessionInfo, er
 		return nil, err
 	}
 	return s.createSession(&account)
+}
+
+// DevLoginAllowed 本机开发登录通道是否启用
+func (s *AccountService) DevLoginAllowed() bool {
+	return s.cfg != nil && s.cfg.DevLocalLogin
 }
 
 // SetAccountRole 管理员调整账号角色

@@ -37,7 +37,7 @@ func main() {
 	projectService := service.NewProjectService("./config")
 	verifyService := service.NewVerifyService(cfg, store, projectService)
 	licenseService := service.NewLicenseService("./config")
-	accountService := service.NewAccountService("./config", store, verifyService)
+	accountService := service.NewAccountService("./config", store, verifyService, cfg)
 	wechatService := service.NewWechatService(cfg, store, verifyService, projectService)
 
 	// 3.5 数据保险：config/ 目录快照（启动一次 + 每 24 小时一次 + 优雅退出前一次，保留最近 7 份）
@@ -81,6 +81,8 @@ func main() {
 	// 控制台与项目管理 API 接口
 	mux.HandleFunc("/api/console/login", consoleHandler.Login)
 	mux.HandleFunc("/api/console/logout", consoleHandler.Logout)
+	mux.HandleFunc("/api/console/dev-status", consoleHandler.DevStatus)
+	mux.HandleFunc("/api/console/dev-login", consoleHandler.DevLogin)
 	mux.HandleFunc("/api/console/bootstrap-status", consoleHandler.BootstrapStatus)
 	mux.HandleFunc("/api/console/bootstrap-session", consoleHandler.BootstrapSession)
 	mux.HandleFunc("/api/console/preview-session", consoleHandler.PreviewSession)

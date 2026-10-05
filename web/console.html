@@ -329,6 +329,34 @@
     }
 
     /* ---------------- 全屏锁屏密码层 ---------------- */
+    .lock-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--tab-bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 14px;
+    }
+    .lock-tab {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .lock-tab.active {
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
     #lockScreen {
       position: fixed;
       inset: 0;
@@ -2326,9 +2354,10 @@ async function handleWechatScanLogin() {
   <div id="lockScreen">
     <div class="lock-card">
       <div class="lock-title">中枢控制台 · 微信验证码登录</div>
-      <div class="lock-desc" id="lockDescMain">请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录。首个登录的账号将自动成为管理员。</div>
+      <div class="lock-desc" id="lockDescMain">请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录（首次登录自动注册账号）。本地开发环境可点击下方免通行码按钮。</div>
       <input type="text" class="lock-input" id="loginCodeInput" placeholder="输入公众号收到的 6 位通行码" maxlength="6" onkeydown="if(event.key==='Enter') unlockConsole()">
       <button class="lock-btn" onclick="unlockConsole()">登录控制台</button>
+      <button class="lock-btn" id="devLoginBtn" onclick="devLogin()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地开发登录（免通行码，本浏览器已注册的身份）</button>
       <button class="lock-btn" id="devInitBtn" onclick="devBootstrap()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地测试通道：一键初始化（本浏览器成为管理员）</button>
       <div id="lockErrorMsg" style="color: #ef4444; font-size: 13px; margin-top: 12px; display: none;"></div>
     </div>
@@ -2587,13 +2616,22 @@ async function handleWechatScanLogin() {
     let needsInit = false;
 
     async function resumeSessionOrLock() {
+      let devAllowed = false;
+      let needsInit = false;
+      try {
+        const ds = await fetch('/api/console/dev-status');
+        const dsj = await ds.json();
+        devAllowed = !!(dsj.code === 0 && dsj.data && dsj.data.dev_login);
+      } catch (e) { devAllowed = false; }
       try {
         const bs = await fetch('/api/console/bootstrap-status');
         const bsj = await bs.json();
         needsInit = !!(bsj.code === 0 && bsj.data && bsj.data.needs_init);
       } catch (e) { needsInit = false; }
-      const devBtn = document.getElementById('devInitBtn');
-      if (devBtn) devBtn.style.display = needsInit ? 'block' : 'none';
+      const initBtn = document.getElementById('devInitBtn');
+      if (initBtn) initBtn.style.display = needsInit ? 'block' : 'none';
+      const devBtn = document.getElementById('devLoginBtn');
+      if (devBtn) devBtn.style.display = (!needsInit && devAllowed) ? 'block' : 'none';
 
       if (currentAuthPassword) {
         try {
@@ -2668,6 +2706,58 @@ async function handleWechatScanLogin() {
     }
 
     let adminToken = localStorage.getItem('admin_token') || '';
+
+    async function deleteProject(id) {
+      if (!confirm('确认删除项目「' + id + '」？该操作不可恢复（激活码账本不受影响）。')) return;
+      try {
+        const res = await fetch('/api/projects/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ id: id })
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('✅ 项目已删除');
+          loadProjects();
+        } else {
+          showToast('❌ ' + (json.message || '删除失败'), false);
+        }
+      } catch (e) {
+        showToast('❌ 请求异常: ' + e, false);
+      }
+    }
+
+    async function devLogin() {
+      let openid = localStorage.getItem('sandbox_openid');
+      if (!openid) {
+        openid = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
+        localStorage.setItem('sandbox_openid', openid);
+      }
+      try {
+        const res = await fetch('/api/console/dev-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ openid: openid })
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data && json.data.token) {
+          currentAuthPassword = json.data.token;
+          currentRole = json.data.role;
+          saveToken(json.data.token);
+          hideLockScreen();
+          applyRoleUI();
+          loadProjects(); loadFooters(); loadReplies(); loadRules();
+        } else {
+          const errEl = document.getElementById('lockErrorMsg');
+          errEl.textContent = json.message || '本地开发登录失败';
+          errEl.style.display = 'block';
+        }
+      } catch (e) {
+        const errEl = document.getElementById('lockErrorMsg');
+        errEl.textContent = '无法连接到后端服务: ' + e;
+        errEl.style.display = 'block';
+      }
+    }
 
     function applyRoleUI() {
       const isAdmin = currentRole === 'admin';
@@ -2758,12 +2848,10 @@ async function handleWechatScanLogin() {
       }
 
       try {
-        const path = '/api/console/login';
-        const body = { code: code };
-        const res = await fetch(path, {
+        const res = await fetch('/api/console/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          body: JSON.stringify({ code: code })
         });
         const json = await res.json();
         if (json.code === 0 && json.data && json.data.token) {
@@ -2775,6 +2863,9 @@ async function handleWechatScanLogin() {
           hideLockScreen();
           applyRoleUI();
           loadProjects(); loadFooters(); loadReplies(); loadRules();
+          if (json.data.is_new) {
+            showToast('✅ 首次登录已自动注册账号，欢迎加入');
+          }
         } else {
           errEl.textContent = json.message || '登录失败';
           errEl.style.display = 'block';
@@ -2784,6 +2875,8 @@ async function handleWechatScanLogin() {
         errEl.style.display = 'block';
       }
     }
+
+
 
     async function logout() {
       try { await fetch('/api/console/logout', { method: 'POST', headers: { 'X-Session-Token': currentAuthPassword } }); } catch (e) {}

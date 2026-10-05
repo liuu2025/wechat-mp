@@ -3,11 +3,13 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config 统一应用配置
 type Config struct {
 	Port              string
+	DevLocalLogin     bool
 	WechatToken       string
 	WechatAppID       string
 	WechatAppSecret   string
@@ -28,6 +30,7 @@ func Load() *Config {
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
 		RedisDB:           getEnvAsInt("REDIS_DB", 0),
 		DefaultCodeExpire: getEnvAsInt("CODE_EXPIRE_SECONDS", 180),
+		DevLocalLogin:     getEnvAsBool("DEV_LOCAL_LOGIN", false),
 	}
 }
 
@@ -36,6 +39,14 @@ func getEnv(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+func getEnvAsBool(key string, defaultVal bool) bool {
+	val := strings.ToLower(os.Getenv(key))
+	if val == "" {
+		return defaultVal
+	}
+	return val == "1" || val == "true" || val == "yes"
 }
 
 func getEnvAsInt(key string, defaultVal int) int {
