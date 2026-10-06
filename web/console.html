@@ -2358,7 +2358,6 @@ async function handleWechatScanLogin() {
       <input type="text" class="lock-input" id="loginCodeInput" placeholder="输入公众号收到的 6 位通行码" maxlength="6" onkeydown="if(event.key==='Enter') unlockConsole()">
       <button class="lock-btn" onclick="unlockConsole()">登录控制台</button>
       <button class="lock-btn" id="devLoginBtn" onclick="devLogin()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地开发登录（免通行码，本浏览器已注册的身份）</button>
-      <button class="lock-btn" id="devInitBtn" onclick="devBootstrap()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地测试通道：一键初始化（本浏览器成为管理员）</button>
       <div id="lockErrorMsg" style="color: #ef4444; font-size: 13px; margin-top: 12px; display: none;"></div>
     </div>
   </div>
@@ -2628,10 +2627,14 @@ async function handleWechatScanLogin() {
         const bsj = await bs.json();
         needsInit = !!(bsj.code === 0 && bsj.data && bsj.data.needs_init);
       } catch (e) { needsInit = false; }
-      const initBtn = document.getElementById('devInitBtn');
-      if (initBtn) initBtn.style.display = needsInit ? 'block' : 'none';
       const devBtn = document.getElementById('devLoginBtn');
       if (devBtn) devBtn.style.display = (!needsInit && devAllowed) ? 'block' : 'none';
+      const desc = document.getElementById('lockDescMain');
+      if (desc) {
+        desc.innerHTML = needsInit
+          ? '系统尚未初始化：请在公众号发送【验证码】，把收到的 6 位通行码填入下方完成初始化——首个登录的账号将自动成为管理员。'
+          : '请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录（首次登录自动注册账号）。';
+      }
 
       if (currentAuthPassword) {
         try {
@@ -2668,41 +2671,6 @@ async function handleWechatScanLogin() {
         localStorage.removeItem('admin_token');
       }
       showLockScreen();
-    }
-
-    async function devBootstrap() {
-      // 与沙箱共用同一个固定 openid，初始化后沙箱消息即被识别为管理员本人
-      let openid = localStorage.getItem('sandbox_openid');
-      if (!openid) {
-        openid = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
-        localStorage.setItem('sandbox_openid', openid);
-      }
-      try {
-        const res = await fetch('/api/console/bootstrap-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ openid: openid })
-        });
-        const json = await res.json();
-        if (json.code === 0 && json.data && json.data.token) {
-          currentAuthPassword = json.data.token;
-          currentRole = json.data.role;
-          adminToken = '';
-          localStorage.removeItem('admin_token');
-          saveToken(json.data.token);
-          hideLockScreen();
-          applyRoleUI();
-          loadProjects(); loadFooters(); loadReplies(); loadRules();
-        } else {
-          const errEl = document.getElementById('lockErrorMsg');
-          errEl.textContent = json.message || '初始化失败';
-          errEl.style.display = 'block';
-        }
-      } catch (e) {
-        const errEl = document.getElementById('lockErrorMsg');
-        errEl.textContent = '无法连接到后端服务';
-        errEl.style.display = 'block';
-      }
     }
 
     let adminToken = localStorage.getItem('admin_token') || '';

@@ -29,34 +29,6 @@ func (h *ConsoleHandler) BootstrapStatus(w http.ResponseWriter, r *http.Request)
 
 // BootstrapSession 本地测试通道：一键以当前浏览器身份创建管理员（仅系统未初始化时可用）
 // POST /api/console/bootstrap-session
-func (h *ConsoleHandler) BootstrapSession(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
-		return
-	}
-
-	var req struct {
-		OpenID string `json:"openid"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, 400, "invalid body")
-		return
-	}
-	defer r.Body.Close()
-
-	sess, err := h.accountService.BootstrapSession(req.OpenID)
-	if err != nil {
-		if err == service.ErrBootstrapDone {
-			writeError(w, http.StatusForbidden, 403, "系统已完成初始化，本地测试通道已关闭")
-			return
-		}
-		writeError(w, http.StatusBadRequest, 400, err.Error())
-		return
-	}
-
-	writeSuccess(w, sess)
-}
-
 // PreviewSession 管理员视角切换：签发普通用户预览会话（仅管理员可用）
 // POST /api/console/preview-session
 func (h *ConsoleHandler) PreviewSession(w http.ResponseWriter, r *http.Request) {
