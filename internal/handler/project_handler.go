@@ -104,13 +104,13 @@ func (h *ProjectHandler) AddProject(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if strings.TrimSpace(req.ID) == "" || strings.TrimSpace(req.Name) == "" {
-		writeError(w, http.StatusBadRequest, 400, "项目英文标识与名称均必填")
+		writeError(w, http.StatusBadRequest, 400, "项目唯一标识与名称均必填")
 		return
 	}
 
 	// 防止消耗激活码后才发现项目已存在：先预检
 	if _, err := h.projectService.GetProject(req.ID); err == nil {
-		writeError(w, http.StatusBadRequest, 400, "项目英文标识已存在，请更换")
+		writeError(w, http.StatusBadRequest, 400, "项目唯一标识已存在，请更换")
 		return
 	}
 
