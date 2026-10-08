@@ -60,7 +60,26 @@ func (h *ConsoleHandler) DevStatus(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, map[string]bool{"dev_login": allowed})
 }
 
-// DevLogin 本机开发登录：免通行码，直接以指定 openid 登录已有账号
+// DevAccounts 返回本地开发登录可选择的已有账号（仅开发模式）。
+// GET /api/console/dev-accounts
+func (h *ConsoleHandler) DevAccounts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+		return
+	}
+	accounts, err := h.accountService.DevAccounts()
+	if err != nil {
+		if err == service.ErrDevLoginDisabled {
+			writeError(w, http.StatusForbidden, 403, "本机开发登录通道未启用")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, 500, err.Error())
+		return
+	}
+	writeSuccess(w, accounts)
+}
+
+// DevLogin 本机开发登录：免通行码，直接以指定账号 ID 登录已有账号
 // POST /api/console/dev-login
 func (h *ConsoleHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -69,7 +88,7 @@ func (h *ConsoleHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		OpenID string `json:"openid"`
+		AccountID string `json:"account_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, 400, "invalid body")
@@ -77,14 +96,14 @@ func (h *ConsoleHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	sess, err := h.accountService.DevLogin(r.Context(), req.OpenID)
+	sess, err := h.accountService.DevLogin(r.Context(), req.AccountID)
 	if err != nil {
 		if err == service.ErrDevLoginDisabled {
 			writeError(w, http.StatusForbidden, 403, "本机开发登录通道未启用")
 			return
 		}
 		if err == service.ErrAccountNotFound {
-			writeError(w, http.StatusUnauthorized, 401, "该设备身份没有已注册账号，请先完成首次初始化")
+			writeError(w, http.StatusUnauthorized, 401, "所选本地测试账号不存在")
 			return
 		}
 		if err == service.ErrAccountDisabled {

@@ -52,22 +52,22 @@ func NewAccountService(configDir string, store *storage.Storage, verifySvc *Veri
 
 var ErrDevLoginDisabled = errors.New("dev login disabled")
 
-// DevLogin 本机开发通道：免通行码直接以指定 openid 登录已有账号。
+// DevLogin 本机开发通道：免通行码直接以指定账号 ID 登录已有账号。
 // 仅当环境变量 DEV_LOCAL_LOGIN 开启时可用（本地开发用）；公开部署不设置该变量，此通道自动关闭。
-// 不创建新账号——openid 必须已注册，防止公开环境下被陌生人利用。
-func (s *AccountService) DevLogin(ctx context.Context, openID string) (*model.SessionInfo, error) {
+// 不创建新账号——账号 ID 必须已注册，防止公开环境下被陌生人利用。
+func (s *AccountService) DevLogin(ctx context.Context, accountID string) (*model.SessionInfo, error) {
 	if s.cfg == nil || !s.cfg.DevLocalLogin {
 		return nil, ErrDevLoginDisabled
 	}
-	if openID == "" {
-		return nil, fmt.Errorf("openid 不能为空")
+	if accountID == "" {
+		return nil, fmt.Errorf("账号 ID 不能为空")
 	}
 	accounts, err := s.readAccounts()
 	if err != nil {
 		return nil, err
 	}
 	for i := range accounts {
-		if accounts[i].OpenID == openID {
+		if accounts[i].ID == accountID {
 			if accounts[i].Status != model.AccountActive {
 				return nil, ErrAccountDisabled
 			}
@@ -77,6 +77,36 @@ func (s *AccountService) DevLogin(ctx context.Context, openID string) (*model.Se
 		}
 	}
 	return nil, ErrAccountNotFound
+}
+
+// DevAccounts 返回本地开发登录可选择的正常账号，仅在开发登录开启时可用。
+func (s *AccountService) DevAccounts() ([]model.DevAccountOption, error) {
+	if !s.DevLoginAllowed() {
+		return nil, ErrDevLoginDisabled
+	}
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return nil, err
+	}
+	options := make([]model.DevAccountOption, 0, len(accounts))
+	for _, account := range accounts {
+		if account.Status != model.AccountActive {
+			continue
+		}
+		options = append(options, model.DevAccountOption{
+			ID:           account.ID,
+			MaskedOpenID: maskOpenID(account.OpenID),
+			Role:         account.Role,
+		})
+	}
+	return options, nil
+}
+
+func maskOpenID(openID string) string {
+	if len(openID) <= 10 {
+		return openID
+	}
+	return openID[:8] + "****"
 }
 
 func (s *AccountService) ensureInitialized() {

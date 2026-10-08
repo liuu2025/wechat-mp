@@ -22,6 +22,14 @@ type Account struct {
 	LastLogin int64  `json:"last_login,omitempty"` // 最近登录时间
 }
 
+// DevAccountOption 本地开发登录页可选择的已有账号。
+// 仅返回账号 ID 与脱敏 OpenID，避免开发页面暴露完整微信身份标识。
+type DevAccountOption struct {
+	ID           string `json:"id"`
+	MaskedOpenID string `json:"masked_openid"`
+	Role         string `json:"role"`
+}
+
 // SessionInfo 登录会话（存于 Redis，7 天有效）
 type SessionInfo struct {
 	Token     string `json:"token"`

@@ -85,6 +85,7 @@ func main() {
 	mux.HandleFunc("/api/console/login", consoleHandler.Login)
 	mux.HandleFunc("/api/console/logout", consoleHandler.Logout)
 	mux.HandleFunc("/api/console/dev-status", consoleHandler.DevStatus)
+	mux.HandleFunc("/api/console/dev-accounts", consoleHandler.DevAccounts)
 	mux.HandleFunc("/api/console/dev-login", consoleHandler.DevLogin)
 	mux.HandleFunc("/api/console/bootstrap-status", consoleHandler.BootstrapStatus)
 	mux.HandleFunc("/api/console/preview-session", consoleHandler.PreviewSession)

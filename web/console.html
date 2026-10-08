@@ -410,6 +410,29 @@
     .lock-input:focus {
       border-color: var(--primary);
     }
+    .dev-login-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+      text-align: left;
+    }
+    .dev-login-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .dev-login-panel .lock-input {
+      margin-bottom: 10px;
+    }
+    .dev-login-hint {
+      color: var(--text-muted);
+      font-size: 11.5px;
+      line-height: 1.5;
+      margin-top: 8px;
+      text-align: center;
+    }
     .lock-btn {
       width: 100%;
       height: 44px;
@@ -2510,7 +2533,12 @@ async function handleWechatScanLogin() {
       <div class="lock-desc" id="lockDescMain">请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录（首次登录自动注册账号）。本地开发环境可点击下方免通行码按钮。</div>
       <input type="text" class="lock-input" id="loginCodeInput" placeholder="输入公众号收到的 6 位通行码" maxlength="6" onkeydown="if(event.key==='Enter') unlockConsole()">
       <button class="lock-btn" onclick="unlockConsole()">登录控制台</button>
-      <button class="lock-btn" id="devLoginBtn" onclick="devLogin()" style="display:none; background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">本地开发登录（免通行码，本浏览器已注册的身份）</button>
+      <div class="dev-login-panel" id="devLoginPanel">
+        <label class="dev-login-label" for="devAccountSelect">本地测试身份</label>
+        <select class="lock-input" id="devAccountSelect"></select>
+        <button class="lock-btn" id="devLoginBtn" onclick="devLogin()" style="background: var(--btn-secondary-bg); color: var(--text-main); font-size: 13.5px;">以所选身份进入（免通行码）</button>
+        <div class="dev-login-hint">仅用于本地界面与权限测试，不会连接真实微信公众号。</div>
+      </div>
       <div id="lockErrorMsg" style="color: #ef4444; font-size: 13px; margin-top: 12px; display: none;"></div>
     </div>
   </div>
@@ -2769,19 +2797,46 @@ async function handleWechatScanLogin() {
 
     async function resumeSessionOrLock() {
       let devAllowed = false;
+      let devAccounts = [];
       let needsInit = false;
       try {
         const ds = await fetch('/api/console/dev-status');
         const dsj = await ds.json();
         devAllowed = !!(dsj.code === 0 && dsj.data && dsj.data.dev_login);
       } catch (e) { devAllowed = false; }
+      if (devAllowed) {
+        try {
+          const das = await fetch('/api/console/dev-accounts');
+          const dasj = await das.json();
+          devAccounts = (dasj.code === 0 && Array.isArray(dasj.data)) ? dasj.data : [];
+        } catch (e) { devAccounts = []; }
+      }
       try {
         const bs = await fetch('/api/console/bootstrap-status');
         const bsj = await bs.json();
         needsInit = !!(bsj.code === 0 && bsj.data && bsj.data.needs_init);
       } catch (e) { needsInit = false; }
+      const devPanel = document.getElementById('devLoginPanel');
+      const devSelect = document.getElementById('devAccountSelect');
       const devBtn = document.getElementById('devLoginBtn');
-      if (devBtn) devBtn.style.display = (!needsInit && devAllowed) ? 'block' : 'none';
+      const showDevLogin = !needsInit && devAllowed;
+      if (devPanel) devPanel.style.display = showDevLogin ? 'block' : 'none';
+      if (devSelect) {
+        devSelect.innerHTML = '';
+        devAccounts.forEach(account => {
+          const option = document.createElement('option');
+          option.value = account.id;
+          option.textContent = `${account.role === 'admin' ? '管理员' : '普通用户'} · ${account.masked_openid}`;
+          devSelect.appendChild(option);
+        });
+        if (!devAccounts.length) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = '暂无可用的本地账号';
+          devSelect.appendChild(option);
+        }
+      }
+      if (devBtn) devBtn.disabled = !devAccounts.length;
       const desc = document.getElementById('lockDescMain');
       if (desc) {
         desc.innerHTML = needsInit
@@ -2849,16 +2904,19 @@ async function handleWechatScanLogin() {
     }
 
     async function devLogin() {
-      let openid = localStorage.getItem('sandbox_openid');
-      if (!openid) {
-        openid = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
-        localStorage.setItem('sandbox_openid', openid);
+      const accountID = document.getElementById('devAccountSelect').value;
+      const errEl = document.getElementById('lockErrorMsg');
+      errEl.style.display = 'none';
+      if (!accountID) {
+        errEl.textContent = '请选择本地测试身份';
+        errEl.style.display = 'block';
+        return;
       }
       try {
         const res = await fetch('/api/console/dev-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ openid: openid })
+          body: JSON.stringify({ account_id: accountID })
         });
         const json = await res.json();
         if (json.code === 0 && json.data && json.data.token) {
