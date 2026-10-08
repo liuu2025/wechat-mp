@@ -433,6 +433,29 @@
       margin-top: 8px;
       text-align: center;
     }
+    .records-pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .records-page-size,
+    .records-page-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .records-page-size select {
+      height: 32px;
+      padding: 0 28px 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-main);
+    }
     .lock-btn {
       width: 100%;
       height: 44px;
@@ -1289,6 +1312,13 @@
       .account-card { align-items: stretch; }
       .account-main { width: 100%; line-height: 1.9; }
       .account-actions { width: 100%; justify-content: space-between; }
+      .records-pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+      }
+      .records-page-size { width: 100%; justify-content: center; }
+      .records-page-nav { justify-content: center; }
 
       /* 回复配置界面的手机端优化：取消吸顶固定，单列流式 */
       #tab-replies .sandbox-layout > div[style*="position: sticky"] {
@@ -1786,10 +1816,23 @@
           <tbody id="recordsTableBody"><tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">暂无记录</td></tr></tbody>
         </table>
       </div>
-      <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:12px;">
-        <button class="btn-action-sm" id="recordsPrevBtn" onclick="loadRecords(recordsCurrentPage - 1)">上一页</button>
-        <span id="recordsPageText" style="font-size:13px; color:var(--text-muted);">第 1 页</span>
-        <button class="btn-action-sm" id="recordsNextBtn" onclick="loadRecords(recordsCurrentPage + 1)">下一页</button>
+      <div class="records-pagination">
+        <div class="records-page-size">
+          <label for="recordsPageSizeSelect">每页</label>
+          <select id="recordsPageSizeSelect" onchange="changeRecordsPageSize(this.value)">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="30" selected>30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          <span>条</span>
+        </div>
+        <div class="records-page-nav">
+          <button class="btn-action-sm" id="recordsPrevBtn" onclick="loadRecords(recordsCurrentPage - 1)">上一页</button>
+          <span id="recordsPageText">第 1 / 1 页</span>
+          <button class="btn-action-sm" id="recordsNextBtn" onclick="loadRecords(recordsCurrentPage + 1)">下一页</button>
+        </div>
       </div>
     </div>
 
@@ -3331,7 +3374,20 @@ async function handleWechatScanLogin() {
     }
 
     let recordsCurrentPage = 1;
+    const allowedRecordPageSizes = [10, 20, 30, 50, 100];
+    const savedRecordPageSize = Number(localStorage.getItem('records_page_size'));
+    let recordsPageSize = allowedRecordPageSizes.includes(savedRecordPageSize) ? savedRecordPageSize : 30;
+    const recordsPageSizeSelect = document.getElementById('recordsPageSizeSelect');
+    if (recordsPageSizeSelect) recordsPageSizeSelect.value = String(recordsPageSize);
     let cachedRecords = [];
+
+    function changeRecordsPageSize(value) {
+      const nextSize = Number(value);
+      if (!allowedRecordPageSizes.includes(nextSize)) return;
+      recordsPageSize = nextSize;
+      localStorage.setItem('records_page_size', String(nextSize));
+      loadRecords(1);
+    }
 
     async function loadRecords(page) {
       page = Math.max(1, page || 1);
@@ -3340,7 +3396,7 @@ async function handleWechatScanLogin() {
       if (!body || !summary) return;
       body.innerHTML = '<tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">加载中...</td></tr>';
 
-      const params = new URLSearchParams({ page: String(page), page_size: '30' });
+      const params = new URLSearchParams({ page: String(page), page_size: String(recordsPageSize) });
       const source = document.getElementById('recordFilterSource').value;
       const status = document.getElementById('recordFilterStatus').value;
       const project = document.getElementById('recordFilterProject').value.trim();
@@ -3360,8 +3416,16 @@ async function handleWechatScanLogin() {
         }
         const data = json.data;
         recordsCurrentPage = data.page || page;
-        const totalPages = Math.max(1, Math.ceil((data.total || 0) / (data.page_size || 30)));
-        summary.textContent = '共 ' + (data.total || 0) + ' 条记录，最近 90 天';
+        recordsPageSize = data.page_size || recordsPageSize;
+        const pageSizeSelect = document.getElementById('recordsPageSizeSelect');
+        if (pageSizeSelect) pageSizeSelect.value = String(recordsPageSize);
+        const total = data.total || 0;
+        const totalPages = Math.max(1, Math.ceil(total / recordsPageSize));
+        const rangeStart = total ? ((recordsCurrentPage - 1) * recordsPageSize + 1) : 0;
+        const rangeEnd = total ? Math.min(recordsCurrentPage * recordsPageSize, total) : 0;
+        summary.textContent = total
+          ? `共 ${total} 条，当前显示 ${rangeStart}–${rangeEnd} 条，最近 90 天`
+          : '共 0 条记录，最近 90 天';
         document.getElementById('recordsPageText').textContent = '第 ' + recordsCurrentPage + ' / ' + totalPages + ' 页';
         document.getElementById('recordsPrevBtn').disabled = recordsCurrentPage <= 1;
         document.getElementById('recordsNextBtn').disabled = recordsCurrentPage >= totalPages;
@@ -4237,9 +4301,48 @@ async function handleWechatScanLogin() {
       renderScenarioPreview();
     }
 
+    // 兼容 HTTPS/localhost 与手机局域网 HTTP：后者无法使用 navigator.clipboard。
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = String(text == null ? '' : text);
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '0';
+      textarea.style.top = '0';
+      textarea.style.width = '1px';
+      textarea.style.height = '1px';
+      textarea.style.opacity = '0';
+      textarea.style.fontSize = '16px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (e) {
+        copied = false;
+      }
+      document.body.removeChild(textarea);
+      return copied;
+    }
+
+    async function writeClipboard(text) {
+      const value = String(text == null ? '' : text);
+      if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        try {
+          await navigator.clipboard.writeText(value);
+          return true;
+        } catch (e) {
+          // 某些内嵌浏览器即便处于安全上下文也会拒绝权限，继续走兼容方案。
+        }
+      }
+      return fallbackCopyText(value);
+    }
+
     // 轻量复制变量名，绝不弹窗打扰，秒变已复制提示
-    function copyVarTag(varKey, btn) {
-      navigator.clipboard.writeText(varKey).then(() => {
+    async function copyVarTag(varKey, btn) {
+      if (await writeClipboard(varKey)) {
         const originalText = btn.innerHTML;
         btn.classList.add('copied');
         btn.innerHTML = `已复制 ${varKey}`;
@@ -4247,10 +4350,9 @@ async function handleWechatScanLogin() {
           btn.classList.remove('copied');
           btn.innerHTML = originalText;
         }, 1500);
-      }).catch(err => {
-        // fallback
+      } else {
         prompt("请复制变量：", varKey);
-      });
+      }
     }
 
     async function saveRepliesConfig() {
@@ -4547,12 +4649,12 @@ async function handleWechatScanLogin() {
       el.style.height = Math.max(260, Math.floor(window.innerHeight - top - 100)) + 'px';
     }
 
-    function copyAiPrompt() {
+    async function copyAiPrompt() {
       const previewEl = document.getElementById('aiPromptPreviewArea');
       const btn = document.getElementById('btnCopyAiPrompt');
       if (!previewEl) return;
 
-      navigator.clipboard.writeText(previewEl.value).then(() => {
+      if (await writeClipboard(previewEl.value)) {
         if (btn) {
           const original = btn.innerHTML;
           btn.classList.add('copied');
@@ -4562,18 +4664,21 @@ async function handleWechatScanLogin() {
             btn.innerHTML = original;
           }, 2500);
         }
-      }).catch(() => {
+      } else {
         previewEl.select();
-        alert("已为您选中提示词内容，请按 Ctrl+C / Cmd+C 复制！");
-      });
+        previewEl.setSelectionRange(0, previewEl.value.length);
+        alert("自动复制失败，已为您选中提示词内容，请长按选择“复制”。");
+      }
     }
 
-    function copyText(txt) {
-      navigator.clipboard.writeText(txt).then(() => alert("已复制到剪贴板！")).catch(() => alert("复制失败，请手动选取"));
+    async function copyText(txt) {
+      const copied = await writeClipboard(txt);
+      alert(copied ? "已复制到剪贴板！" : "自动复制失败，请长按内容手动复制");
     }
-    function copySnippet(id) {
+    async function copySnippet(id) {
       const txt = document.getElementById(id).textContent;
-      navigator.clipboard.writeText(txt).then(() => alert("代码已复制到剪贴板！")).catch(() => alert("复制失败"));
+      const copied = await writeClipboard(txt);
+      alert(copied ? "代码已复制到剪贴板！" : "自动复制失败，请长按代码手动复制");
     }
     function escapeHtml(str) {
       return (str || '').replace(/[&<>'"]/g, tag => ({
