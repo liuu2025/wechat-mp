@@ -35,7 +35,8 @@ func main() {
 
 	// 3. 业务服务层
 	projectService := service.NewProjectService("./config")
-	verifyService := service.NewVerifyService(cfg, store, projectService)
+	recordService := service.NewRecordService("./config", 90)
+	verifyService := service.NewVerifyService(cfg, store, projectService, recordService)
 	licenseService := service.NewLicenseService("./config")
 	accountService := service.NewAccountService("./config", store, verifyService, cfg)
 	wechatService := service.NewWechatService(cfg, store, verifyService, projectService)
@@ -56,6 +57,7 @@ func main() {
 	consoleHandler := handler.NewConsoleHandler(accountService)
 	licenseHandler := handler.NewLicenseHandler(licenseService, accountService)
 	projectHandler := handler.NewProjectHandler(projectService, accountService, licenseService)
+	recordHandler := handler.NewRecordHandler(recordService, accountService)
 
 	// 5. 路由注册
 	mux := http.NewServeMux()
@@ -76,6 +78,7 @@ func main() {
 	mux.HandleFunc("/api/code/create", verifyHandler.CreateCode)
 	mux.HandleFunc("/api/code/check", verifyHandler.CheckCode)
 	mux.HandleFunc("/api/code/verify-universal", verifyHandler.VerifyUniversal)
+	mux.HandleFunc("/api/records", recordHandler.List)
 	mux.HandleFunc("/health", verifyHandler.Health)
 
 	// 控制台与项目管理 API 接口

@@ -235,7 +235,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 		}
 
 		// 执行核销（成功即清空失败计数）
-		if _, err := s.storage.MarkVerified(ctx, text, openID); err != nil {
+		if _, err := s.verifyService.MarkCodeVerified(ctx, text, openID); err != nil {
 			return "核销处理异常，请重试。"
 		}
 		s.storage.ClearVerifyFailures(ctx, openID)
@@ -418,9 +418,10 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 		if strings.HasPrefix(eventKey, "GET_CODE_") {
 			projectName := strings.TrimPrefix(eventKey, "GET_CODE_")
 			resp, err := s.verifyService.GenerateCode(ctx, &model.CreateCodeReq{
-				Project:      projectName,
-				SessionTag:   "menu:" + openID,
+				Project:       projectName,
+				SessionTag:    "menu:" + openID,
 				ExpireSeconds: s.cfg.DefaultCodeExpire,
+				Source:        RecordSourceWechat,
 			}, "menu:"+openID, true)
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"

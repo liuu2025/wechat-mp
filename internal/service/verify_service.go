@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"time"
@@ -20,14 +21,19 @@ type VerifyService struct {
 	cfg            *config.Config
 	storage        *storage.Storage
 	projectService *ProjectService
+	recordService  *RecordService
 }
 
-func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectService) *VerifyService {
-	return &VerifyService{
+func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectService, records ...*RecordService) *VerifyService {
+	svc := &VerifyService{
 		cfg:            cfg,
 		storage:        store,
 		projectService: ps,
 	}
+	if len(records) > 0 {
+		svc.recordService = records[0]
+	}
+	return svc
 }
 
 // GenerateCode 为业务项目生成唯一的 6 位数字验证码（集成准入契约、四道防线与轮询密钥）
@@ -48,6 +54,7 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 	req.Extra = sessionTag // 归一存储
 
 	projectName := projectSlug
+	ownerAccountID := ""
 	// 严格白名单与密钥鉴权校验
 	if s.projectService != nil {
 		p, err := s.projectService.GetProject(projectSlug)
@@ -63,6 +70,7 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		}
 		projectSlug = p.ID   // 始终保持标准英文标识
 		projectName = p.Name // 项目中文展示名称
+		ownerAccountID = p.OwnerAccountID
 	}
 
 	// ---------------- 准入契约：会话标识（session_tag）或转发用户 IP，二者必居其一 ----------------
@@ -140,16 +148,25 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 
 	pollToken := generateRandomHex(24)
 
+	now := time.Now().Unix()
+	source := req.Source
+	if source != RecordSourceWechat {
+		source = RecordSourceWeb
+	}
 	record := &model.CodeRecord{
-		Code:        code,
-		Project:     projectSlug,
-		ProjectName: projectName,
-		Status:      model.StatusPending,
-		CreatedAt:   time.Now().Unix(),
-		Extra:       req.Extra,
-		SessionTag:  sessionTag,
-		IP:          clientIP,
-		PollToken:   pollToken,
+		Code:           code,
+		RecordID:       "rec_" + generateRandomHex(12),
+		Source:         source,
+		Project:        projectSlug,
+		ProjectName:    projectName,
+		OwnerAccountID: ownerAccountID,
+		Status:         model.StatusPending,
+		CreatedAt:      now,
+		ExpiresAt:      now + int64(expireSec),
+		Extra:          req.Extra,
+		SessionTag:     sessionTag,
+		IP:             clientIP,
+		PollToken:      pollToken,
 	}
 
 	// 码记录与轮询密钥索引同管道原子写入
@@ -158,6 +175,7 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 		s.storage.ReleaseProjectActiveCode(ctx, projectSlug, code)
 		return nil, err
 	}
+	s.recordCreated(record)
 
 	return &model.CreateCodeResp{
 		Code:          code,
@@ -227,23 +245,28 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 		return "", fmt.Errorf("system busy, failed to generate code")
 	}
 
+	now := time.Now().Unix()
 	record := &model.CodeRecord{
 		Code:        code,
+		RecordID:    "rec_" + generateRandomHex(12),
+		Source:      RecordSourceWechat,
 		Project:     "universal",
 		ProjectName: "通用登录",
 		Status:      model.StatusPending,
 		OpenID:      openID,
-		CreatedAt:   time.Now().Unix(),
+		CreatedAt:   now,
 	}
 
 	ttl := time.Duration(s.cfg.DefaultCodeExpire) * time.Second
 	if ttl <= 0 {
 		ttl = 180 * time.Second
 	}
+	record.ExpiresAt = now + int64(ttl/time.Second)
 
 	if err := s.storage.SaveUserUniversalCode(ctx, openID, record, ttl); err != nil {
 		return "", err
 	}
+	s.recordCreated(record)
 
 	return code, nil
 }
@@ -260,6 +283,7 @@ func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.Veri
 	}
 
 	projectName := projectSlug
+	ownerAccountID := ""
 	// 严格白名单与密钥鉴权校验
 	if s.projectService != nil {
 		p, err := s.projectService.GetProject(projectSlug)
@@ -275,12 +299,14 @@ func (s *VerifyService) VerifyUniversalCode(ctx context.Context, req *model.Veri
 		}
 		projectSlug = p.ID   // 始终保持标准英文标识
 		projectName = p.Name // 项目中文展示名称
+		ownerAccountID = p.OwnerAccountID
 	}
 
-	record, err := s.storage.ConsumeUniversalCode(ctx, reqCode, projectSlug, projectName)
+	record, err := s.storage.ConsumeUniversalCode(ctx, reqCode, projectSlug, projectName, ownerAccountID)
 	if err != nil {
 		return nil, err
 	}
+	s.recordVerified(record)
 
 	return &model.VerifyUniversalResp{
 		Valid:       true,
@@ -299,10 +325,40 @@ func (s *VerifyService) ConsumeLoginCode(ctx context.Context, code string) (stri
 		return "", storage.ErrCodeNotFound
 	}
 	// 立即作废该码（一次性消费）
-	if _, err := s.storage.ConsumeUniversalCode(ctx, code, "login", "控制台登录"); err != nil {
+	consumed, err := s.storage.ConsumeUniversalCode(ctx, code, "login", "控制台登录", "")
+	if err != nil {
 		return "", err
 	}
+	s.recordVerified(consumed)
 	return record.OpenID, nil
+}
+
+// MarkCodeVerified 完成网页取码链路核销，并同步追加长期流水快照。
+func (s *VerifyService) MarkCodeVerified(ctx context.Context, code, openID string) (*model.CodeRecord, error) {
+	record, err := s.storage.MarkVerified(ctx, code, openID)
+	if err != nil {
+		return nil, err
+	}
+	s.recordVerified(record)
+	return record, nil
+}
+
+func (s *VerifyService) recordCreated(record *model.CodeRecord) {
+	if s.recordService == nil {
+		return
+	}
+	if err := s.recordService.RecordCreated(record); err != nil {
+		log.Printf("[Records] 写入生成流水失败（不阻断业务）: %v", err)
+	}
+}
+
+func (s *VerifyService) recordVerified(record *model.CodeRecord) {
+	if s.recordService == nil {
+		return
+	}
+	if err := s.recordService.RecordVerified(record); err != nil {
+		log.Printf("[Records] 写入核销流水失败（不阻断业务）: %v", err)
+	}
 }
 
 // randomDigits 生成指定长度的纯数字字符串

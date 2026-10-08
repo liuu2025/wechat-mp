@@ -19,26 +19,59 @@ const (
 
 // CodeRecord 存储在 Redis 中的验证码实体信息
 type CodeRecord struct {
-	Code        string `json:"code"`
-	Project     string `json:"project"`      // 项目唯一英文代号
-	ProjectName string `json:"project_name"` // 项目中文展示名称
-	Status      string `json:"status"`       // pending | verified | used
-	OpenID      string `json:"openid,omitempty"`
-	SessionTag  string `json:"session_tag,omitempty"` // 业务后端签发的会话标识（并发分桶与归属依据）
-	IP          string `json:"ip,omitempty"`          // 发码时的用户 IP（X-Forwarded-For，审计与 IP 桶）
-	PollToken   string `json:"poll_token,omitempty"`  // 轮询密钥（高熵随机，业务后端凭此查询状态）
-	CreatedAt   int64  `json:"created_at"`
-	VerifiedAt  int64  `json:"verified_at,omitempty"`
-	Extra       string `json:"extra,omitempty"` // 兼容保留（旧字段名，新数据与 SessionTag 同值）
+	Code           string `json:"code"`
+	RecordID       string `json:"record_id,omitempty"`        // 长期流水 ID（与可重复使用的 6 位码解耦）
+	Source         string `json:"source,omitempty"`           // wechat | web
+	Project        string `json:"project"`                    // 项目唯一英文代号
+	ProjectName    string `json:"project_name"`               // 项目中文展示名称
+	OwnerAccountID string `json:"owner_account_id,omitempty"` // 项目归属快照（用于租户历史隔离）
+	Status         string `json:"status"`                     // pending | verified | used
+	OpenID         string `json:"openid,omitempty"`
+	SessionTag     string `json:"session_tag,omitempty"` // 业务后端签发的会话标识（并发分桶与归属依据）
+	IP             string `json:"ip,omitempty"`          // 发码时的用户 IP（X-Forwarded-For，审计与 IP 桶）
+	PollToken      string `json:"poll_token,omitempty"`  // 轮询密钥（高熵随机，业务后端凭此查询状态）
+	CreatedAt      int64  `json:"created_at"`
+	ExpiresAt      int64  `json:"expires_at,omitempty"`
+	VerifiedAt     int64  `json:"verified_at,omitempty"`
+	Extra          string `json:"extra,omitempty"` // 兼容保留（旧字段名，新数据与 SessionTag 同值）
 }
 
 // CreateCodeReq 项目方请求生成验证码的参数
 type CreateCodeReq struct {
-	Project     string `json:"project"`      // 项目标识（如 "blog", "shop"）
-	Key         string `json:"key"`          // 项目安全通信密钥（必须与后台配置一致）
-	SessionTag  string `json:"session_tag"`  // 会话标识：业务后端签发的本次尝试/访客标识（准入契约要求）
-	Extra       string `json:"extra"`        // 旧字段名（兼容别名，session_tag 为空时作为其值）
-	ExpireSeconds int  `json:"expire_seconds"` // 自定义过期秒数（可选）
+	Project       string `json:"project"`        // 项目标识（如 "blog", "shop"）
+	Key           string `json:"key"`            // 项目安全通信密钥（必须与后台配置一致）
+	SessionTag    string `json:"session_tag"`    // 会话标识：业务后端签发的本次尝试/访客标识（准入契约要求）
+	Extra         string `json:"extra"`          // 旧字段名（兼容别名，session_tag 为空时作为其值）
+	ExpireSeconds int    `json:"expire_seconds"` // 自定义过期秒数（可选）
+	Source        string `json:"-"`              // 内部来源标记；外部请求始终按 web 处理
+}
+
+// VerificationRecord 长期保留的最小取码/核销流水，不包含完整验证码、轮询密钥或聊天内容。
+type VerificationRecord struct {
+	ID             string `json:"id"`
+	Source         string `json:"source"` // wechat | web
+	Status         string `json:"status"` // pending | verified | expired
+	OpenID         string `json:"openid,omitempty"`
+	Project        string `json:"project,omitempty"`
+	ProjectName    string `json:"project_name,omitempty"`
+	OwnerAccountID string `json:"owner_account_id,omitempty"`
+	CreatedAt      int64  `json:"created_at"`
+	ExpiresAt      int64  `json:"expires_at"`
+	VerifiedAt     int64  `json:"verified_at,omitempty"`
+}
+
+// VerificationRecordEvent JSONL 中的一次完整状态快照。事件只追加，不原地修改旧行。
+type VerificationRecordEvent struct {
+	Event    string `json:"event"` // created | verified
+	LoggedAt int64  `json:"logged_at"`
+	VerificationRecord
+}
+
+type VerificationRecordList struct {
+	Items    []VerificationRecord `json:"items"`
+	Total    int                  `json:"total"`
+	Page     int                  `json:"page"`
+	PageSize int                  `json:"page_size"`
 }
 
 // CreateCodeResp 生成验证码的响应结构
@@ -60,7 +93,7 @@ type CheckCodeResp struct {
 	OpenID      string `json:"openid,omitempty"`
 	VerifiedAt  int64  `json:"verified_at,omitempty"`
 	SessionTag  string `json:"session_tag,omitempty"` // 会话标识（与请求中的 session_tag 呼应）
-	ErrorType   string `json:"error_type,omitempty"` // 当异常时携带机器错误代号
+	ErrorType   string `json:"error_type,omitempty"`  // 当异常时携带机器错误代号
 }
 
 // VerifyUniversalReq 业务网站提交通用验证码进行核销的请求
@@ -75,7 +108,7 @@ type VerifyUniversalResp struct {
 	Valid       bool   `json:"valid"`        // 是否核销成功
 	OpenID      string `json:"openid"`       // 成功核销时绑定的微信用户 OpenID
 	Project     string `json:"project"`      // 始终返回目标项目英文代号
-	ProjectName string `json:"project_name"`  // 目标项目中文展示名称
+	ProjectName string `json:"project_name"` // 目标项目中文展示名称
 	VerifiedAt  int64  `json:"verified_at"`  // 核销时间戳
 }
 
@@ -88,11 +121,11 @@ type APIResponse struct {
 
 // MenuButton 微信自定义菜单按钮结构
 type MenuButton struct {
-	Type      string        `json:"type"`                // click, view
-	Name      string        `json:"name"`                // 菜单名称
-	Key       string        `json:"key,omitempty"`       // click 类型附带的标识 key
-	URL       string        `json:"url,omitempty"`       // view 类型跳转网址
-	SubButton []*MenuButton `json:"sub_button,omitempty"`// 二级子菜单（最多 5 个）
+	Type      string        `json:"type"`                 // click, view
+	Name      string        `json:"name"`                 // 菜单名称
+	Key       string        `json:"key,omitempty"`        // click 类型附带的标识 key
+	URL       string        `json:"url,omitempty"`        // view 类型跳转网址
+	SubButton []*MenuButton `json:"sub_button,omitempty"` // 二级子菜单（最多 5 个）
 }
 
 // MenuConfig 微信菜单整体结构（最多 3 个一级菜单）
