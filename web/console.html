@@ -1659,7 +1659,10 @@
           <h2 style="font-size:18px; font-weight:700;">取码与核销记录</h2>
           <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">仅保留最近 90 天的验证码生命周期，不保存聊天内容、完整验证码或轮询密钥。</p>
         </div>
-        <button class="btn-action-sm" onclick="loadRecords(1)">刷新</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
+          <button class="btn-action-sm" onclick="loadRecords(1)">刷新</button>
+        </div>
       </div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; background:var(--panel-soft); border:1px solid var(--border-color); border-radius:8px; padding:10px 14px;">
@@ -1958,7 +1961,10 @@
               <div class="card-title">平台账号</div>
               <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 openid 为唯一身份，登录即注册。首个账号固定为唯一管理员，后续账号均为普通用户；禁用账号将立即踢出其全部会话。</div>
             </div>
-            <button class="btn-action-sm" onclick="loadAccounts()">刷新</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
+              <button class="btn-action-sm" onclick="loadAccounts()">刷新</button>
+            </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
             <input type="text" id="accFilterKw" placeholder="搜索 openid / 账号ID" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderAccounts()">
@@ -3195,6 +3201,7 @@ async function handleWechatScanLogin() {
     }
 
     let recordsCurrentPage = 1;
+    let cachedRecords = [];
 
     async function loadRecords(page) {
       page = Math.max(1, page || 1);
@@ -3228,7 +3235,8 @@ async function handleWechatScanLogin() {
         document.getElementById('recordsPageText').textContent = '第 ' + recordsCurrentPage + ' / ' + totalPages + ' 页';
         document.getElementById('recordsPrevBtn').disabled = recordsCurrentPage <= 1;
         document.getElementById('recordsNextBtn').disabled = recordsCurrentPage >= totalPages;
-        renderRecords(data.items || []);
+        cachedRecords = data.items || [];
+        renderRecords(cachedRecords);
       } catch (err) {
         summary.textContent = '读取失败：' + err.message;
         body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">读取取码记录失败</td></tr>';
@@ -3253,7 +3261,10 @@ async function handleWechatScanLogin() {
         return `<tr>
           <td>${source}</td>
           <td><span class="record-badge" style="${state[1]}">${state[0]}</span></td>
-          <td><code title="已脱敏展示">${escapeHtml(maskOpenid(r.openid || ''))}</code></td>
+          <td>
+            <code>${escapeHtml(formatOpenID(r.openid || ''))}</code>
+            ${r.openid ? `<button class="copy-btn" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
+          </td>
           <td>${project}</td>
           <td>${formatRecordTime(r.created_at)}</td>
           <td>${r.verified_at ? formatRecordTime(r.verified_at) : '-'}</td>
@@ -3264,6 +3275,21 @@ async function handleWechatScanLogin() {
     function formatRecordTime(ts) {
       if (!ts) return '-';
       return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+    }
+
+    let showFullOpenID = false;
+
+    function formatOpenID(openid) {
+      return showFullOpenID ? (openid || '-') : maskOpenid(openid);
+    }
+
+    function toggleOpenIDVisibility() {
+      showFullOpenID = !showFullOpenID;
+      document.querySelectorAll('.openid-toggle-btn').forEach(btn => {
+        btn.textContent = showFullOpenID ? '脱敏显示 OpenID' : '显示完整 OpenID';
+      });
+      renderAccounts();
+      renderRecords(cachedRecords);
     }
 
     function renderProjectsGrid(projects) {
@@ -4792,8 +4818,8 @@ async function handleWechatScanLogin() {
           : '<span style="color:#60a5fa;">普通用户</span>';
         item.innerHTML = `
           <div style="font-size:13px; color:var(--text-main);">
-            ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(a.openid || '-')}</code>
-            ${a.openid ? `<button class="copy-btn" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制</button>` : ''}
+            ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
+            ${a.openid ? `<button class="copy-btn" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
             ｜ 注册：${created}
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
