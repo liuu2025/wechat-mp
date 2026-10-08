@@ -1956,7 +1956,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">平台账号</div>
-              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 openid 为唯一身份，登录即注册。禁用账号将立即踢出其全部会话并阻止再次登录。</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 openid 为唯一身份，登录即注册。首个账号固定为唯一管理员，后续账号均为普通用户；禁用账号将立即踢出其全部会话。</div>
             </div>
             <button class="btn-action-sm" onclick="loadAccounts()">刷新</button>
           </div>
@@ -4792,27 +4792,16 @@ async function handleWechatScanLogin() {
           : '<span style="color:#60a5fa;">普通用户</span>';
         item.innerHTML = `
           <div style="font-size:13px; color:var(--text-main);">
-            ${roleHtml} ｜ 微信：<code>${maskOpenid(a.openid)}</code> ｜ 注册：${created}
+            ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(a.openid || '-')}</code>
+            ${a.openid ? `<button class="copy-btn" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制</button>` : ''}
+            ｜ 注册：${created}
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
             ${statusHtml}
-            ${(!isAdminAcc && a.status === 'active') ? `<button class="btn-action-sm" onclick="setAccountRole('${a.id}', 'admin')" style="color:#a78bfa;">设为管理员</button>` : ''}
-            ${(!isAdminAcc && a.role === 'admin') ? `<button class="btn-action-sm" onclick="setAccountRole('${a.id}', 'tenant')" style="color:#f59e0b;">降为普通用户</button>` : ''}
             ${(!isAdminAcc) ? `<button class="btn-action-sm" onclick="toggleAccount('${a.id}', '${a.status === 'active' ? 'disabled' : 'active'}')">${a.status === 'active' ? '禁用' : '启用'}</button>` : ''}
           </div>`;
         c.appendChild(item);
       });
-    }
-
-    async function setAccountRole(id, role) {
-      const res = await fetch('/api/accounts/set-role', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
-        body: JSON.stringify({ id, role })
-      });
-      const json = await res.json();
-      if (json.code === 0) { showToast('角色已调整'); loadAccounts(); }
-      else showToast('' + (json.message || '操作失败'), false);
     }
 
     async function toggleAccount(id, status) {

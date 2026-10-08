@@ -136,11 +136,11 @@ func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeSuccess(w, map[string]interface{}{
-		"token":    sess.Token,
-		"role":     sess.Role,
-		"openid":   sess.OpenID,
-		"is_new":   isNew,
-		"message":  map[bool]string{true: "账号注册成功，欢迎加入", false: "登录成功"}[isNew],
+		"token":   sess.Token,
+		"role":    sess.Role,
+		"openid":  sess.OpenID,
+		"is_new":  isNew,
+		"message": map[bool]string{true: "账号注册成功，欢迎加入", false: "登录成功"}[isNew],
 	})
 }
 
@@ -192,41 +192,6 @@ func (h *ConsoleHandler) ListAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeSuccess(w, accounts)
-}
-
-// SetAccountRole 调整账号角色（不允许管理员对自己降级）
-// POST /api/accounts/set-role
-func (h *ConsoleHandler) SetAccountRole(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
-		return
-	}
-	sess := authAdmin(h.accountService, w, r)
-	if sess == nil {
-		return
-	}
-
-	var req struct {
-		ID   string `json:"id"`
-		Role string `json:"role"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, 400, "invalid body")
-		return
-	}
-	defer r.Body.Close()
-
-	if req.ID == sess.AccountID {
-		writeError(w, http.StatusBadRequest, 400, "不能调整自己的角色")
-		return
-	}
-
-	if err := h.accountService.SetAccountRole(req.ID, req.Role); err != nil {
-		writeError(w, http.StatusBadRequest, 400, err.Error())
-		return
-	}
-
-	writeSuccess(w, map[string]string{"message": "账号角色已调整"})
 }
 
 // SetAccountStatus 启停账号（禁用即踢出全部会话）

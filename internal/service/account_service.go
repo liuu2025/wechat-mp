@@ -201,29 +201,6 @@ func (s *AccountService) DevLoginAllowed() bool {
 	return s.cfg != nil && s.cfg.DevLocalLogin
 }
 
-// SetAccountRole 管理员调整账号角色
-func (s *AccountService) SetAccountRole(id, role string) error {
-	if role != model.RoleAdmin && role != model.RoleTenant {
-		return fmt.Errorf("非法的角色值")
-	}
-	accounts, err := s.readAccounts()
-	if err != nil {
-		return err
-	}
-	found := false
-	for i := range accounts {
-		if accounts[i].ID == id {
-			accounts[i].Role = role
-			found = true
-			break
-		}
-	}
-	if !found {
-		return ErrAccountNotFound
-	}
-	return s.writeAccounts(accounts)
-}
-
 // PreviewSession 管理员视角切换：签发一个普通用户身份的预览会话（虚拟身份，不写入账号库）
 func (s *AccountService) PreviewSession() (*model.SessionInfo, error) {
 	buf := make([]byte, 24)
@@ -297,7 +274,8 @@ func (s *AccountService) createSession(account *model.Account) (*model.SessionIn
 	return info, nil
 }
 
-// Authenticate 从请求头解析会话（X-Session-Token），无效返回 nil
+// Authenticate 从请求头解析会话（X-Session-Token），并以账号文件中的当前角色与状态为准。
+// 这样即使 Redis 中仍有旧会话，账号降权或禁用也会立即生效。
 func (s *AccountService) Authenticate(r *http.Request) *model.SessionInfo {
 	token := r.Header.Get("X-Session-Token")
 	if token == "" {
@@ -307,7 +285,23 @@ func (s *AccountService) Authenticate(r *http.Request) *model.SessionInfo {
 	if err != nil || info == nil {
 		return nil
 	}
-	return info
+	// 管理员签发的临时普通用户预览身份不写入账号文件。
+	if info.AccountID == "acc_preview" && info.Role == model.RoleTenant {
+		return info
+	}
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return nil
+	}
+	for i := range accounts {
+		account := &accounts[i]
+		if account.ID == info.AccountID && account.OpenID == info.OpenID && account.Status == model.AccountActive {
+			info.Role = account.Role
+			return info
+		}
+	}
+	s.store.DeleteSession(context.Background(), token)
+	return nil
 }
 
 func (s *AccountService) Logout(token string) {

@@ -91,7 +91,6 @@ func main() {
 	mux.HandleFunc("/api/console/me", consoleHandler.Me)
 	mux.HandleFunc("/api/accounts", consoleHandler.ListAccounts)
 	mux.HandleFunc("/api/accounts/set-status", consoleHandler.SetAccountStatus)
-	mux.HandleFunc("/api/accounts/set-role", consoleHandler.SetAccountRole)
 	mux.HandleFunc("/api/licenses", licenseHandler.ListCodes)
 	mux.HandleFunc("/api/licenses/generate", licenseHandler.GenerateCodes)
 	mux.HandleFunc("/api/licenses/void", licenseHandler.VoidCode)
