@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,10 +20,11 @@ import (
 )
 
 var (
-	ErrAccountNotFound  = errors.New("account not found")
-	ErrAccountDisabled  = errors.New("account disabled")
-	ErrBootstrapDone    = errors.New("system already initialized")
-	ErrLoginRateLimited = errors.New("login rate limited")
+	ErrAccountNotFound    = errors.New("account not found")
+	ErrAccountDisabled    = errors.New("account disabled")
+	ErrRegistrationClosed = errors.New("registration closed")
+	ErrBootstrapDone      = errors.New("system already initialized")
+	ErrLoginRateLimited   = errors.New("login rate limited")
 )
 
 const (
@@ -33,6 +35,7 @@ const (
 // AccountService 账号与会话管理（accounts.json + Redis 会话）
 type AccountService struct {
 	accountsPath string
+	settingsPath string
 	store        *storage.Storage
 	verifySvc    *VerifyService
 	cfg          *config.Config
@@ -42,6 +45,7 @@ type AccountService struct {
 func NewAccountService(configDir string, store *storage.Storage, verifySvc *VerifyService, cfg *config.Config) *AccountService {
 	s := &AccountService{
 		accountsPath: filepath.Join(configDir, "accounts.json"),
+		settingsPath: filepath.Join(configDir, "platform_settings.json"),
 		store:        store,
 		verifySvc:    verifySvc,
 		cfg:          cfg,
@@ -62,20 +66,29 @@ func (s *AccountService) DevLogin(ctx context.Context, accountID string) (*model
 	if accountID == "" {
 		return nil, fmt.Errorf("账号 ID 不能为空")
 	}
-	accounts, err := s.readAccounts()
+	s.accountsMu.Lock()
+	accounts, err := s.readAccountsLocked()
 	if err != nil {
+		s.accountsMu.Unlock()
 		return nil, err
 	}
 	for i := range accounts {
 		if accounts[i].ID == accountID {
 			if accounts[i].Status != model.AccountActive {
+				s.accountsMu.Unlock()
 				return nil, ErrAccountDisabled
 			}
 			accounts[i].LastLogin = time.Now().Unix()
-			_ = s.writeAccounts(accounts)
-			return s.createSession(&accounts[i])
+			if err := s.writeAccountsLocked(accounts); err != nil {
+				s.accountsMu.Unlock()
+				return nil, err
+			}
+			account := accounts[i]
+			s.accountsMu.Unlock()
+			return s.createSession(&account)
 		}
 	}
+	s.accountsMu.Unlock()
 	return nil, ErrAccountNotFound
 }
 
@@ -118,6 +131,10 @@ func (s *AccountService) ensureInitialized() {
 func (s *AccountService) readAccounts() ([]model.Account, error) {
 	s.accountsMu.Lock()
 	defer s.accountsMu.Unlock()
+	return s.readAccountsLocked()
+}
+
+func (s *AccountService) readAccountsLocked() ([]model.Account, error) {
 	data, err := os.ReadFile(s.accountsPath)
 	if err != nil {
 		return nil, err
@@ -132,11 +149,71 @@ func (s *AccountService) readAccounts() ([]model.Account, error) {
 func (s *AccountService) writeAccounts(accounts []model.Account) error {
 	s.accountsMu.Lock()
 	defer s.accountsMu.Unlock()
+	return s.writeAccountsLocked(accounts)
+}
+
+func (s *AccountService) writeAccountsLocked(accounts []model.Account) error {
 	data, err := json.MarshalIndent(accounts, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(s.accountsPath, data, 0644)
+}
+
+func defaultPlatformSettings(mode string) model.PlatformSettings {
+	return model.PlatformSettings{RegistrationMode: mode}
+}
+
+// readPlatformSettingsLocked 缺少配置时兼容旧版本默认开放；文件损坏时安全关闭新注册。
+// 调用方必须持有 accountsMu，使注册开关变更与账号创建形成同一个临界区。
+func (s *AccountService) readPlatformSettingsLocked() model.PlatformSettings {
+	data, err := os.ReadFile(s.settingsPath)
+	if os.IsNotExist(err) {
+		return defaultPlatformSettings(model.RegistrationOpen)
+	}
+	if err != nil {
+		log.Printf("[Account] 读取平台注册设置失败，新注册已安全关闭: %v", err)
+		return defaultPlatformSettings(model.RegistrationClosed)
+	}
+	var settings model.PlatformSettings
+	if err := json.Unmarshal(data, &settings); err != nil {
+		log.Printf("[Account] 解析平台注册设置失败，新注册已安全关闭: %v", err)
+		return defaultPlatformSettings(model.RegistrationClosed)
+	}
+	if settings.RegistrationMode != model.RegistrationOpen && settings.RegistrationMode != model.RegistrationClosed {
+		log.Printf("[Account] 未知的注册模式 %q，新注册已安全关闭", settings.RegistrationMode)
+		return defaultPlatformSettings(model.RegistrationClosed)
+	}
+	return settings
+}
+
+// PlatformSettings 返回当前平台注册设置。
+func (s *AccountService) PlatformSettings() model.PlatformSettings {
+	s.accountsMu.Lock()
+	defer s.accountsMu.Unlock()
+	return s.readPlatformSettingsLocked()
+}
+
+// SetRegistrationMode 管理员修改注册模式，保存后立即生效。
+func (s *AccountService) SetRegistrationMode(mode, updatedBy string) (model.PlatformSettings, error) {
+	if mode != model.RegistrationOpen && mode != model.RegistrationClosed {
+		return model.PlatformSettings{}, fmt.Errorf("非法的注册模式")
+	}
+	settings := model.PlatformSettings{
+		RegistrationMode: mode,
+		UpdatedAt:        time.Now().Unix(),
+		UpdatedBy:        updatedBy,
+	}
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return model.PlatformSettings{}, err
+	}
+	s.accountsMu.Lock()
+	defer s.accountsMu.Unlock()
+	if err := os.WriteFile(s.settingsPath, data, 0o644); err != nil {
+		return model.PlatformSettings{}, err
+	}
+	return settings, nil
 }
 
 // NeedsBootstrap 系统是否尚未初始化任何账号（引导模式）
@@ -156,7 +233,20 @@ func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*
 		return nil, false, err
 	}
 
-	accounts, err := s.readAccounts()
+	account, isNew, err := s.findOrRegisterAccount(openID)
+	if err != nil {
+		return nil, false, err
+	}
+	info, err := s.createSession(account)
+	return info, isNew, err
+}
+
+// findOrRegisterAccount 原子完成账号查找、注册开关判断、首个管理员判定与写入。
+func (s *AccountService) findOrRegisterAccount(openID string) (*model.Account, bool, error) {
+	s.accountsMu.Lock()
+	defer s.accountsMu.Unlock()
+
+	accounts, err := s.readAccountsLocked()
 	if err != nil {
 		return nil, false, err
 	}
@@ -166,16 +256,22 @@ func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*
 				return nil, false, ErrAccountDisabled
 			}
 			accounts[i].LastLogin = time.Now().Unix()
-			_ = s.writeAccounts(accounts)
-			info, err := s.createSession(&accounts[i])
-			return info, false, err
+			if err := s.writeAccountsLocked(accounts); err != nil {
+				return nil, false, err
+			}
+			account := accounts[i]
+			return &account, false, nil
 		}
+	}
+
+	// 完全未初始化时始终允许第一个真实微信身份创建唯一管理员，避免配置导致永久锁死。
+	if len(accounts) > 0 && s.readPlatformSettingsLocked().RegistrationMode != model.RegistrationOpen {
+		return nil, false, ErrRegistrationClosed
 	}
 
 	// 首个注册的账号自动成为管理员（之后注册的都是普通用户）
 	role := model.RoleTenant
-	isNew := true
-	if s.NeedsBootstrap() {
+	if len(accounts) == 0 {
 		role = model.RoleAdmin
 	}
 	account := model.Account{
@@ -187,29 +283,27 @@ func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*
 		LastLogin: time.Now().Unix(),
 	}
 	accounts = append(accounts, account)
-	if err := s.writeAccounts(accounts); err != nil {
+	if err := s.writeAccountsLocked(accounts); err != nil {
 		return nil, true, err
 	}
-	info, err := s.createSession(&account)
-	return info, isNew, err
+	return &account, true, nil
 }
 
 // BootstrapSession 本地测试通道：系统未初始化（无任何账号）时，以提供的 openid 直接创建管理员会话。
 // 仅在系统无账号期间可用，首个账号创建后本通道永久失效（公开部署时窗口期与"首个登录即管理员"一致）
 func (s *AccountService) BootstrapSession(openID string) (*model.SessionInfo, error) {
-	if !s.NeedsBootstrap() {
-		return nil, ErrBootstrapDone
-	}
 	if openID == "" {
 		return nil, fmt.Errorf("openid 不能为空")
 	}
-	accounts, _ := s.readAccounts()
-	for i := range accounts {
-		if accounts[i].OpenID == openID {
-			accounts[i].Role = model.RoleAdmin
-			_ = s.writeAccounts(accounts)
-			return s.createSession(&accounts[i])
-		}
+	s.accountsMu.Lock()
+	accounts, err := s.readAccountsLocked()
+	if err != nil {
+		s.accountsMu.Unlock()
+		return nil, err
+	}
+	if len(accounts) != 0 {
+		s.accountsMu.Unlock()
+		return nil, ErrBootstrapDone
 	}
 	account := model.Account{
 		ID:        "acc_" + generateRandomHex(4),
@@ -220,9 +314,11 @@ func (s *AccountService) BootstrapSession(openID string) (*model.SessionInfo, er
 		LastLogin: time.Now().Unix(),
 	}
 	accounts = append(accounts, account)
-	if err := s.writeAccounts(accounts); err != nil {
+	if err := s.writeAccountsLocked(accounts); err != nil {
+		s.accountsMu.Unlock()
 		return nil, err
 	}
+	s.accountsMu.Unlock()
 	return s.createSession(&account)
 }
 
@@ -259,8 +355,10 @@ func (s *AccountService) SetAccountStatus(ctx context.Context, id, status string
 	if status != model.AccountActive && status != model.AccountDisabled {
 		return fmt.Errorf("非法的状态值")
 	}
-	accounts, err := s.readAccounts()
+	s.accountsMu.Lock()
+	accounts, err := s.readAccountsLocked()
 	if err != nil {
+		s.accountsMu.Unlock()
 		return err
 	}
 	found := false
@@ -268,16 +366,22 @@ func (s *AccountService) SetAccountStatus(ctx context.Context, id, status string
 		if accounts[i].ID == id {
 			accounts[i].Status = status
 			found = true
-			if status == model.AccountDisabled {
-				s.store.DeleteAccountSessions(ctx, id)
-			}
 			break
 		}
 	}
 	if !found {
+		s.accountsMu.Unlock()
 		return ErrAccountNotFound
 	}
-	return s.writeAccounts(accounts)
+	if err := s.writeAccountsLocked(accounts); err != nil {
+		s.accountsMu.Unlock()
+		return err
+	}
+	s.accountsMu.Unlock()
+	if status == model.AccountDisabled {
+		s.store.DeleteAccountSessions(ctx, id)
+	}
+	return nil
 }
 
 // consumeLoginCode 消耗一张公众号通行码换取 openid（一次性，防重放）

@@ -27,6 +27,20 @@ func (h *ConsoleHandler) BootstrapStatus(w http.ResponseWriter, r *http.Request)
 	writeSuccess(w, map[string]bool{"needs_init": h.accountService.NeedsBootstrap()})
 }
 
+// RegistrationStatus 登录页读取当前注册策略（公开接口，不含管理元数据）。
+// GET /api/console/registration-status
+func (h *ConsoleHandler) RegistrationStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+		return
+	}
+	settings := h.accountService.PlatformSettings()
+	writeSuccess(w, map[string]interface{}{
+		"mode":    settings.RegistrationMode,
+		"enabled": settings.RegistrationMode == model.RegistrationOpen,
+	})
+}
+
 // BootstrapSession 本地测试通道：一键以当前浏览器身份创建管理员（仅系统未初始化时可用）
 // POST /api/console/bootstrap-session
 // PreviewSession 管理员视角切换：签发普通用户预览会话（仅管理员可用）
@@ -149,6 +163,10 @@ func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, 403, "该账号已被停用，请联系管理员")
 			return
 		}
+		if err == service.ErrRegistrationClosed {
+			writeError(w, http.StatusForbidden, 403, "当前暂停新用户注册，已有账号仍可正常登录")
+			return
+		}
 		// 统一模糊提示，不暴露"码不存在/已使用"的细节，防止探测
 		writeError(w, http.StatusUnauthorized, 401, "验证码无效或已过期，请在公众号重新获取")
 		return
@@ -193,6 +211,34 @@ func (h *ConsoleHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // ----------------- 账号管理（仅管理员） -----------------
+
+// RegistrationSettings 管理员读取或修改平台注册模式。
+// GET/POST /api/settings/registration
+func (h *ConsoleHandler) RegistrationSettings(w http.ResponseWriter, r *http.Request) {
+	sess := authAdmin(h.accountService, w, r)
+	if sess == nil {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		writeSuccess(w, h.accountService.PlatformSettings())
+	case http.MethodPost:
+		var req model.SetRegistrationModeReq
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, 400, "invalid body")
+			return
+		}
+		defer r.Body.Close()
+		settings, err := h.accountService.SetRegistrationMode(req.Mode, sess.AccountID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, 400, err.Error())
+			return
+		}
+		writeSuccess(w, settings)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+	}
+}
 
 // ListAccounts 账号列表
 // GET /api/accounts

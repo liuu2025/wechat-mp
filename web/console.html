@@ -1215,6 +1215,29 @@
       flex-wrap: wrap;
       gap: 10px;
     }
+    .registration-setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+      padding: 13px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+    .registration-setting-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .registration-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
     .account-main { min-width: 0; }
     .account-main code { overflow-wrap: anywhere; }
     .account-actions { display: flex; align-items: center; gap: 10px; }
@@ -1312,6 +1335,8 @@
       .account-card { align-items: stretch; }
       .account-main { width: 100%; line-height: 1.9; }
       .account-actions { width: 100%; justify-content: space-between; }
+      .registration-setting { align-items: flex-start; }
+      .registration-setting-actions { flex-direction: column-reverse; }
       .records-pagination {
         justify-content: center;
         flex-wrap: wrap;
@@ -2097,11 +2122,24 @@
           <div class="card-header">
             <div>
               <div class="card-title">平台账号</div>
-              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 openid 为唯一身份，登录即注册。首个账号固定为唯一管理员，后续账号均为普通用户；禁用账号将立即踢出其全部会话。</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 OpenID 为唯一身份；注册开放时，新身份首次登录自动创建普通账号。首个账号固定为唯一管理员，禁用账号将立即踢出其全部会话。</div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
               <button class="btn-action-sm" onclick="loadAccounts()">刷新</button>
+            </div>
+          </div>
+          <div class="registration-setting">
+            <div>
+              <div style="font-size:13.5px; font-weight:700; color:var(--text-main);">允许新用户注册</div>
+              <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px; line-height:1.55;">关闭后，未注册的微信身份不能创建平台账号；已注册账号登录和现有会话不受影响。</div>
+            </div>
+            <div class="registration-setting-actions">
+              <span class="registration-status" id="registrationStatusBadge">读取中</span>
+              <label class="switch" title="允许新用户注册">
+                <input type="checkbox" id="registrationModeToggle" onchange="updateRegistrationMode(this.checked)" disabled>
+                <span class="slider"></span>
+              </label>
             </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
@@ -2842,6 +2880,7 @@ async function handleWechatScanLogin() {
       let devAllowed = false;
       let devAccounts = [];
       let needsInit = false;
+      let registrationEnabled = true;
       try {
         const ds = await fetch('/api/console/dev-status');
         const dsj = await ds.json();
@@ -2859,6 +2898,11 @@ async function handleWechatScanLogin() {
         const bsj = await bs.json();
         needsInit = !!(bsj.code === 0 && bsj.data && bsj.data.needs_init);
       } catch (e) { needsInit = false; }
+      try {
+        const rs = await fetch('/api/console/registration-status');
+        const rsj = await rs.json();
+        registrationEnabled = !!(rsj.code === 0 && rsj.data && rsj.data.enabled);
+      } catch (e) { registrationEnabled = false; }
       const devPanel = document.getElementById('devLoginPanel');
       const devSelect = document.getElementById('devAccountSelect');
       const devBtn = document.getElementById('devLoginBtn');
@@ -2884,7 +2928,9 @@ async function handleWechatScanLogin() {
       if (desc) {
         desc.innerHTML = needsInit
           ? '系统尚未初始化：请在公众号发送【验证码】，把收到的 6 位通行码填入下方完成初始化——首个登录的账号将自动成为管理员。'
-          : '请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录（首次登录自动注册账号）。';
+          : registrationEnabled
+            ? '请在公众号发送【验证码】获取 6 位通行码，填入下方完成登录（首次登录自动注册账号）。'
+            : '当前暂停新用户注册；已注册账号仍可在公众号获取 6 位通行码并正常登录。';
       }
 
       if (currentAuthPassword) {
@@ -5002,10 +5048,13 @@ async function handleWechatScanLogin() {
     // ================= 账号与授权（管理员） =================
     let cachedAccounts = [];
     let cachedLicenses = [];
+    let registrationMode = 'open';
+    let registrationModeUpdating = false;
 
     function maskOpenid(o) { return o && o.length > 10 ? o.slice(0, 8) + '****' : (o || '-'); }
 
     async function loadAccounts() {
+      loadRegistrationSettings();
       try {
         const res = await fetch('/api/accounts', { headers: { 'X-Session-Token': currentAuthPassword } });
         const json = await res.json();
@@ -5014,6 +5063,63 @@ async function handleWechatScanLogin() {
           renderAccounts();
         }
       } catch (e) {}
+    }
+
+    function renderRegistrationSettings(mode) {
+      registrationMode = mode === 'open' ? 'open' : 'closed';
+      const toggle = document.getElementById('registrationModeToggle');
+      const badge = document.getElementById('registrationStatusBadge');
+      if (toggle) {
+        toggle.checked = registrationMode === 'open';
+        toggle.disabled = registrationModeUpdating;
+      }
+      if (badge) {
+        const enabled = registrationMode === 'open';
+        badge.textContent = enabled ? '注册开放' : '注册关闭';
+        badge.style.color = enabled ? '#34d399' : '#f59e0b';
+        badge.style.background = enabled ? 'rgba(52,211,153,.12)' : 'rgba(245,158,11,.12)';
+      }
+    }
+
+    async function loadRegistrationSettings() {
+      try {
+        const res = await fetch('/api/settings/registration', {
+          headers: { 'X-Session-Token': currentAuthPassword }
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) renderRegistrationSettings(json.data.registration_mode);
+      } catch (e) {
+        const toggle = document.getElementById('registrationModeToggle');
+        if (toggle) toggle.disabled = true;
+      }
+    }
+
+    async function updateRegistrationMode(enabled) {
+      const nextMode = enabled ? 'open' : 'closed';
+      const previousMode = registrationMode;
+      if (!enabled && !confirm('关闭后，未注册的微信身份将无法创建平台账号；已有账号登录不受影响。确认关闭新用户注册？')) {
+        renderRegistrationSettings(previousMode);
+        return;
+      }
+      registrationModeUpdating = true;
+      renderRegistrationSettings(nextMode);
+      try {
+        const res = await fetch('/api/settings/registration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ mode: nextMode })
+        });
+        const json = await res.json();
+        if (json.code !== 0 || !json.data) throw new Error(json.message || '保存失败');
+        registrationMode = json.data.registration_mode;
+        showToast(registrationMode === 'open' ? '已开放新用户注册' : '已关闭新用户注册');
+      } catch (e) {
+        registrationMode = previousMode;
+        showToast('注册设置保存失败：' + e.message, false);
+      } finally {
+        registrationModeUpdating = false;
+        renderRegistrationSettings(registrationMode);
+      }
     }
 
     function renderAccounts() {

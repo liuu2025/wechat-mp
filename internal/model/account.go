@@ -12,6 +12,12 @@ const (
 	AccountDisabled = "disabled"
 )
 
+// 平台账号注册模式
+const (
+	RegistrationOpen   = "open"
+	RegistrationClosed = "closed"
+)
+
 // Account 平台账号（以微信公众号 openid 为唯一身份）
 type Account struct {
 	ID        string `json:"id"`                   // 账号ID（acc_ 前缀）
@@ -28,6 +34,18 @@ type DevAccountOption struct {
 	ID           string `json:"id"`
 	MaskedOpenID string `json:"masked_openid"`
 	Role         string `json:"role"`
+}
+
+// PlatformSettings 平台运行时业务设置（持久化于 config/platform_settings.json）。
+type PlatformSettings struct {
+	RegistrationMode string `json:"registration_mode"`
+	UpdatedAt        int64  `json:"updated_at,omitempty"`
+	UpdatedBy        string `json:"updated_by,omitempty"`
+}
+
+// SetRegistrationModeReq 管理员修改账号注册模式。
+type SetRegistrationModeReq struct {
+	Mode string `json:"mode"`
 }
 
 // SessionInfo 登录会话（存于 Redis，7 天有效）
