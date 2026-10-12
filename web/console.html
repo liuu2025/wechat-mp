@@ -1436,6 +1436,34 @@
     .copy-var-pill:hover {
       background: rgba(59, 130, 246, 0.25);
     }
+    .variable-preview-token {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      font: 600 13px/1.2 monospace;
+    }
+    body.theme-light .variable-preview-token {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+    .variable-preview-value {
+      min-height: 54px;
+      padding: 12px 13px;
+      border: 1px dashed var(--border-color);
+      border-radius: 9px;
+      background: var(--preview-wrap-bg);
+      color: var(--text-main);
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     .copy-var-pill.copied {
       background: rgba(16, 185, 129, 0.2);
       border-color: #34d399;
@@ -2900,6 +2928,28 @@ async function handleWechatScanLogin() {
           <button class="btn-action-sm" onclick="closeModal('snippetPickerModal')">取消</button>
           <button class="btn-primary" id="snippetInsertBtn" onclick="insertSelectedSnippets()" disabled>插入所选内容</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="variablePreviewModal">
+    <div class="modal-card" style="width:480px;">
+      <div class="modal-header">
+        <div class="modal-title">动态变量预览</div>
+        <button class="modal-close" onclick="closeModal('variablePreviewModal')"></button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <code class="variable-preview-token" id="variablePreviewToken"></code>
+        <div id="variablePreviewDescription" style="font-size:13px; color:var(--text-muted); line-height:1.65;"></div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:7px;">发送时的替换结果</div>
+          <div class="variable-preview-value" id="variablePreviewValue">正在生成无副作用预览…</div>
+        </div>
+        <div style="font-size:11.5px; color:var(--text-muted);">预览使用示例数据，不会生成或核销真实验证码。</div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
+        <button class="btn-action-sm" onclick="closeModal('variablePreviewModal')">取消</button>
+        <button class="btn-primary" id="variablePreviewInsertBtn" onclick="insertPreviewedVariable()">确认插入</button>
       </div>
     </div>
   </div>
@@ -5467,6 +5517,16 @@ async function handleWechatScanLogin() {
     let studioDigitResult = 'code_success';
     let studioPreviewTimer = null;
     let studioDirty = false;
+    let studioVariablePending = null;
+
+    const STUDIO_VARIABLE_META = {
+      '{code}': '6 位验证码。公众号取码场景会替换为新生成的验证码；验证结果场景会替换为用户发送的验证码。',
+      '{expire_minutes}': '验证码有效期（分钟），发送时按系统当前设置自动计算。',
+      '{expire_seconds}': '验证码有效期（秒），发送时使用系统当前设置。',
+      '{project_name}': '本次验证码所属的项目名称。',
+      '{project_url}': '本次验证码所属项目的访问地址；项目未配置地址时会自动移除相关空行。',
+      '{project_list}': '当前所有可用项目组成的列表，项目名称和地址会在发送时实时生成。'
+    };
 
     const STUDIO_META = {
       universal_code: { title: '公众号取码', desc: '用户发送指定文字后，生成一个通用验证码。', field: 'universal_code', builtin: true, sample: '验证码', vars: ['{code}', '{expire_minutes}', '{expire_seconds}'] },
@@ -5570,7 +5630,8 @@ async function handleWechatScanLogin() {
           <textarea class="studio-textarea" id="studioReplyTextarea" oninput="studioUpdateReply('${field}', this.value)">${escapeHtml(cachedReplies[field] || '')}</textarea>
           <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-top:9px;">
             <button class="btn-action-sm" onclick="openSnippetPicker('studioReplyTextarea', '${field}')">多选插入常用内容</button>
-            ${vars.map(v => `<button class="copy-var-pill" onclick="studioInsertVariable('${v}')">${v}</button>`).join('')}
+            ${vars.length ? '<span style="font-size:11.5px; color:var(--text-muted);">动态变量（点击预览）：</span>' : ''}
+            ${vars.map(v => `<button class="copy-var-pill" title="预览变量含义和替换结果" onclick="openVariablePreview('${v}', '${field}')">${v}</button>`).join('')}
             ${vars.length ? '' : '<span style="font-size:11.5px; color:var(--text-muted);">本场景无动态变量</span>'}
           </div>
         </div>
@@ -5633,11 +5694,50 @@ async function handleWechatScanLogin() {
       cachedRules[key].keywords.push(value); studioMarkDirty(); renderReplyStudio();
     }
     function studioRemoveKeyword(key, index) { cachedRules[key].keywords.splice(index, 1); studioMarkDirty(); renderReplyStudio(); }
-    function studioInsertVariable(value) {
+    async function openVariablePreview(value, field) {
       const el = document.getElementById('studioReplyTextarea');
       if (!el) return;
-      const start = el.selectionStart ?? el.value.length;
-      const end = el.selectionEnd ?? start;
+      studioVariablePending = {
+        value,
+        field,
+        start: el.selectionStart ?? el.value.length,
+        end: el.selectionEnd ?? (el.selectionStart ?? el.value.length)
+      };
+      document.getElementById('variablePreviewToken').textContent = value;
+      document.getElementById('variablePreviewDescription').textContent = STUDIO_VARIABLE_META[value] || '发送时由系统自动替换的动态内容。';
+      const preview = document.getElementById('variablePreviewValue');
+      const insertBtn = document.getElementById('variablePreviewInsertBtn');
+      preview.textContent = '正在生成无副作用预览…';
+      insertBtn.disabled = true;
+      openModal('variablePreviewModal');
+      try {
+        const draft = JSON.parse(JSON.stringify(cachedReplySettings));
+        draft.replies[field] = value;
+        const res = await fetch('/api/reply-settings/preview', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'X-Session-Token':currentAuthPassword},
+          body: JSON.stringify({draft, field, code:'839201'})
+        });
+        const json = await res.json();
+        preview.textContent = json.code === 0 && json.data ? json.data.reply : ('预览失败：' + (json.message || '未知错误'));
+        insertBtn.disabled = !(json.code === 0 && json.data);
+      } catch (e) {
+        preview.textContent = '预览请求失败：' + e;
+        insertBtn.disabled = true;
+      }
+    }
+    function insertPreviewedVariable() {
+      if (!studioVariablePending) return;
+      const pending = studioVariablePending;
+      closeModal('variablePreviewModal');
+      studioInsertVariable(pending.value, pending.start, pending.end);
+      studioVariablePending = null;
+    }
+    function studioInsertVariable(value, savedStart, savedEnd) {
+      const el = document.getElementById('studioReplyTextarea');
+      if (!el) return;
+      const start = savedStart ?? el.selectionStart ?? el.value.length;
+      const end = savedEnd ?? el.selectionEnd ?? start;
       el.value = el.value.slice(0,start) + value + el.value.slice(end);
       el.focus(); el.setSelectionRange(start+value.length,start+value.length);
       el.dispatchEvent(new Event('input', {bubbles:true}));
