@@ -105,6 +105,26 @@ func (h *ReplyEditorHandler) DeleteSnippet(w http.ResponseWriter, r *http.Reques
 	writeSuccess(w, map[string]string{"message": "常用内容已删除；已插入的回复不受影响"})
 }
 
+func (h *ReplyEditorHandler) ReorderSnippets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
+		return
+	}
+	if authAdmin(h.accountService, w, r) == nil {
+		return
+	}
+	var req model.ReorderReplySnippetsReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, 400, "JSON 请求体格式不正确: "+err.Error())
+		return
+	}
+	if err := h.projectService.ReorderReplySnippets(req.IDs); err != nil {
+		writeError(w, http.StatusBadRequest, 400, err.Error())
+		return
+	}
+	writeSuccess(w, map[string]string{"message": "常用内容顺序已更新"})
+}
+
 func (h *ReplyEditorHandler) Preview(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")

@@ -114,6 +114,7 @@ func main() {
 	mux.HandleFunc("/api/reply-settings/preview", replyEditorHandler.Preview)
 	mux.HandleFunc("/api/reply-library", replyEditorHandler.Library)
 	mux.HandleFunc("/api/reply-library/delete", replyEditorHandler.DeleteSnippet)
+	mux.HandleFunc("/api/reply-library/reorder", replyEditorHandler.ReorderSnippets)
 
 	// 自定义菜单配置接口（安全只读，返回 config/menu.json 正式配置）
 	mux.HandleFunc("/api/menu", menuHandler.GetMenu)

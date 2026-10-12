@@ -32,3 +32,7 @@ type ReplyPreviewResp struct {
 type DeleteReplySnippetReq struct {
 	ID string `json:"id"`
 }
+
+type ReorderReplySnippetsReq struct {
+	IDs []string `json:"ids"`
+}

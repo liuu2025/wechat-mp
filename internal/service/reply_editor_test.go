@@ -125,3 +125,36 @@ func TestReplySnippetIsCopiedNotReferenced(t *testing.T) {
 		t.Fatalf("删除内容库条目影响了已保存回复: %q", after.Replies.Help)
 	}
 }
+
+func TestReplySnippetReorderPersists(t *testing.T) {
+	ps, _ := newReplyEditorTestService(t)
+	first := &model.ReplySnippet{Title: "第一条", Content: "A"}
+	second := &model.ReplySnippet{Title: "第二条", Content: "B"}
+	if err := ps.SaveReplySnippet(first); err != nil {
+		t.Fatal(err)
+	}
+	if err := ps.SaveReplySnippet(second); err != nil {
+		t.Fatal(err)
+	}
+	library, err := ps.ListReplySnippets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]string, 0, len(library))
+	ids = append(ids, second.ID, first.ID)
+	for _, item := range library {
+		if item.ID != first.ID && item.ID != second.ID {
+			ids = append(ids, item.ID)
+		}
+	}
+	if err := ps.ReorderReplySnippets(ids); err != nil {
+		t.Fatal(err)
+	}
+	after, err := ps.ListReplySnippets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after) < 2 || after[0].ID != second.ID || after[1].ID != first.ID {
+		t.Fatalf("排序未持久化: %#v", after)
+	}
+}

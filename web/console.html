@@ -1575,6 +1575,72 @@
     .rules-state-on { color: #34d399; }
     .rules-state-off { color: #94a3b8; }
 
+    /* ---------------- 新版回复工作台 ---------------- */
+    .reply-studio-shell { display: flex; flex-direction: column; gap: 14px; }
+    .reply-studio-head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+      padding: 16px 18px; border: 1px solid var(--border-color); border-radius: 12px;
+      background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(16,185,129,.06));
+    }
+    .reply-studio-head h2 { margin: 0; color: var(--text-main); font-size: 19px; }
+    .reply-studio-head p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.65; }
+    .reply-studio-head .btn-action-sm { white-space: nowrap; flex-shrink: 0; }
+    .reply-studio-grid {
+      display: grid; grid-template-columns: 230px minmax(420px, 1fr) 350px;
+      gap: 14px; align-items: start;
+    }
+    .studio-pane {
+      background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px;
+      min-width: 0; overflow: hidden;
+    }
+    .studio-pane-head { padding: 13px 14px; border-bottom: 1px solid var(--border-color); }
+    .studio-pane-title { color: var(--text-main); font-size: 14px; font-weight: 700; }
+    .studio-pane-sub { color: var(--text-muted); font-size: 11.5px; margin-top: 4px; line-height: 1.5; }
+    .studio-scenes { padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .studio-scene-group { color: var(--text-muted); font-size: 11px; font-weight: 700; padding: 10px 9px 4px; letter-spacing: .04em; }
+    .studio-scene-btn {
+      width: 100%; border: 0; background: transparent; color: var(--text-muted); text-align: left;
+      padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .studio-scene-btn:hover { background: var(--panel-soft); color: var(--text-main); }
+    .studio-scene-btn.active { background: rgba(59,130,246,.15); color: var(--primary); font-weight: 700; box-shadow: inset 3px 0 0 var(--primary); }
+    .studio-scene-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; flex-shrink: 0; }
+    .studio-scene-dot.off { background: #94a3b8; }
+    .studio-editor-body { padding: 16px; }
+    .studio-editor-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .studio-editor-title h3 { margin: 0; color: var(--text-main); font-size: 17px; }
+    .studio-editor-title p { margin: 5px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
+    .studio-block { border: 1px solid var(--border-color); border-radius: 10px; padding: 13px; background: var(--panel-soft); margin-bottom: 12px; }
+    .studio-block-label { color: var(--text-main); font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+    .studio-textarea { width: 100%; min-height: 250px; resize: vertical; padding: 12px 13px; border-radius: 9px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 14px; line-height: 1.72; }
+    .studio-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border-color); }
+    .studio-preview-pane { position: sticky; top: 14px; }
+    .studio-preview-body { padding: 14px; }
+    .studio-phone { background: var(--preview-wrap-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 14px 12px; min-height: 260px; }
+    .studio-message { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; border-radius: 3px 12px 12px 12px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+    .studio-mobile-switch { display: none; }
+    .snippet-order { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(59,130,246,.14); color: var(--primary); font-weight: 800; font-size: 12px; }
+    .snippet-manage-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--panel-soft); }
+    .studio-keyword-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+    .studio-result-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+
+    @media (max-width: 1180px) {
+      .reply-studio-grid { grid-template-columns: 210px minmax(380px, 1fr); }
+      .studio-preview-pane { grid-column: 2; position: static; }
+    }
+    @media (max-width: 760px) {
+      .reply-studio-head { padding: 14px; }
+      .reply-studio-grid { display: block; }
+      .studio-pane { display: none; }
+      .studio-pane.mobile-active { display: block; }
+      .studio-preview-pane { position: static; }
+      .studio-mobile-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border: 1px solid var(--border-color); background: var(--tab-bg); border-radius: 9px; }
+      .studio-mobile-switch button { border: 0; border-radius: 6px; padding: 8px 5px; background: transparent; color: var(--text-muted); }
+      .studio-mobile-switch button.active { background: var(--card-bg); color: var(--text-main); font-weight: 700; }
+      .studio-textarea { min-height: 220px; }
+    }
+
     @media (max-width: 900px) {
       body { flex-direction: column; }
       .sidebar {
@@ -1865,6 +1931,68 @@
     <div id="tab-rules" class="tab-content">
       <div class="doc-container">
 
+        <div class="reply-studio-shell" id="replyStudio">
+          <div class="reply-studio-head">
+            <div>
+              <h2>回复工作台</h2>
+              <p>选择场景后，在同一处编辑触发条件和完整回复；右侧始终显示使用草稿与示例数据生成的效果，不会操作真实验证码。</p>
+            </div>
+            <button class="btn-action-sm" onclick="studioSelectScene('library')">内容库</button>
+          </div>
+
+          <div class="studio-mobile-switch" id="studioMobileSwitch">
+            <button class="active" onclick="studioMobilePane('scenes', this)">场景</button>
+            <button onclick="studioMobilePane('editor', this)">编辑</button>
+            <button onclick="studioMobilePane('preview', this)">预览</button>
+          </div>
+
+          <div class="reply-studio-grid">
+            <aside class="studio-pane mobile-active" id="studioScenesPane">
+              <div class="studio-pane-head">
+                <div class="studio-pane-title">回复场景</div>
+                <div class="studio-pane-sub">文字触发词采用完整匹配；6 位数字验证始终优先。</div>
+              </div>
+              <div class="studio-scenes" id="studioSceneList"></div>
+            </aside>
+
+            <main class="studio-pane" id="studioEditorPane">
+              <div class="studio-pane-head">
+                <div class="studio-pane-title">规则与回复</div>
+                <div class="studio-pane-sub" id="studioSaveState">选择一个场景开始编辑</div>
+              </div>
+              <div class="studio-editor-body" id="studioEditorBody"></div>
+            </main>
+
+            <aside class="studio-pane studio-preview-pane" id="studioPreviewPane">
+              <div class="studio-pane-head">
+                <div class="studio-pane-title">最终回复预览</div>
+                <div class="studio-pane-sub">预览包含变量、项目补充信息和未保存草稿。</div>
+              </div>
+              <div class="studio-preview-body">
+                <div id="studioPreviewControls"></div>
+                <div class="studio-phone">
+                  <div style="text-align:center; font-size:11px; color:var(--text-muted); margin-bottom:12px;">— 模拟微信对话 —</div>
+                  <div id="studioUserBubble" style="display:none; margin-left:auto; max-width:82%; background:#95ec69; color:#0f172a; padding:8px 11px; border-radius:10px 3px 10px 10px; font-size:13px; margin-bottom:12px; word-break:break-word;"></div>
+                  <div style="display:flex; gap:8px; align-items:flex-start;">
+                    <div class="wx-avatar official" style="width:34px; height:34px; flex-shrink:0;">睡</div>
+                    <div class="studio-message" id="studioPreviewMessage">正在加载回复配置…</div>
+                  </div>
+                </div>
+                <div class="studio-block" style="margin-top:12px; margin-bottom:0;">
+                  <div class="studio-block-label">安全试跑</div>
+                  <div style="display:flex; gap:7px;">
+                    <input id="studioTestInput" type="text" placeholder="输入用户消息" style="min-width:0; flex:1; height:35px; padding:0 9px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);" onkeydown="if(event.key==='Enter') runStudioTest()">
+                    <button class="btn-action-sm" onclick="runStudioTest()">试跑</button>
+                  </div>
+                  <div id="studioTestResult" style="display:none; margin-top:8px; font-size:12px; color:var(--text-muted);"></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div id="legacyRulesUI" style="display:none;">
+
         <!-- 二级分类导航（顶部横排） -->
         <div class="rules-nav">
           <button class="rules-nav-btn active" id="rulesNavBtnScenes" onclick="switchRulesSection('scenes')">回复规则</button>
@@ -2103,6 +2231,8 @@
             <div id="testResultArea" style="display: none; margin-top: 14px;"></div>
           </div>
         </div>
+
+        </div><!-- /legacyRulesUI -->
 
       </div>
     </div>
@@ -2751,7 +2881,7 @@ async function handleWechatScanLogin() {
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
         <button class="btn-action-sm" onclick="closeModal('footerModal')">取消</button>
-        <button class="btn-primary" onclick="submitFooterModal()">保存模版</button>
+        <button class="btn-primary" onclick="submitFooterModal()">保存内容</button>
       </div>
     </div>
   </div>
@@ -2764,6 +2894,13 @@ async function handleWechatScanLogin() {
       </div>
       <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">选中后会复制到当前光标位置，插入后可独立修改，不会与内容库保持自动关联。</div>
       <div id="snippetPickerList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow:auto;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border-color);">
+        <span id="snippetPickerCount" style="font-size:12px; color:var(--text-muted);">已选择 0 项</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-action-sm" onclick="closeModal('snippetPickerModal')">取消</button>
+          <button class="btn-primary" id="snippetInsertBtn" onclick="insertSelectedSnippets()" disabled>插入所选内容</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3374,6 +3511,7 @@ async function handleWechatScanLogin() {
           renderProjectsGrid(cachedProjects);
           populateProjectSelects(cachedProjects);
           populateReplyPreviewProjectSelect();
+          scheduleStudioPreview();
         }
       } catch (err) {
         console.error("加载项目列表失败:", err);
@@ -3705,7 +3843,7 @@ async function handleWechatScanLogin() {
         const json = await res.json();
         if (json.code === 0 && json.data) {
           cachedFooters = json.data;
-          renderFootersList(cachedFooters);
+          if (typeof renderReplyStudio === 'function') renderReplyStudio();
         }
       } catch (err) {
         console.error("加载常用内容失败:", err);
@@ -4155,11 +4293,7 @@ async function handleWechatScanLogin() {
           cachedReplies = json.data.replies;
           cachedRules = json.data.rules;
           if (!cachedRules.custom) cachedRules.custom = [];
-          fillReplyTextareas();
-          renderBuiltinRules();
-          renderCustomRules();
-          renderRulesTree();
-          installReplyEditorTools();
+          if (typeof renderReplyStudio === 'function') renderReplyStudio();
         }
       } catch (err) {
         console.error("加载回复配置失败:", err);
@@ -4903,19 +5037,19 @@ async function handleWechatScanLogin() {
       }
       closeModal('customRuleModal');
       renderCustomRules();
-      persistRules();
+      persistRules().then(() => renderReplyStudio());
     }
 
     function toggleCustomRule(id, on) {
       const rule = cachedRules.custom.find(r => r.id === id);
-      if (rule) { rule.enabled = on; renderCustomRules(); persistRules(); }
+      if (rule) { rule.enabled = on; renderCustomRules(); persistRules().then(() => renderReplyStudio()); }
     }
 
     function deleteCustomRule(id) {
       if (!confirm('确认删除这条自定义规则？')) return;
       cachedRules.custom = cachedRules.custom.filter(r => r.id !== id);
       renderCustomRules();
-      persistRules();
+      persistRules().then(() => renderReplyStudio());
     }
 
     function renderRulesTree() {
@@ -5326,6 +5460,291 @@ async function handleWechatScanLogin() {
     }
     if (document.getElementById('digitBlock_code_success')) {
       switchDigitResult('code_success');
+    }
+
+    // ================= 新版回复工作台 =================
+    let studioScene = localStorage.getItem('studio_scene') || 'universal_code';
+    let studioDigitResult = 'code_success';
+    let studioPreviewTimer = null;
+    let studioDirty = false;
+
+    const STUDIO_META = {
+      universal_code: { title: '公众号取码', desc: '用户发送指定文字后，生成一个通用验证码。', field: 'universal_code', builtin: true, sample: '验证码', vars: ['{code}', '{expire_minutes}', '{expire_seconds}'] },
+      verify: { title: '发送网页验证码', desc: '用户发送网页显示的 6 位数字，根据验证结果回复。', sample: '839201' },
+      help: { title: '使用指南', desc: '用户发送指定文字后，回复使用说明。', field: 'help', builtin: true, sample: '帮助', vars: [] },
+      projects: { title: '项目清单', desc: '用户发送指定文字后，回复当前可用项目列表。', field: 'projects', builtin: true, sample: '项目', vars: ['{project_list}'] },
+      custom: { title: '自定义回复', desc: '为价格、客服、活动等文字指令创建完整回复。', sample: '客服' },
+      fallback: { title: '未识别文字', desc: '文字没有命中任何规则时使用。', field: 'unknown_text', sample: '你好呀', vars: [] },
+      media: { title: '图片 / 语音 / 表情', desc: '收到非文字消息时使用。', field: 'media_message', sample: '[发送了一张图片]', vars: [] },
+      welcome: { title: '新关注欢迎语', desc: '用户关注公众号时自动回复。', field: 'welcome', sample: '用户关注了公众号', vars: [] },
+      library: { title: '常用内容库', desc: '管理可在回复编辑时多选、排序并复制插入的内容。' }
+    };
+
+    function studioSceneGroups() {
+      return [
+        { title: '业务动作', keys: ['universal_code', 'verify'] },
+        { title: '文字回复', keys: ['help', 'projects', 'custom'] },
+        { title: '系统场景', keys: ['fallback', 'media', 'welcome'] },
+        { title: '编辑素材', keys: ['library'] }
+      ];
+    }
+
+    function studioSceneEnabled(key) {
+      if (!cachedRules) return false;
+      if (['universal_code', 'help', 'projects'].includes(key)) return !!cachedRules[key].enabled;
+      if (key === 'custom') return cachedRules.custom.some(r => r.enabled);
+      return true;
+    }
+
+    function renderReplyStudio() {
+      const list = document.getElementById('studioSceneList');
+      const body = document.getElementById('studioEditorBody');
+      if (!list || !body) return;
+      list.innerHTML = studioSceneGroups().map(group => `
+        <div class="studio-scene-group">${group.title}</div>
+        ${group.keys.map(key => {
+          const meta = STUDIO_META[key];
+          const count = key === 'library' ? `<span style="font-size:11px;">${cachedFooters.length}</span>` : `<span class="studio-scene-dot ${studioSceneEnabled(key) ? '' : 'off'}"></span>`;
+          return `<button class="studio-scene-btn ${studioScene === key ? 'active' : ''}" onclick="studioSelectScene('${key}')"><span>${meta.title}</span>${count}</button>`;
+        }).join('')}
+      `).join('');
+
+      if (!cachedReplySettings || !cachedReplies || !cachedRules) {
+        body.innerHTML = '<div style="color:var(--text-muted);">正在加载回复配置…</div>';
+        return;
+      }
+      if (!STUDIO_META[studioScene]) studioScene = 'universal_code';
+      if (studioScene === 'library') body.innerHTML = studioLibraryEditorHTML();
+      else if (studioScene === 'custom') body.innerHTML = studioCustomEditorHTML();
+      else body.innerHTML = studioRuleEditorHTML(studioScene);
+      renderStudioPreviewControls();
+      scheduleStudioPreview();
+      const state = document.getElementById('studioSaveState');
+      if (state) state.textContent = studioDirty ? '有尚未保存的修改' : '当前显示服务器已保存配置';
+    }
+
+    function studioSelectScene(key) {
+      studioScene = key;
+      localStorage.setItem('studio_scene', key);
+      renderReplyStudio();
+      if (window.innerWidth <= 760) studioMobilePane('editor');
+    }
+
+    function studioMobilePane(name, clicked) {
+      const map = { scenes: 'studioScenesPane', editor: 'studioEditorPane', preview: 'studioPreviewPane' };
+      Object.values(map).forEach(id => document.getElementById(id)?.classList.remove('mobile-active'));
+      document.getElementById(map[name])?.classList.add('mobile-active');
+      document.querySelectorAll('#studioMobileSwitch button').forEach(btn => btn.classList.remove('active'));
+      if (clicked) clicked.classList.add('active');
+      else {
+        const idx = { scenes: 0, editor: 1, preview: 2 }[name];
+        document.querySelectorAll('#studioMobileSwitch button')[idx]?.classList.add('active');
+      }
+    }
+
+    function studioRuleEditorHTML(key) {
+      const meta = STUDIO_META[key];
+      const isVerify = key === 'verify';
+      const field = isVerify ? studioDigitResult : meta.field;
+      const vars = field === 'code_success' ? ['{project_name}', '{project_url}'] : field === 'code_invalid' || field === 'code_used' ? ['{code}'] : (meta.vars || []);
+      const trigger = isVerify ? `
+        <div class="studio-block">
+          <div class="studio-block-label">触发条件（固定）</div>
+          <div style="font-size:13px; color:var(--text-muted); line-height:1.65;">用户发送任意 6 位纯数字。该条件优先级最高，不能被普通关键词覆盖。</div>
+        </div>
+        <div class="studio-result-tabs">
+          ${[['code_success','验证成功'],['code_invalid','无效或过期'],['code_used','重复核销']].map(x => `<button class="rules-nav-btn ${studioDigitResult===x[0]?'active':''}" onclick="studioSetDigitResult('${x[0]}')">${x[1]}</button>`).join('')}
+        </div>` : meta.builtin ? studioKeywordEditorHTML(key) : `
+        <div class="studio-block">
+          <div class="studio-block-label">触发条件（固定）</div>
+          <div style="font-size:13px; color:var(--text-muted);">${meta.desc}</div>
+        </div>`;
+      return `
+        <div class="studio-editor-title">
+          <div><h3>${meta.title}</h3><p>${meta.desc}</p></div>
+          ${meta.builtin ? `<label style="font-size:12.5px; color:var(--text-muted);"><input type="checkbox" ${cachedRules[key].enabled?'checked':''} onchange="studioToggleBuiltin('${key}', this.checked)"> 启用</label>` : ''}
+        </div>
+        ${trigger}
+        <div class="studio-block" style="background:transparent;">
+          <div class="studio-block-label">完整回复</div>
+          <textarea class="studio-textarea" id="studioReplyTextarea" oninput="studioUpdateReply('${field}', this.value)">${escapeHtml(cachedReplies[field] || '')}</textarea>
+          <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-top:9px;">
+            <button class="btn-action-sm" onclick="openSnippetPicker('studioReplyTextarea', '${field}')">多选插入常用内容</button>
+            ${vars.map(v => `<button class="copy-var-pill" onclick="studioInsertVariable('${v}')">${v}</button>`).join('')}
+            ${vars.length ? '' : '<span style="font-size:11.5px; color:var(--text-muted);">本场景无动态变量</span>'}
+          </div>
+        </div>
+        <div class="studio-editor-actions">
+          <span style="font-size:12px; color:var(--text-muted);">预览会实时更新；只有保存后公众号才使用新内容。</span>
+          <button class="btn-primary" onclick="studioSave()">保存当前修改</button>
+        </div>`;
+    }
+
+    function studioKeywordEditorHTML(key) {
+      const rule = cachedRules[key];
+      return `<div class="studio-block">
+        <div class="studio-block-label">触发词（完整匹配）</div>
+        <div class="studio-keyword-wrap">
+          ${(rule.keywords || []).map((kw, i) => `<span class="kw-chip">${escapeHtml(kw)}<a class="kw-del" onclick="studioRemoveKeyword('${key}', ${i})">×</a></span>`).join('') || '<span style="font-size:12px; color:#f59e0b;">暂无触发词</span>'}
+        </div>
+        <div style="display:flex; gap:7px; margin-top:9px;">
+          <input id="studioKeywordInput" type="text" placeholder="输入触发词，回车添加" style="flex:1; min-width:0; height:35px; padding:0 9px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);" onkeydown="if(event.key==='Enter'){event.preventDefault();studioAddKeyword('${key}')} ">
+          <button class="btn-action-sm" onclick="studioAddKeyword('${key}')">添加</button>
+        </div>
+      </div>`;
+    }
+
+    function studioCustomEditorHTML() {
+      const items = cachedRules.custom || [];
+      return `<div class="studio-editor-title"><div><h3>自定义回复</h3><p>普通文字规则按列表顺序匹配，第一条命中后停止。</p></div><button class="btn-primary" onclick="openCustomRuleModal()">新增规则</button></div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          ${items.length ? items.map((r, i) => `<div class="snippet-manage-row">
+            <div class="snippet-order">${String(i+1).padStart(2,'0')}</div>
+            <div style="flex:1; min-width:0;"><div style="font-weight:700; color:var(--text-main);">${(r.keywords||[]).map(escapeHtml).join(' / ')}</div><div style="font-size:12.5px; color:var(--text-muted); margin-top:5px; white-space:pre-wrap;">${escapeHtml((r.reply||'').slice(0,160))}${(r.reply||'').length>160?'…':''}</div></div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;"><label style="font-size:12px; color:var(--text-muted);"><input type="checkbox" ${r.enabled?'checked':''} onchange="toggleCustomRule('${r.id}', this.checked)"> 启用</label><button class="btn-action-sm" onclick="openCustomRuleModal('${r.id}')">编辑</button><button class="btn-action-sm" style="color:#ef4444;" onclick="deleteCustomRule('${r.id}')">删除</button></div>
+          </div>`).join('') : '<div class="studio-block" style="color:var(--text-muted);">暂无自定义规则。</div>'}
+        </div>`;
+    }
+
+    function studioLibraryEditorHTML() {
+      return `<div class="studio-editor-title"><div><h3>常用内容库</h3><p>序号由当前顺序自动生成。上下移动会影响以后多选插入的排列，不修改已经保存的回复。</p></div><button class="btn-primary" onclick="openAddFooterModal()">新建内容</button></div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          ${cachedFooters.length ? cachedFooters.map((item, i) => `<div class="snippet-manage-row">
+            <div class="snippet-order">${String(i+1).padStart(2,'0')}</div>
+            <div style="flex:1; min-width:0;"><div style="font-weight:700; color:var(--text-main);">${escapeHtml(item.title)}</div><div style="font-size:12.5px; color:var(--text-muted); white-space:pre-wrap; margin-top:5px;">${escapeHtml(item.content)}</div></div>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;"><button class="btn-action-sm" ${i===0?'disabled':''} onclick="moveReplySnippet('${item.id}', -1)">上移</button><button class="btn-action-sm" ${i===cachedFooters.length-1?'disabled':''} onclick="moveReplySnippet('${item.id}', 1)">下移</button><button class="btn-action-sm" onclick="openEditFooterModal('${item.id}')">编辑</button><button class="btn-action-sm" style="color:#ef4444;" onclick="deleteFooter('${item.id}')">删除</button></div>
+          </div>`).join('') : '<div class="studio-block" style="color:var(--text-muted);">暂无常用内容。</div>'}
+        </div>`;
+    }
+
+    function studioSetDigitResult(field) { studioDigitResult = field; renderReplyStudio(); }
+    function studioMarkDirty() {
+      studioDirty = true;
+      const state = document.getElementById('studioSaveState');
+      if (state) state.textContent = '有尚未保存的修改';
+    }
+    function studioUpdateReply(field, value) { cachedReplies[field] = value; studioMarkDirty(); scheduleStudioPreview(); }
+    function studioToggleBuiltin(key, enabled) { cachedRules[key].enabled = enabled; studioMarkDirty(); renderReplyStudio(); }
+    function studioAddKeyword(key) {
+      const input = document.getElementById('studioKeywordInput');
+      const value = (input?.value || '').trim();
+      if (!value) return;
+      if (cachedRules[key].keywords.some(x => x.toLowerCase() === value.toLowerCase())) { showToast('该触发词已存在', false); return; }
+      cachedRules[key].keywords.push(value); studioMarkDirty(); renderReplyStudio();
+    }
+    function studioRemoveKeyword(key, index) { cachedRules[key].keywords.splice(index, 1); studioMarkDirty(); renderReplyStudio(); }
+    function studioInsertVariable(value) {
+      const el = document.getElementById('studioReplyTextarea');
+      if (!el) return;
+      const start = el.selectionStart ?? el.value.length;
+      const end = el.selectionEnd ?? start;
+      el.value = el.value.slice(0,start) + value + el.value.slice(end);
+      el.focus(); el.setSelectionRange(start+value.length,start+value.length);
+      el.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+    async function studioSave() {
+      if (await saveReplySettings()) { studioDirty = false; renderReplyStudio(); }
+    }
+
+    function studioCurrentPreview() {
+      if (!cachedReplySettings) return { field: '', message: '' };
+      if (studioScene === 'verify') return { field: studioDigitResult, message: '839201' };
+      if (studioScene === 'custom') {
+        const rule = (cachedRules.custom || []).find(r => r.enabled) || cachedRules.custom[0];
+        return rule ? { field: 'custom:' + rule.id, message: (rule.keywords || ['自定义'])[0] } : { field: 'fallback', message: '自定义消息' };
+      }
+      if (studioScene === 'library') return { field: '', message: '' };
+      const meta = STUDIO_META[studioScene];
+      return { field: meta.field, message: meta.sample };
+    }
+
+    function renderStudioPreviewControls() {
+      const controls = document.getElementById('studioPreviewControls');
+      if (!controls) return;
+      if (studioScene === 'verify' && studioDigitResult === 'code_success') {
+        controls.innerHTML = `<select id="studioProjectSelect" onchange="scheduleStudioPreview()" style="width:100%; height:36px; margin-bottom:10px; padding:0 9px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">${cachedProjects.length ? cachedProjects.map(p=>`<option value="${escapeHtml(p.id)}">预览项目：${escapeHtml(p.name)}</option>`).join('') : '<option value="">预览项目：示例项目</option>'}</select>`;
+      } else {
+        controls.innerHTML = `<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:9px;">当前场景：${escapeHtml(STUDIO_META[studioScene]?.title || '')}</div>`;
+      }
+    }
+
+    function scheduleStudioPreview() {
+      clearTimeout(studioPreviewTimer);
+      studioPreviewTimer = setTimeout(renderStudioPreview, 180);
+    }
+
+    async function renderStudioPreview() {
+      const messageEl = document.getElementById('studioPreviewMessage');
+      const userEl = document.getElementById('studioUserBubble');
+      if (!messageEl || !cachedReplySettings) return;
+      if (studioScene === 'library') {
+        userEl.style.display = 'none';
+        messageEl.textContent = '常用内容只用于编辑，不会单独触发发送。勾选插入后，它会成为当前回复的一部分。';
+        return;
+      }
+      const current = studioCurrentPreview();
+      userEl.style.display = 'block'; userEl.textContent = current.message;
+      messageEl.textContent = '正在生成预览…';
+      try {
+        const projectId = document.getElementById('studioProjectSelect')?.value || '';
+        const res = await fetch('/api/reply-settings/preview', { method:'POST', headers:{'Content-Type':'application/json','X-Session-Token':currentAuthPassword}, body:JSON.stringify({draft:cachedReplySettings,field:current.field,project_id:projectId,code:'839201'}) });
+        const json = await res.json();
+        messageEl.textContent = json.code===0 && json.data ? json.data.reply : ('预览失败：'+(json.message||'未知错误'));
+      } catch(e) { messageEl.textContent = '预览请求失败：'+e; }
+    }
+
+    async function runStudioTest() {
+      const input = document.getElementById('studioTestInput');
+      const result = document.getElementById('studioTestResult');
+      const message = (input?.value || '').trim();
+      if (!message) { showToast('请输入模拟消息', false); return; }
+      result.style.display='block'; result.textContent='正在安全试跑…';
+      try {
+        const res=await fetch('/api/reply-settings/preview',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':currentAuthPassword},body:JSON.stringify({draft:cachedReplySettings,message,code:/^\d{6}$/.test(message)?message:'839201'})});
+        const json=await res.json();
+        if(json.code===0&&json.data){ result.innerHTML=`命中：<b>${escapeHtml(json.data.matched_zh)}</b>；未产生真实验证码或核销记录。`; document.getElementById('studioUserBubble').style.display='block'; document.getElementById('studioUserBubble').textContent=message; document.getElementById('studioPreviewMessage').textContent=json.data.reply; }
+        else result.textContent='试跑失败：'+(json.message||'未知错误');
+      } catch(e){result.textContent='试跑请求失败：'+e;}
+    }
+
+    async function moveReplySnippet(id, delta) {
+      const index = cachedFooters.findIndex(x => x.id === id);
+      const next = index + delta;
+      if (index < 0 || next < 0 || next >= cachedFooters.length) return;
+      const copy = cachedFooters.slice();
+      [copy[index], copy[next]] = [copy[next], copy[index]];
+      try {
+        const res = await fetch('/api/reply-library/reorder',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Token':currentAuthPassword},body:JSON.stringify({ids:copy.map(x=>x.id)})});
+        const json=await res.json();
+        if(json.code===0){cachedFooters=copy;renderReplyStudio();showToast('顺序已更新');}
+        else showToast(json.message||'排序失败',false);
+      } catch(e){showToast('排序请求失败：'+e,false);}
+    }
+
+    // 常用内容选择器：可自由多选，按内容库顺序插入“序号 + 名称 + 正文”。
+    function openSnippetPicker(targetId, field) {
+      snippetPickerTargetId = targetId;
+      snippetPickerField = field;
+      const list = document.getElementById('snippetPickerList');
+      if (!list) return;
+      list.innerHTML = cachedFooters.length ? cachedFooters.map((item,index) => {
+        const allowed=snippetAllowedForField(item.content,field);
+        const number=String(index+1).padStart(2,'0');
+        return `<label style="display:flex; gap:10px; padding:11px; border:1px solid var(--border-color); border-radius:9px; background:var(--panel-soft); cursor:${allowed?'pointer':'not-allowed'}; opacity:${allowed?'1':'.45'};">
+          <input class="snippet-picker-check" type="checkbox" value="${escapeHtml(item.id)}" ${allowed?'onchange="updateSnippetPickerCount()"':'disabled'} style="margin-top:5px;">
+          <span class="snippet-order">${number}</span>
+          <span style="min-width:0;"><b style="color:var(--text-main);">${escapeHtml(item.title)}</b><span style="display:block; color:var(--text-muted); font-size:12px; white-space:pre-wrap; margin-top:4px;">${escapeHtml(item.content)}</span>${allowed?'':'<small style="color:#f59e0b;">包含当前场景不支持的变量</small>'}</span>
+        </label>`;
+      }).join('') : '<div style="color:var(--text-muted);">常用内容库为空，请先新建内容。</div>';
+      updateSnippetPickerCount(); openModal('snippetPickerModal');
+    }
+    function updateSnippetPickerCount(){const count=document.querySelectorAll('.snippet-picker-check:checked').length;const text=document.getElementById('snippetPickerCount');const btn=document.getElementById('snippetInsertBtn');if(text)text.textContent=`已选择 ${count} 项`;if(btn)btn.disabled=count===0;}
+    function insertSelectedSnippets() {
+      const selected = new Set([...document.querySelectorAll('.snippet-picker-check:checked')].map(x=>x.value));
+      const blocks = cachedFooters.map((item,index)=>({item,index})).filter(x=>selected.has(x.item.id)).map(x=>`【${String(x.index+1).padStart(2,'0')}｜${x.item.title}】\n${x.item.content}`);
+      const el=document.getElementById(snippetPickerTargetId); if(!el||!blocks.length)return;
+      const start=el.selectionStart??el.value.length,end=el.selectionEnd??start,prefix=start>0&&el.value.slice(0,start).trim()?'\n\n':'';
+      const content=blocks.join('\n\n'); el.value=el.value.slice(0,start)+prefix+content+el.value.slice(end); const pos=start+prefix.length+content.length; el.focus(); if(el.setSelectionRange)el.setSelectionRange(pos,pos); el.dispatchEvent(new Event('input',{bubbles:true})); closeModal('snippetPickerModal');
     }
 
     function autoGrowReplyTextareas() {

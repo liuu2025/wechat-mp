@@ -270,3 +270,35 @@ func (s *ProjectService) DeleteReplySnippet(id string) error {
 	}
 	return errors.New("常用内容不存在")
 }
+
+// ReorderReplySnippets 以数组顺序作为唯一排序依据；显示序号由当前位置动态生成。
+func (s *ProjectService) ReorderReplySnippets(ids []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	data, err := os.ReadFile(s.replyLibraryPath)
+	if err != nil {
+		return err
+	}
+	var library []model.ReplySnippet
+	if err := json.Unmarshal(data, &library); err != nil {
+		return err
+	}
+	if len(ids) != len(library) {
+		return errors.New("排序数据与当前内容数量不一致，请刷新后重试")
+	}
+	byID := make(map[string]model.ReplySnippet, len(library))
+	for _, item := range library {
+		byID[item.ID] = item
+	}
+	ordered := make([]model.ReplySnippet, 0, len(library))
+	seen := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		item, ok := byID[id]
+		if !ok || seen[id] {
+			return errors.New("排序数据包含不存在或重复的内容")
+		}
+		seen[id] = true
+		ordered = append(ordered, item)
+	}
+	return writeReplyJSON(s.replyLibraryPath, ordered)
+}
