@@ -52,6 +52,7 @@ type VerificationRecord struct {
 	Source         string `json:"source"` // wechat | web
 	Status         string `json:"status"` // pending | verified | expired
 	OpenID         string `json:"openid,omitempty"`
+	UserNumber     int64  `json:"user_number,omitempty"` // 根据 OpenID 派生的永久用户编号，不写入流水文件
 	Project        string `json:"project,omitempty"`
 	ProjectName    string `json:"project_name,omitempty"`
 	OwnerAccountID string `json:"owner_account_id,omitempty"`

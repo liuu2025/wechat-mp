@@ -20,19 +20,21 @@ const (
 
 // Account 平台账号（以微信公众号 openid 为唯一身份）
 type Account struct {
-	ID        string `json:"id"`                   // 账号ID（acc_ 前缀）
-	OpenID    string `json:"openid"`               // 微信 openid（唯一身份，由微信服务器背书）
-	Role      string `json:"role"`                 // admin | tenant
-	Status    string `json:"status"`               // active | disabled
-	CreatedAt int64  `json:"created_at"`           // 注册时间
-	LastLogin int64  `json:"last_login,omitempty"` // 最近登录时间
+	ID         string `json:"id"`                    // 账号ID（acc_ 前缀）
+	OpenID     string `json:"openid"`                // 微信 openid（唯一身份，由微信服务器背书）
+	UserNumber int64  `json:"user_number,omitempty"` // 根据 OpenID 派生的永久用户编号，不写回账号文件
+	Role       string `json:"role"`                  // admin | tenant
+	Status     string `json:"status"`                // active | disabled
+	CreatedAt  int64  `json:"created_at"`            // 注册时间
+	LastLogin  int64  `json:"last_login,omitempty"`  // 最近登录时间
 }
 
 // DevAccountOption 本地开发登录页可选择的已有账号。
-// 仅返回账号 ID 与脱敏 OpenID，避免开发页面暴露完整微信身份标识。
+// 仅返回账号 ID、永久用户编号与脱敏 OpenID，避免开发页面暴露完整微信身份标识。
 type DevAccountOption struct {
 	ID           string `json:"id"`
 	MaskedOpenID string `json:"masked_openid"`
+	UserNumber   int64  `json:"user_number,omitempty"`
 	Role         string `json:"role"`
 }
 

@@ -35,11 +35,15 @@ func main() {
 
 	// 3. 业务服务层
 	projectService := service.NewProjectService("./config")
-	recordService := service.NewRecordService("./config", 90)
+	userIdentityService, err := service.NewUserIdentityService("./config")
+	if err != nil {
+		log.Fatalf("[UserIdentity] 永久用户编号表初始化失败: %v", err)
+	}
+	recordService := service.NewRecordService("./config", 90, userIdentityService)
 	verifyService := service.NewVerifyService(cfg, store, projectService, recordService)
 	licenseService := service.NewLicenseService("./config")
-	accountService := service.NewAccountService("./config", store, verifyService, cfg)
-	wechatService := service.NewWechatService(cfg, store, verifyService, projectService)
+	accountService := service.NewAccountService("./config", store, verifyService, cfg, userIdentityService)
+	wechatService := service.NewWechatService(cfg, store, verifyService, projectService, userIdentityService)
 
 	// 3.5 数据保险：config/ 目录快照（启动一次 + 每 24 小时一次 + 优雅退出前一次，保留最近 7 份）
 	backupService := service.NewBackupService("./config", "./backups/config", 7, 24*time.Hour)

@@ -1901,7 +1901,7 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:12px; flex-wrap:wrap;">
         <div>
           <h2 style="font-size:18px; font-weight:700;">取码与核销记录</h2>
-          <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">仅保留最近 90 天的验证码生命周期，不保存聊天内容、完整验证码或轮询密钥。</p>
+          <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">流水仅保留最近 90 天；用户编号与 OpenID 永久绑定，不随流水过期删除，不保存聊天内容、完整验证码或轮询密钥。</p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
@@ -1922,7 +1922,7 @@
           <option value="expired">已过期</option>
         </select>
         <input id="recordFilterProject" type="text" placeholder="项目唯一标识" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; width:150px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
-        <input id="recordFilterOpenID" type="text" placeholder="搜索 OpenID" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; flex:1; min-width:180px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+        <input id="recordFilterOpenID" type="text" placeholder="搜索用户编号或 OpenID" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; flex:1; min-width:180px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
         <button class="btn-primary" onclick="loadRecords(1)">查询</button>
       </div>
 
@@ -1930,7 +1930,7 @@
       <div class="records-table-wrap">
         <table class="records-table">
           <thead>
-            <tr><th>取码方式</th><th>状态</th><th>OpenID</th><th>对应项目</th><th>生成时间</th><th>核销时间</th></tr>
+            <tr><th>取码方式</th><th>状态</th><th>用户 / OpenID</th><th>对应项目</th><th>生成时间</th><th>核销时间</th></tr>
           </thead>
           <tbody id="recordsTableBody"><tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">暂无记录</td></tr></tbody>
         </table>
@@ -2279,7 +2279,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">平台账号</div>
-              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">以微信 OpenID 为唯一身份；注册开放时，新身份首次登录自动创建普通账号。首个账号固定为唯一管理员，禁用账号将立即踢出其全部会话。</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">每个微信 OpenID 永久绑定“用户 + 编号”；注册开放时，新身份首次登录自动创建普通账号。首个账号固定为唯一管理员，禁用账号将立即踢出其全部会话。</div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
@@ -2300,7 +2300,7 @@
             </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-            <input type="text" id="accFilterKw" placeholder="搜索 openid / 账号ID" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderAccounts()">
+            <input type="text" id="accFilterKw" placeholder="搜索用户编号 / OpenID / 账号ID" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderAccounts()">
             <select id="accFilterRole" onchange="renderAccounts()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
               <option value="all">全部角色</option>
               <option value="admin">管理员</option>
@@ -3084,7 +3084,8 @@ async function handleWechatScanLogin() {
         devAccounts.forEach(account => {
           const option = document.createElement('option');
           option.value = account.id;
-          option.textContent = `${account.role === 'admin' ? '管理员' : '普通用户'} · ${account.masked_openid}`;
+          const userLabel = account.user_number ? `用户${account.user_number} · ` : '';
+          option.textContent = `${userLabel}${account.role === 'admin' ? '管理员' : '普通用户'} · ${account.masked_openid}`;
           devSelect.appendChild(option);
         });
         if (!devAccounts.length) {
@@ -3647,12 +3648,13 @@ async function handleWechatScanLogin() {
         const state = statusView[r.status] || [r.status || '-', 'color:var(--text-muted); background:var(--panel-soft);'];
         const source = r.source === 'wechat' ? '公众号取码' : '网页取码';
         const project = r.project ? (escapeHtml(r.project_name || r.project) + ' <code>' + escapeHtml(r.project) + '</code>') : '<span style="color:var(--text-muted);">待核销确定</span>';
+        const userLabel = formatUserNumber(r.user_number, !!r.openid);
         return `<tr>
           <td data-label="取码方式">${source}</td>
           <td data-label="状态"><span class="record-badge" style="${state[1]}">${state[0]}</span></td>
-          <td data-label="OpenID">
-            <code>${escapeHtml(formatOpenID(r.openid || ''))}</code>
-            ${r.openid ? `<button class="copy-btn" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
+          <td data-label="用户 / OpenID">
+            <div style="font-weight:700; color:${r.user_number ? 'var(--text-main)' : 'var(--text-muted)'}; margin-bottom:${r.openid ? '5px' : '0'};">${escapeHtml(userLabel)}</div>
+            ${r.openid ? `<code>${escapeHtml(formatOpenID(r.openid))}</code><button class="copy-btn" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
           </td>
           <td data-label="对应项目">${project}</td>
           <td data-label="生成时间">${formatRecordTime(r.created_at)}</td>
@@ -3670,6 +3672,12 @@ async function handleWechatScanLogin() {
 
     function formatOpenID(openid) {
       return showFullOpenID ? (openid || '-') : maskOpenid(openid);
+    }
+
+    function formatUserNumber(number, hasOpenID = true) {
+      const value = Number(number || 0);
+      if (value >= 1001) return '用户' + value;
+      return hasOpenID ? '编号待分配' : '未绑定用户';
     }
 
     function toggleOpenIDVisibility() {
@@ -5284,7 +5292,8 @@ async function handleWechatScanLogin() {
       const roleV = roleEl ? roleEl.value : 'all';
       const stV = stEl ? stEl.value : 'all';
       let list = cachedAccounts.filter(a => {
-        if (kw && !((a.openid || '') + ' ' + (a.id || '')).toLowerCase().includes(kw)) return false;
+        const userText = a.user_number ? ('用户' + a.user_number + ' ' + a.user_number) : '';
+        if (kw && !((a.openid || '') + ' ' + (a.id || '') + ' ' + userText).toLowerCase().includes(kw)) return false;
         if (roleV !== 'all' && a.role !== roleV) return false;
         if (stV !== 'all' && a.status !== stV) return false;
         return true;
@@ -5311,7 +5320,7 @@ async function handleWechatScanLogin() {
           : '<span style="color:#60a5fa;">普通用户</span>';
         item.innerHTML = `
           <div class="account-main" style="font-size:13px; color:var(--text-main);">
-            ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
+            <strong>${escapeHtml(formatUserNumber(a.user_number, !!a.openid))}</strong> ｜ ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
             ${a.openid ? `<button class="copy-btn" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
             ｜ 注册：${created}
           </div>

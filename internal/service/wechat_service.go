@@ -118,15 +118,20 @@ type WechatService struct {
 	storage        *storage.Storage
 	verifyService  *VerifyService
 	projectService *ProjectService
+	userIdentities *UserIdentityService
 }
 
-func NewWechatService(cfg *config.Config, store *storage.Storage, vSvc *VerifyService, ps *ProjectService) *WechatService {
-	return &WechatService{
+func NewWechatService(cfg *config.Config, store *storage.Storage, vSvc *VerifyService, ps *ProjectService, identities ...*UserIdentityService) *WechatService {
+	s := &WechatService{
 		cfg:            cfg,
 		storage:        store,
 		verifyService:  vSvc,
 		projectService: ps,
 	}
+	if len(identities) > 0 {
+		s.userIdentities = identities[0]
+	}
+	return s
 }
 
 // VerifySignature 校验来自微信服务器的 GET 请求签名
@@ -149,6 +154,11 @@ func (s *WechatService) ProcessMessage(ctx context.Context, body []byte) (string
 	var in model.WechatIncomingMsg
 	if err := xml.Unmarshal(body, &in); err != nil {
 		return "", fmt.Errorf("unmarshal incoming xml failed: %w", err)
+	}
+	if s.userIdentities != nil && strings.TrimSpace(in.FromUserName) != "" {
+		if _, err := s.userIdentities.GetOrCreate(in.FromUserName, time.Now().Unix()); err != nil {
+			return "", fmt.Errorf("persist user identity failed: %w", err)
+		}
 	}
 
 	replyContent := ""

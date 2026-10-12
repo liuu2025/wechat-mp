@@ -34,21 +34,25 @@ const (
 
 // AccountService 账号与会话管理（accounts.json + Redis 会话）
 type AccountService struct {
-	accountsPath string
-	settingsPath string
-	store        *storage.Storage
-	verifySvc    *VerifyService
-	cfg          *config.Config
-	accountsMu   sync.Mutex
+	accountsPath   string
+	settingsPath   string
+	store          *storage.Storage
+	verifySvc      *VerifyService
+	cfg            *config.Config
+	userIdentities *UserIdentityService
+	accountsMu     sync.Mutex
 }
 
-func NewAccountService(configDir string, store *storage.Storage, verifySvc *VerifyService, cfg *config.Config) *AccountService {
+func NewAccountService(configDir string, store *storage.Storage, verifySvc *VerifyService, cfg *config.Config, identities ...*UserIdentityService) *AccountService {
 	s := &AccountService{
 		accountsPath: filepath.Join(configDir, "accounts.json"),
 		settingsPath: filepath.Join(configDir, "platform_settings.json"),
 		store:        store,
 		verifySvc:    verifySvc,
 		cfg:          cfg,
+	}
+	if len(identities) > 0 {
+		s.userIdentities = identities[0]
 	}
 	s.ensureInitialized()
 	return s
@@ -85,6 +89,11 @@ func (s *AccountService) DevLogin(ctx context.Context, accountID string) (*model
 			}
 			account := accounts[i]
 			s.accountsMu.Unlock()
+			if s.userIdentities != nil {
+				if _, err := s.userIdentities.GetOrCreate(account.OpenID, account.CreatedAt); err != nil {
+					return nil, err
+				}
+			}
 			return s.createSession(&account)
 		}
 	}
@@ -106,9 +115,14 @@ func (s *AccountService) DevAccounts() ([]model.DevAccountOption, error) {
 		if account.Status != model.AccountActive {
 			continue
 		}
+		userNumber := int64(0)
+		if s.userIdentities != nil {
+			userNumber, _ = s.userIdentities.Lookup(account.OpenID)
+		}
 		options = append(options, model.DevAccountOption{
 			ID:           account.ID,
 			MaskedOpenID: maskOpenID(account.OpenID),
+			UserNumber:   userNumber,
 			Role:         account.Role,
 		})
 	}
@@ -243,6 +257,11 @@ func (s *AccountService) LoginWithCode(ctx context.Context, loginCode string) (*
 
 // findOrRegisterAccount 原子完成账号查找、注册开关判断、首个管理员判定与写入。
 func (s *AccountService) findOrRegisterAccount(openID string) (*model.Account, bool, error) {
+	if s.userIdentities != nil {
+		if _, err := s.userIdentities.GetOrCreate(openID, time.Now().Unix()); err != nil {
+			return nil, false, err
+		}
+	}
 	s.accountsMu.Lock()
 	defer s.accountsMu.Unlock()
 
@@ -294,6 +313,11 @@ func (s *AccountService) findOrRegisterAccount(openID string) (*model.Account, b
 func (s *AccountService) BootstrapSession(openID string) (*model.SessionInfo, error) {
 	if openID == "" {
 		return nil, fmt.Errorf("openid 不能为空")
+	}
+	if s.userIdentities != nil {
+		if _, err := s.userIdentities.GetOrCreate(openID, time.Now().Unix()); err != nil {
+			return nil, err
+		}
 	}
 	s.accountsMu.Lock()
 	accounts, err := s.readAccountsLocked()
@@ -347,7 +371,16 @@ func (s *AccountService) PreviewSession() (*model.SessionInfo, error) {
 
 // ListAccounts 管理员查看全部账号
 func (s *AccountService) ListAccounts() ([]model.Account, error) {
-	return s.readAccounts()
+	accounts, err := s.readAccounts()
+	if err != nil {
+		return nil, err
+	}
+	if s.userIdentities != nil {
+		for i := range accounts {
+			accounts[i].UserNumber, _ = s.userIdentities.Lookup(accounts[i].OpenID)
+		}
+	}
+	return accounts, nil
 }
 
 // SetAccountStatus 管理员启停账号（禁用即踢出其全部会话）

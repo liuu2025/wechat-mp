@@ -150,3 +150,30 @@ func TestRecordServicePaginationUpperBoundWithRealFile(t *testing.T) {
 		t.Fatalf("第二页应剩余 5 条，实际 %d", len(second.Items))
 	}
 }
+
+func TestRecordServiceReturnsAndSearchesPermanentUserNumber(t *testing.T) {
+	configDir := t.TempDir()
+	identities, err := NewUserIdentityService(configDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewRecordService(configDir, 90, identities)
+	now := time.Now().Unix()
+	record := &model.CodeRecord{
+		RecordID: "rec_numbered", Source: RecordSourceWechat, Status: model.StatusPending,
+		OpenID: "openid_numbered", CreatedAt: now, ExpiresAt: now + 180,
+	}
+	if err := svc.RecordCreated(record); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, query := range []string{"1001", "用户1001", "openid_numbered"} {
+		result, err := svc.List(RecordQuery{OpenID: query, Page: 1, PageSize: 30}, model.RoleAdmin, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Total != 1 || result.Items[0].UserNumber != 1001 {
+			t.Fatalf("应能用 %q 查到用户1001: %#v", query, result.Items)
+		}
+	}
+}

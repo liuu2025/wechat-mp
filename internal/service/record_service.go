@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,19 +33,24 @@ type RecordQuery struct {
 // RecordService 以按月 JSONL 文件保存取码/核销快照。
 // 文件仅追加；同一流水的最新快照由 LoggedAt 决定。
 type RecordService struct {
-	dir       string
-	retention time.Duration
-	mu        sync.Mutex
+	dir            string
+	retention      time.Duration
+	userIdentities *UserIdentityService
+	mu             sync.Mutex
 }
 
-func NewRecordService(configDir string, retentionDays int) *RecordService {
+func NewRecordService(configDir string, retentionDays int, identities ...*UserIdentityService) *RecordService {
 	if retentionDays <= 0 {
 		retentionDays = 90
 	}
-	return &RecordService{
+	s := &RecordService{
 		dir:       filepath.Join(configDir, "records"),
 		retention: time.Duration(retentionDays) * 24 * time.Hour,
 	}
+	if len(identities) > 0 {
+		s.userIdentities = identities[0]
+	}
+	return s
 }
 
 func (s *RecordService) RecordCreated(record *model.CodeRecord) error {
@@ -58,6 +64,11 @@ func (s *RecordService) RecordVerified(record *model.CodeRecord) error {
 func (s *RecordService) appendSnapshot(event string, record *model.CodeRecord) error {
 	if record == nil || strings.TrimSpace(record.RecordID) == "" {
 		return nil
+	}
+	if s.userIdentities != nil && strings.TrimSpace(record.OpenID) != "" {
+		if _, err := s.userIdentities.GetOrCreate(record.OpenID, record.CreatedAt); err != nil {
+			return err
+		}
 	}
 	status := record.Status
 	if status == model.StatusUsed {
@@ -161,6 +172,9 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 		if role != model.RoleAdmin && (r.OwnerAccountID == "" || r.OwnerAccountID != accountID) {
 			continue
 		}
+		if s.userIdentities != nil && r.OpenID != "" {
+			r.UserNumber, _ = s.userIdentities.Lookup(r.OpenID)
+		}
 		if query.Source != "" && query.Source != "all" && r.Source != query.Source {
 			continue
 		}
@@ -170,7 +184,7 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 		if query.Project != "" && query.Project != "all" && r.Project != query.Project {
 			continue
 		}
-		if query.OpenID != "" && !strings.Contains(strings.ToLower(r.OpenID), strings.ToLower(query.OpenID)) {
+		if query.OpenID != "" && !recordMatchesUserQuery(r, query.OpenID) {
 			continue
 		}
 		items = append(items, r)
@@ -197,6 +211,19 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 		Page:     query.Page,
 		PageSize: query.PageSize,
 	}, nil
+}
+
+func recordMatchesUserQuery(record model.VerificationRecord, query string) bool {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return true
+	}
+	if strings.Contains(strings.ToLower(record.OpenID), strings.ToLower(query)) {
+		return true
+	}
+	numberText := strings.TrimSpace(strings.TrimPrefix(query, "用户"))
+	number, err := strconv.ParseInt(numberText, 10, 64)
+	return err == nil && record.UserNumber == number
 }
 
 func (s *RecordService) readFile(path string, latest map[string]model.VerificationRecordEvent) error {
