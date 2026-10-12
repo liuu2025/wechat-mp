@@ -215,7 +215,7 @@ func (s *WechatService) getReplySettingsSafe() *model.ReplySettings {
 	}
 	return &model.ReplySettings{Version: 2, Rules: *factoryDefaultRules(), SnippetSections: map[string]model.ReplySnippetSection{}, Replies: model.RepliesConfig{
 		Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
-		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
+		CodeSuccess:   "恭喜！{project_name}验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
@@ -302,15 +302,15 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 			}
 		}
 
-		// 项目补充信息有标题时加上【标题】；若留空则原样输出。
+		// 项目补充信有标题时独占一行；若留空则只输出正文。
 		projectBlock := projectCustomAd
 		if projectBlock != "" && projectCustomTitle != "" {
-			projectBlock = fmt.Sprintf("【%s】\n%s", projectCustomTitle, projectBlock)
+			projectBlock = projectCustomTitle + "\n\n" + projectBlock
 		}
 
 		projectSupplement := ""
 		if projectBlock != "" {
-			projectSupplement = "\n\n-------------------\n" + projectBlock
+			projectSupplement = "\n\n" + projectBlock
 		}
 
 		baseMsg := formatSuccessMessage(replies.CodeSuccess, projectName, projectURL) + projectSupplement
@@ -516,9 +516,9 @@ func (s *WechatService) renderPreviewSuccess(settings *model.ReplySettings, proj
 	if strings.TrimSpace(supplement) != "" {
 		block := strings.TrimSpace(supplement)
 		if strings.TrimSpace(title) != "" {
-			block = fmt.Sprintf("【%s】\n%s", strings.TrimSpace(title), block)
+			block = strings.TrimSpace(title) + "\n\n" + block
 		}
-		reply += "\n\n-------------------\n" + block
+		reply += "\n\n" + block
 	}
 	return formatSuccessMessage(replyTemplateWithSnippets(settings, "code_success", reply), name, url)
 }

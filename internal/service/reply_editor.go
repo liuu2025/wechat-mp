@@ -148,6 +148,11 @@ func (s *ProjectService) migrateReplyEditorV2Locked() {
 		settings.Replies.Projects = plainProjects
 		settingsChanged = true
 	}
+	plainSuccess := strings.Replace(settings.Replies.CodeSuccess, "✅ 恭喜！【{project_name}】验证成功。", "恭喜！{project_name}验证成功。", 1)
+	if plainSuccess != settings.Replies.CodeSuccess {
+		settings.Replies.CodeSuccess = plainSuccess
+		settingsChanged = true
+	}
 
 	libraryChanged := false
 	for i := range library {

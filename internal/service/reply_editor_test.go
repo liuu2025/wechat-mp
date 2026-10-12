@@ -88,6 +88,12 @@ func TestCommonLibraryNeverAutoAppendsToProjectReply(t *testing.T) {
 	if !strings.Contains(preview.Reply, "只属于演示项目的补充信息") {
 		t.Fatalf("项目补充信息未显示: %q", preview.Reply)
 	}
+	if !strings.Contains(preview.Reply, "项目须知\n\n只属于演示项目的补充信息") {
+		t.Fatalf("项目补充标题和内容没有用空行分区: %q", preview.Reply)
+	}
+	if strings.Contains(preview.Reply, "-------------------") || strings.Contains(preview.Reply, "【项目须知】") {
+		t.Fatalf("项目补充信息仍含写死的横线或括号: %q", preview.Reply)
+	}
 	if strings.Contains(preview.Reply, "推荐站点") || strings.Contains(preview.Reply, "站长微信") {
 		t.Fatalf("公共内容被错误追加到项目回复: %q", preview.Reply)
 	}
@@ -329,6 +335,7 @@ func TestReplyEditorV2MigratesExactLegacySnippetSuffix(t *testing.T) {
 	}
 	settings.Version = 1
 	settings.SnippetSections = nil
+	settings.Replies.CodeSuccess = "✅ 恭喜！【{project_name}】验证成功。\n网址：{project_url}\n您的身份已核销。"
 	settings.Replies.Projects = "🌐【当前已支持的业务平台】\n{project_list}\n\n【03｜服务维护公告】\n📢 温馨提示：请稍后重试。\n\n【04｜管理员尾注】\n管理员尾注内容"
 	if err := writeReplyJSON(ps.replySettingsPath, settings); err != nil {
 		t.Fatal(err)
@@ -345,6 +352,9 @@ func TestReplyEditorV2MigratesExactLegacySnippetSuffix(t *testing.T) {
 	}
 	if strings.Contains(got.Replies.Projects, "【03｜") || strings.Contains(got.Replies.Projects, "🌐") {
 		t.Fatalf("旧区块或项目标题图标未移除: %q", got.Replies.Projects)
+	}
+	if strings.Contains(got.Replies.CodeSuccess, "✅") || strings.Contains(got.Replies.CodeSuccess, "【{project_name}】") {
+		t.Fatalf("核销成功旧默认图标或括号未移除: %q", got.Replies.CodeSuccess)
 	}
 	if section.Items[0].Content != "温馨提示：请稍后重试。" {
 		t.Fatalf("迁移副本未去掉默认图标: %#v", section.Items[0])

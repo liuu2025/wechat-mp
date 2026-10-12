@@ -104,7 +104,7 @@ func (s *ProjectService) ensureInitialized() {
 		if !copyFromDefault(s.repliesPath, "replies.json") {
 			initialReplies := model.RepliesConfig{
 				Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
-				CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
+				CodeSuccess:   "恭喜！{project_name}验证成功。\n您的身份已核销，请回到网页继续操作。",
 				CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 				CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 				UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
@@ -727,7 +727,7 @@ func (s *ProjectService) UpdateReplies(req *model.RepliesConfig) error {
 func (s *ProjectService) defaultReplies() *model.RepliesConfig {
 	return &model.RepliesConfig{
 		Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
-		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
+		CodeSuccess:   "恭喜！{project_name}验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
