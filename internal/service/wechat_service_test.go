@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"wechat-mp/internal/model"
 )
@@ -88,5 +89,17 @@ func TestFormatSuccessMessage_无网址时微创消融(t *testing.T) {
 	}
 	if !strings.Contains(got, "恭喜") || !strings.Contains(got, "已核销") {
 		t.Fatalf("主句应保留: %s", got)
+	}
+}
+
+func TestFormatUniversalCodeMessageUsesRecordExpiry(t *testing.T) {
+	record := &model.CodeRecord{Code: "123456", CreatedAt: 1_700_000_000, ExpiresAt: 1_700_000_300}
+	got := formatUniversalCodeMessage("码：{code}\n有效期：{expire_minutes} 分钟/{expire_seconds} 秒\n截止：{expire_time}", record, 180)
+	if !strings.Contains(got, "码：123456") || !strings.Contains(got, "5 分钟/300 秒") {
+		t.Fatalf("没有使用验证码记录自身的有效期: %q", got)
+	}
+	wantTime := time.Unix(record.ExpiresAt, 0).In(time.FixedZone("北京时间", 8*60*60)).Format("15:04:05")
+	if !strings.Contains(got, "截止："+wantTime) {
+		t.Fatalf("真实截止时间渲染错误: got %q want %q", got, wantTime)
 	}
 }

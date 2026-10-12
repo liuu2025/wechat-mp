@@ -86,6 +86,7 @@ func (s *RecordService) appendSnapshot(event string, record *model.CodeRecord) e
 		LoggedAt: now.UnixNano(),
 		VerificationRecord: model.VerificationRecord{
 			ID:             record.RecordID,
+			Code:           record.Code,
 			Source:         record.Source,
 			Status:         status,
 			OpenID:         record.OpenID,

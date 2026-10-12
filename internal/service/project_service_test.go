@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"wechat-mp/internal/config"
 	"wechat-mp/internal/model"
 )
 
@@ -59,6 +60,38 @@ func TestIsProjectUsable(t *testing.T) {
 		if got := IsProjectUsable(c.p); got != c.want {
 			t.Fatalf("%s: got %v want %v", c.name, got, c.want)
 		}
+	}
+}
+
+func TestVerificationSettingsRuntimePersistenceAndBounds(t *testing.T) {
+	dir := t.TempDir()
+	svc := NewProjectService(dir)
+	initial, err := svc.GetVerificationSettings(300)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if initial.DefaultCodeExpireSeconds != 300 {
+		t.Fatalf("首次应沿用环境默认值: %#v", initial)
+	}
+
+	saved := &model.VerificationSettings{DefaultCodeExpireSeconds: 420, UpdatedAt: 123, UpdatedBy: "acc_admin"}
+	if err := svc.SaveVerificationSettings(saved); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := NewProjectService(dir)
+	got, err := reloaded.GetVerificationSettings(180)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *got != *saved {
+		t.Fatalf("运行时设置未持久化: got %#v want %#v", got, saved)
+	}
+	verify := NewVerifyService(&config.Config{DefaultCodeExpire: 180}, nil, reloaded)
+	if seconds := verify.CodeExpireSeconds(); seconds != 420 {
+		t.Fatalf("保存后的设置没有即时覆盖环境默认值: got %d want 420", seconds)
+	}
+	if err := svc.SaveVerificationSettings(&model.VerificationSettings{DefaultCodeExpireSeconds: 601}); err == nil {
+		t.Fatal("超过 10 分钟必须拒绝")
 	}
 }
 

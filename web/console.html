@@ -1731,7 +1731,7 @@
       <button class="tab-btn" id="navBtn-docs" onclick="switchTab('docs')">接入文档与指南</button>
     </nav>
     <div class="side-foot">
-      <button class="btn-action-sm" id="previewToggleBtn" onclick="togglePreview()" style="display:none;">预览普通用户视角</button>
+      <button class="btn-action-sm" id="previewToggleBtn" onclick="togglePreview()" style="display:none;">预览普通用户权限</button>
       <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">深色模式</button>
       <button class="btn-action-sm" onclick="logout()" style="color: #ef4444;">锁屏退出</button>
     </div>
@@ -1776,6 +1776,14 @@
             </div>
           </div>
 
+          <div style="width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; background:var(--card-bg);">
+            <label for="sandboxUserSelect" style="display:block; font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:6px;">当前仿真微信用户</label>
+            <select id="sandboxUserSelect" onchange="changeSandboxUser(this.value)" style="width:100%; height:36px; padding:0 9px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+              <option value="">正在读取用户…</option>
+            </select>
+            <div id="sandboxUserHint" style="font-size:11.5px; color:var(--text-muted); line-height:1.5; margin-top:6px;">仿真发送身份与控制台权限视角相互独立。</div>
+          </div>
+
           <div style="display: flex; gap: 8px; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="btn-action-sm" onclick="simulateSubscribe()" style="color: #16a34a;">模拟关注</button>
             <button class="btn-action-sm" onclick="simulateUnsubscribe()" style="color: #dc2626;">模拟取关</button>
@@ -1789,7 +1797,6 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">【流向一】微信索码 获得通行码 网站表单核销</div>
-              <span class="tag-green">短信替代方案</span>
             </div>
             <div class="input-row">
               <label>核销项目：</label>
@@ -1809,7 +1816,6 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title">【流向二】网站弹码 手机回复数字 网页自动登录</div>
-              <span class="tag-blue">适合 PC 网站</span>
             </div>
             <div class="input-row">
               <label>目标业务项目：</label>
@@ -1901,7 +1907,7 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:12px; flex-wrap:wrap;">
         <div>
           <h2 style="font-size:18px; font-weight:700;">取码与核销记录</h2>
-          <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">流水仅保留最近 90 天；用户编号与 OpenID 永久绑定，不随流水过期删除，不保存聊天内容、完整验证码或轮询密钥。</p>
+          <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">流水仅保留最近 90 天；用户编号与 OpenID 永久绑定，不随流水过期删除。新记录保留验证码用于审计，但不保存聊天内容或轮询密钥。</p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
@@ -1930,9 +1936,9 @@
       <div class="records-table-wrap">
         <table class="records-table">
           <thead>
-            <tr><th>取码方式</th><th>状态</th><th>用户 / OpenID</th><th>对应项目</th><th>生成时间</th><th>核销时间</th></tr>
+            <tr><th>取码方式</th><th>验证码</th><th>状态</th><th>用户 / OpenID</th><th>对应项目</th><th>生成时间</th><th>核销时间</th></tr>
           </thead>
-          <tbody id="recordsTableBody"><tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">暂无记录</td></tr></tbody>
+          <tbody id="recordsTableBody"><tr><td colspan="7" data-empty style="text-align:center; color:var(--text-muted);">暂无记录</td></tr></tbody>
         </table>
       </div>
       <div class="records-pagination">
@@ -2440,7 +2446,7 @@
       │                                       │                                        │
       │ 1. 用户发送: "验证码"                  │                                        │
       │──────────────────────────────────────>│                                        │
-      │                                       │ 检查该用户 3 分钟内是否有活跃码        │
+      │                                       │ 检查该用户在当前有效期内是否有活跃码    │
       │   <-- 回复: 【209710】(有效期3分钟)    │ 绑定关系: 209710 <---> openID          │
       │                                       │                                        │
       │ 2. 用户将 209710 填入网站输入框并提交                                          │
@@ -2553,10 +2559,10 @@ def login_by_wechat():
               </tr>
               <tr>
                 <td><code>POST /api/code/create</code></td>
-                <td><code>{"project": "your_project", "key": "项目安全密钥", "session_tag": "会话标识（必填，后端签发）", "expire_seconds": 180}</code></td>
+                <td><code>{"project": "your_project", "key": "项目安全密钥", "session_tag": "会话标识（必填，后端签发）"}</code><br><span style="font-size:12px; color:var(--text-muted);">expire_seconds 可选（60～600）；省略时使用控制台默认值。</span></td>
                 <td>
                   1. 严格白名单与密钥核验，项目必须已启用且密钥匹配；<br>
-                  2. 生成 6 位不重复的随机数字，默认 3 分钟有效；<br>
+                  2. 生成 6 位不重复的随机数字，有效期使用控制台当前设置；<br>
                   3. 响应包含 <code>project</code>（项目唯一标识）与 <code>project_name</code>（中文名）。
                 </td>
               </tr>
@@ -2580,7 +2586,7 @@ async function handleWechatScanLogin() {
   const createRes = await fetch('https://中枢域名/api/code/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', session_tag: 'sess_abc123', expire_seconds: 180 })
+    body: JSON.stringify({ project: 'your_project', key: 'sec_your_key', session_tag: 'sess_abc123' })
   });
   const { data } = await createRes.json();
   const code = data.code;
@@ -2622,7 +2628,7 @@ async function handleWechatScanLogin() {
             </p>
 
             <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
-              <span class="rule-tag ttl">验证码默认寿命：3 分钟 (180秒)</span>
+              <span class="rule-tag ttl" id="runtimeExpiryRuleTag">验证码默认寿命：读取中…</span>
               <span class="rule-tag safe">单次消费：核销成功后立即销毁防重放</span>
               <span class="rule-tag rate">防刷机制：未过期前重复索取返回相同码</span>
             </div>
@@ -2957,6 +2963,7 @@ async function handleWechatScanLogin() {
       </div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-color);">
         <button class="btn-action-sm" onclick="closeModal('variablePreviewModal')">取消</button>
+        <button class="btn-action-sm" onclick="copyPreviewedVariable()">复制变量</button>
         <button class="btn-primary" id="variablePreviewInsertBtn" onclick="insertPreviewedVariable()">确认插入</button>
       </div>
     </div>
@@ -2993,6 +3000,9 @@ async function handleWechatScanLogin() {
       currentOpenID = "mock_wx_user_" + Math.floor(Math.random() * 89999 + 10000);
       localStorage.setItem('sandbox_openid', currentOpenID);
     }
+    let cachedDevAccounts = [];
+    let currentSessionInfo = null;
+    let sandboxIdentities = [];
     let currentPollingTimer = null;
     let latestActiveCode = "";
     let latestPollToken = "";
@@ -3057,7 +3067,6 @@ async function handleWechatScanLogin() {
 
     async function resumeSessionOrLock() {
       let devAllowed = false;
-      let devAccounts = [];
       let needsInit = false;
       let registrationEnabled = true;
       try {
@@ -3069,8 +3078,8 @@ async function handleWechatScanLogin() {
         try {
           const das = await fetch('/api/console/dev-accounts');
           const dasj = await das.json();
-          devAccounts = (dasj.code === 0 && Array.isArray(dasj.data)) ? dasj.data : [];
-        } catch (e) { devAccounts = []; }
+          cachedDevAccounts = (dasj.code === 0 && Array.isArray(dasj.data)) ? dasj.data : [];
+        } catch (e) { cachedDevAccounts = []; }
       }
       try {
         const bs = await fetch('/api/console/bootstrap-status');
@@ -3089,21 +3098,21 @@ async function handleWechatScanLogin() {
       if (devPanel) devPanel.style.display = showDevLogin ? 'block' : 'none';
       if (devSelect) {
         devSelect.innerHTML = '';
-        devAccounts.forEach(account => {
+        cachedDevAccounts.forEach(account => {
           const option = document.createElement('option');
           option.value = account.id;
           const userLabel = account.user_number ? `用户${account.user_number} · ` : '';
           option.textContent = `${userLabel}${account.role === 'admin' ? '管理员' : '普通用户'} · ${account.masked_openid}`;
           devSelect.appendChild(option);
         });
-        if (!devAccounts.length) {
+        if (!cachedDevAccounts.length) {
           const option = document.createElement('option');
           option.value = '';
           option.textContent = '暂无可用的本地账号';
           devSelect.appendChild(option);
         }
       }
-      if (devBtn) devBtn.disabled = !devAccounts.length;
+      if (devBtn) devBtn.disabled = !cachedDevAccounts.length;
       const desc = document.getElementById('lockDescMain');
       if (desc) {
         desc.innerHTML = needsInit
@@ -3121,6 +3130,7 @@ async function handleWechatScanLogin() {
             currentRole = json.data.role;
             hideLockScreen();
             applyRoleUI();
+            await loadSandboxIdentities(json.data);
             loadProjects(); loadFooters(); loadReplies();
             return;
           }
@@ -3137,6 +3147,7 @@ async function handleWechatScanLogin() {
               adminToken = '';
               hideLockScreen();
               applyRoleUI();
+              await loadSandboxIdentities(json2.data);
               loadProjects(); loadFooters(); loadReplies();
               return;
             }
@@ -3194,6 +3205,7 @@ async function handleWechatScanLogin() {
           saveToken(json.data.token);
           hideLockScreen();
           applyRoleUI();
+          await loadSandboxIdentities(json.data);
           loadProjects(); loadFooters(); loadReplies();
         } else {
           const errEl = document.getElementById('lockErrorMsg');
@@ -3223,7 +3235,7 @@ async function handleWechatScanLogin() {
       const previewing = currentRole === 'tenant' && !!adminToken;
       if (badge) {
         if (previewing) {
-          badge.textContent = '普通用户视角预览中';
+          badge.textContent = '普通用户权限预览中';
           badge.style.background = '#78350f';
           badge.style.color = '#fcd34d';
         } else {
@@ -3235,7 +3247,7 @@ async function handleWechatScanLogin() {
       if (btn) {
         if (isAdmin) {
           btn.style.display = 'flex';
-          btn.textContent = '预览普通用户视角';
+          btn.textContent = '预览普通用户权限';
         } else if (previewing) {
           btn.style.display = 'flex';
           btn.textContent = '返回管理员视角';
@@ -3243,6 +3255,86 @@ async function handleWechatScanLogin() {
           btn.style.display = 'none';
         }
       }
+    }
+
+    async function loadSandboxIdentities(sessionInfo) {
+      if (sessionInfo) currentSessionInfo = sessionInfo;
+      const ownOpenID = currentSessionInfo?.openid || '';
+      let identities = [];
+      if (currentRole === 'admin') {
+        try {
+          const res = await fetch('/api/accounts', { headers: { 'X-Session-Token': currentAuthPassword } });
+          const json = await res.json();
+          if (json.code === 0 && Array.isArray(json.data)) {
+            identities = json.data.filter(a => a.status === 'active' && a.openid).map(a => ({
+              openid: a.openid,
+              user_number: a.user_number || 0,
+              role: a.role,
+              account_id: a.id
+            }));
+          }
+        } catch (e) {}
+      }
+      if (!identities.length && ownOpenID) {
+        const devAccount = cachedDevAccounts.find(a => a.id === currentSessionInfo?.account_id);
+        identities = [{
+          openid: ownOpenID,
+          user_number: devAccount?.user_number || 0,
+          role: currentSessionInfo?.role || currentRole,
+          account_id: currentSessionInfo?.account_id || ''
+        }];
+      }
+      if (!identities.length) {
+        identities = [{ openid: currentOpenID, user_number: 0, role: currentRole, account_id: '' }];
+      }
+      sandboxIdentities = identities;
+      const saved = localStorage.getItem('sandbox_selected_openid');
+      const selected = identities.find(x => x.openid === saved)
+        || identities.find(x => x.openid === ownOpenID)
+        || identities[0];
+      const select = document.getElementById('sandboxUserSelect');
+      if (select) {
+        select.innerHTML = '';
+        identities.forEach(identity => {
+          const option = document.createElement('option');
+          option.value = identity.openid;
+          const userLabel = identity.user_number ? `用户${identity.user_number}` : '当前用户';
+          const roleLabel = identity.role === 'admin' ? '管理员' : '普通用户';
+          option.textContent = `${userLabel} · ${roleLabel} · ${maskOpenid(identity.openid)}`;
+          select.appendChild(option);
+        });
+        select.value = selected.openid;
+      }
+      currentOpenID = selected.openid;
+      localStorage.setItem('sandbox_openid', currentOpenID);
+      localStorage.setItem('sandbox_selected_openid', currentOpenID);
+      updateSandboxUserHint(selected);
+    }
+
+    function updateSandboxUserHint(identity) {
+      const hint = document.getElementById('sandboxUserHint');
+      if (!hint || !identity) return;
+      const userLabel = identity.user_number ? `用户${identity.user_number}` : '当前用户';
+      hint.textContent = `手机消息将以${userLabel}的 OpenID 发送；切换普通用户视角只改变权限，不改变这里的身份。`;
+    }
+
+    function changeSandboxUser(openid) {
+      const identity = sandboxIdentities.find(x => x.openid === openid);
+      if (!identity || identity.openid === currentOpenID) return;
+      currentOpenID = identity.openid;
+      localStorage.setItem('sandbox_openid', currentOpenID);
+      localStorage.setItem('sandbox_selected_openid', currentOpenID);
+      if (currentPollingTimer) clearInterval(currentPollingTimer);
+      currentPollingTimer = null;
+      latestActiveCode = '';
+      latestPollToken = '';
+      clearChat();
+      const codeArea = document.getElementById('codeDisplayArea');
+      if (codeArea) codeArea.style.display = 'none';
+      const universalInput = document.getElementById('universalCodeInput');
+      if (universalInput) universalInput.value = '';
+      updateSandboxUserHint(identity);
+      showToast(`已切换仿真微信用户：${identity.user_number ? '用户' + identity.user_number : maskOpenid(identity.openid)}`);
     }
 
     async function togglePreview() {
@@ -3261,7 +3353,7 @@ async function handleWechatScanLogin() {
             currentRole = 'tenant';
             applyRoleUI();
             switchTab('projects');
-            showToast('已切换到普通用户视角（服务端真实按租户权限响应）');
+            showToast('已切换到普通用户权限视角；仿真微信用户保持不变');
           } else {
             showToast('' + (json.message || '切换失败'), false);
           }
@@ -3310,6 +3402,7 @@ async function handleWechatScanLogin() {
           saveToken(json.data.token);
           hideLockScreen();
           applyRoleUI();
+          await loadSandboxIdentities(json.data);
           loadProjects(); loadFooters(); loadReplies();
           if (json.data.is_new) {
             showToast('✅ 首次登录已自动注册账号，欢迎加入');
@@ -3598,7 +3691,7 @@ async function handleWechatScanLogin() {
       const body = document.getElementById('recordsTableBody');
       const summary = document.getElementById('recordSummary');
       if (!body || !summary) return;
-      body.innerHTML = '<tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">加载中...</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" data-empty style="text-align:center; color:var(--text-muted);">加载中...</td></tr>';
 
       const params = new URLSearchParams({ page: String(page), page_size: String(recordsPageSize) });
       const source = document.getElementById('recordFilterSource').value;
@@ -3637,14 +3730,14 @@ async function handleWechatScanLogin() {
         renderRecords(cachedRecords);
       } catch (err) {
         summary.textContent = '读取失败：' + err.message;
-        body.innerHTML = '<tr><td colspan="6" data-empty style="text-align:center; color:#ef4444;">读取取码记录失败</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" data-empty style="text-align:center; color:#ef4444;">读取取码记录失败</td></tr>';
       }
     }
 
     function renderRecords(items) {
       const body = document.getElementById('recordsTableBody');
       if (!items.length) {
-        body.innerHTML = '<tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted); padding:24px;">没有符合条件的记录</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" data-empty style="text-align:center; color:var(--text-muted); padding:24px;">没有符合条件的记录</td></tr>';
         return;
       }
       const statusView = {
@@ -3659,6 +3752,7 @@ async function handleWechatScanLogin() {
         const userLabel = formatUserNumber(r.user_number, !!r.openid);
         return `<tr>
           <td data-label="取码方式">${source}</td>
+          <td data-label="验证码">${r.code ? `<code style="letter-spacing:1px;">${escapeHtml(r.code)}</code><button class="copy-btn" data-code="${escapeHtml(r.code)}" onclick="copyText(this.dataset.code)">复制</button>` : '<span style="color:var(--text-muted);">历史记录未保存</span>'}</td>
           <td data-label="状态"><span class="record-badge" style="${state[1]}">${state[0]}</span></td>
           <td data-label="用户 / OpenID">
             <div style="font-weight:700; color:${r.user_number ? 'var(--text-main)' : 'var(--text-muted)'}; margin-bottom:${r.openid ? '5px' : '0'};">${escapeHtml(userLabel)}</div>
@@ -4151,7 +4245,7 @@ async function handleWechatScanLogin() {
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 180 })
+          body: JSON.stringify({ project, key, session_tag: extra })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -4271,8 +4365,8 @@ async function handleWechatScanLogin() {
       code_invalid: {
         title: '验证码不存在或已过期',
         badge: '6 位数字查无记录',
-        trigger: '当用户发送了 6 位数字，但验证码已超过 3 分钟失效，或输错了数字。',
-        desc: '场景：用户输错了 6 位验证码，或者超过 3 分钟验证码已过期',
+        trigger: '当用户发送了 6 位数字，但验证码已超过当前设置的有效期，或输错了数字。',
+        desc: '场景：用户输错了 6 位验证码，或者验证码已经过期',
         simUserMsg: '123456',
         isSystemNotice: false,
         vars: [
@@ -4296,11 +4390,14 @@ async function handleWechatScanLogin() {
         title: '索取通用通行码',
         badge: '流向一：微信索码',
         trigger: '用户回复关键词：【验证码】【取码】【登录】【注册】【通行码】【code】【1】。',
-        desc: '场景：用户在微信发送【验证码】或【登录】，索取 3 分钟有效通用通行码',
+        desc: '场景：用户在微信发送【验证码】或【登录】，索取当前时效设置的通用通行码',
         simUserMsg: '验证码',
         isSystemNotice: false,
         vars: [
-          { key: '{code}', desc: '系统动态生成的 6 位通用通行码（3分钟有效）' }
+          { key: '{code}', desc: '系统动态生成的 6 位通用通行码' },
+          { key: '{expire_minutes}', desc: '本次验证码生成时确定的总有效分钟数' },
+          { key: '{expire_seconds}', desc: '本次验证码生成时确定的总有效秒数' },
+          { key: '{expire_time}', desc: '本次验证码的真实截止时刻（北京时间）' }
         ],
         field: 'universal_code'
       },
@@ -4349,6 +4446,7 @@ async function handleWechatScanLogin() {
     };
 
     async function loadReplies() {
+      loadVerificationSettings();
       try {
         const res = await fetch('/api/reply-settings', {
           headers: { 'X-Session-Token': currentAuthPassword }
@@ -4363,6 +4461,22 @@ async function handleWechatScanLogin() {
         }
       } catch (err) {
         console.error("加载回复配置失败:", err);
+      }
+    }
+
+    async function loadVerificationSettings() {
+      try {
+        const res = await fetch('/api/verification-settings', { headers: { 'X-Session-Token': currentAuthPassword } });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          cachedVerificationSettings = json.data;
+          const seconds = Number(json.data.default_code_expire_seconds || 180);
+          const tag = document.getElementById('runtimeExpiryRuleTag');
+          if (tag) tag.textContent = `验证码默认寿命：${Math.round(seconds / 60)} 分钟 (${seconds}秒)`;
+          if (studioScene === 'verification_settings') renderReplyStudio();
+        }
+      } catch (err) {
+        console.error('加载验证码时效设置失败:', err);
       }
     }
 
@@ -4705,7 +4819,7 @@ async function handleWechatScanLogin() {
 - **申请 6 位验证码**：
   * 请求：\`POST ${baseUrl}/api/code/create\`
   * Headers: \`Content-Type: application/json\`
-  * Body: \`{ "project": "<项目唯一标识>", "key": "<项目通信密钥>", "expire_seconds": 180, "session_tag": "<后端签发的会话标识，必填>" }\`
+  * Body: \`{ "project": "<项目唯一标识>", "key": "<项目通信密钥>", "session_tag": "<后端签发的会话标识，必填>" }\`；\`expire_seconds\` 可选（60～600），省略时使用控制台默认值。
   * 响应（200 OK）：\`{ "code": 0, "data": { "code": "640798", "poll_token": "<轮询密钥>", "project": "your_project", "project_name": "项目名称", "expire_seconds": 180 } }\`
   * 规范约定：返回的 \`project\` 为英文唯一代号（用于代码逻辑校验），\`project_name\` 为中文展示名。
 
@@ -4965,7 +5079,7 @@ async function handleWechatScanLogin() {
       const allowed = {
         code_success: ['{project_name}', '{project_url}'],
         code_invalid: ['{code}'], code_used: ['{code}'],
-        universal_code: ['{code}', '{expire_seconds}', '{expire_minutes}'],
+        universal_code: ['{code}', '{expire_seconds}', '{expire_minutes}', '{expire_time}'],
         projects: ['{project_list}'], custom: ['{project_list}']
       }[field] || [];
       return vars.every(v => allowed.includes(v));
@@ -5535,18 +5649,30 @@ async function handleWechatScanLogin() {
     let studioPreviewTimer = null;
     let studioDirty = false;
     let studioVariablePending = null;
+    let cachedVerificationSettings = null;
 
     const STUDIO_VARIABLE_META = {
       '{code}': '6 位验证码。公众号取码场景会替换为新生成的验证码；验证结果场景会替换为用户发送的验证码。',
-      '{expire_minutes}': '验证码有效期（分钟），发送时按系统当前设置自动计算。',
-      '{expire_seconds}': '验证码有效期（秒），发送时使用系统当前设置。',
+      '{expire_minutes}': '该验证码生成时确定的总有效分钟数；修改全局设置不会改变已有验证码。',
+      '{expire_seconds}': '该验证码生成时确定的总有效秒数；项目接口可在合法范围内单次指定。',
+      '{expire_time}': '本次验证码真实截止时刻（北京时间）；复用尚未过期的验证码时不会重新计时。',
       '{project_name}': '本次验证码所属的项目名称。',
       '{project_url}': '本次验证码所属项目的访问地址；项目未配置地址时会自动移除相关空行。',
       '{project_list}': '当前所有可用项目组成的列表，项目名称和地址会在发送时实时生成。'
     };
 
+    const STUDIO_VARIABLES = [
+      { token:'{code}', meaning:'六位验证码', scenes:'公众号取码、无效或过期、重复核销', sample:'839201' },
+      { token:'{expire_minutes}', meaning:'验证码生成时确定的总有效分钟数', scenes:'公众号取码', sample:'3' },
+      { token:'{expire_seconds}', meaning:'验证码生成时确定的总有效秒数', scenes:'公众号取码', sample:'180' },
+      { token:'{expire_time}', meaning:'该验证码真实截止时刻（北京时间）', scenes:'公众号取码', sample:'00:05:35' },
+      { token:'{project_name}', meaning:'本次验证码对应的项目名称', scenes:'验证成功', sample:'示例项目' },
+      { token:'{project_url}', meaning:'项目访问地址；未配置时自动移除相关空行', scenes:'验证成功', sample:'https://example.com' },
+      { token:'{project_list}', meaning:'发送时实时生成的可用项目列表', scenes:'项目清单、自定义回复', sample:'示例项目：https://example.com' }
+    ];
+
     const STUDIO_META = {
-      universal_code: { title: '公众号取码', desc: '用户发送指定文字后，生成一个通用验证码。', field: 'universal_code', builtin: true, sample: '验证码', vars: ['{code}', '{expire_minutes}', '{expire_seconds}'] },
+      universal_code: { title: '公众号取码', desc: '用户发送指定文字后，生成一个通用验证码。', field: 'universal_code', builtin: true, sample: '验证码', vars: ['{code}', '{expire_minutes}', '{expire_seconds}', '{expire_time}'] },
       verify: { title: '发送网页验证码', desc: '用户发送网页显示的 6 位数字，根据验证结果回复。', sample: '839201' },
       help: { title: '使用指南', desc: '用户发送指定文字后，回复使用说明。', field: 'help', builtin: true, sample: '帮助', vars: [] },
       projects: { title: '项目清单', desc: '用户发送指定文字后，回复当前可用项目列表。', field: 'projects', builtin: true, sample: '项目', vars: ['{project_list}'] },
@@ -5554,6 +5680,8 @@ async function handleWechatScanLogin() {
       fallback: { title: '未识别文字', desc: '文字没有命中任何规则时使用。', field: 'unknown_text', sample: '你好呀', vars: [] },
       media: { title: '图片 / 语音 / 表情', desc: '收到非文字消息时使用。', field: 'media_message', sample: '[发送了一张图片]', vars: [] },
       welcome: { title: '新关注欢迎语', desc: '用户关注公众号时自动回复。', field: 'welcome', sample: '用户关注了公众号', vars: [] },
+      verification_settings: { title: '验证码时效', desc: '修改新生成验证码的默认有效期，无需重启服务。' },
+      variables: { title: '动态变量表', desc: '集中查看、预览并复制所有可用动态变量。' },
       library: { title: '常用内容库', desc: '管理可在回复编辑时多选、排序并复制插入的内容。' }
     };
 
@@ -5562,7 +5690,8 @@ async function handleWechatScanLogin() {
         { title: '业务动作', keys: ['universal_code', 'verify'] },
         { title: '文字回复', keys: ['help', 'projects', 'custom'] },
         { title: '系统场景', keys: ['fallback', 'media', 'welcome'] },
-        { title: '编辑素材', keys: ['library'] }
+        { title: '运行设置', keys: ['verification_settings'] },
+        { title: '编辑素材', keys: ['variables', 'library'] }
       ];
     }
 
@@ -5581,7 +5710,7 @@ async function handleWechatScanLogin() {
         <div class="studio-scene-group">${group.title}</div>
         ${group.keys.map(key => {
           const meta = STUDIO_META[key];
-          const count = key === 'library' ? `<span style="font-size:11px;">${cachedFooters.length}</span>` : `<span class="studio-scene-dot ${studioSceneEnabled(key) ? '' : 'off'}"></span>`;
+          const count = key === 'library' ? `<span style="font-size:11px;">${cachedFooters.length}</span>` : key === 'variables' ? `<span style="font-size:11px;">${STUDIO_VARIABLES.length}</span>` : `<span class="studio-scene-dot ${studioSceneEnabled(key) ? '' : 'off'}"></span>`;
           return `<button class="studio-scene-btn ${studioScene === key ? 'active' : ''}" onclick="studioSelectScene('${key}')"><span>${meta.title}</span>${count}</button>`;
         }).join('')}
       `).join('');
@@ -5592,6 +5721,8 @@ async function handleWechatScanLogin() {
       }
       if (!STUDIO_META[studioScene]) studioScene = 'universal_code';
       if (studioScene === 'library') body.innerHTML = studioLibraryEditorHTML();
+      else if (studioScene === 'variables') body.innerHTML = studioVariablesEditorHTML();
+      else if (studioScene === 'verification_settings') body.innerHTML = studioVerificationSettingsHTML();
       else if (studioScene === 'custom') body.innerHTML = studioCustomEditorHTML();
       else body.innerHTML = studioRuleEditorHTML(studioScene);
       renderStudioPreviewControls();
@@ -5695,6 +5826,60 @@ async function handleWechatScanLogin() {
         </div>`;
     }
 
+    function studioVariablesEditorHTML() {
+      return `<div class="studio-editor-title"><div><h3>动态变量表</h3><p>变量只在标注的场景中有效；复制后可粘贴到对应完整回复中。</p></div></div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          ${STUDIO_VARIABLES.map(item => `<div class="snippet-manage-row">
+            <div style="min-width:150px;"><code style="font-size:13px; color:#60a5fa;">${escapeHtml(item.token)}</code></div>
+            <div style="flex:1; min-width:220px;"><div style="font-weight:700; color:var(--text-main);">${escapeHtml(item.meaning)}</div><div style="font-size:12px; color:var(--text-muted); margin-top:4px;">可用场景：${escapeHtml(item.scenes)}</div><div style="font-size:12px; color:var(--text-muted); margin-top:3px;">示例：<code>${escapeHtml(item.sample)}</code></div></div>
+            <button class="btn-action-sm" data-variable="${escapeHtml(item.token)}" onclick="copyText(this.dataset.variable)">复制变量</button>
+          </div>`).join('')}
+        </div>`;
+    }
+
+    function studioVerificationSettingsHTML() {
+      const seconds = Number(cachedVerificationSettings?.default_code_expire_seconds || 180);
+      const minutes = Math.max(1, Math.round(seconds / 60));
+      return `<div class="studio-editor-title"><div><h3>验证码时效</h3><p>修改后立即生效，无需重启或重新部署。</p></div></div>
+        <div class="studio-block">
+          <div class="studio-block-label">默认验证码有效期</div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input id="verificationExpireMinutes" type="number" min="1" max="10" step="1" value="${minutes}" style="width:110px; height:36px; padding:0 10px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+            <span style="font-size:13px; color:var(--text-main);">分钟</span>
+            <button class="btn-primary" onclick="saveVerificationSettings()">保存并立即生效</button>
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); line-height:1.65; margin-top:10px;">允许 1～10 分钟。只影响保存后新生成的验证码，现有验证码不会延长或缩短。项目接口显式传入合法的 <code>expire_seconds</code> 时仍以调用值为准。</div>
+        </div>`;
+    }
+
+    async function saveVerificationSettings() {
+      const minutes = Number(document.getElementById('verificationExpireMinutes')?.value || 0);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 10) {
+        showToast('有效期必须是 1～10 的整数分钟', false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/verification-settings', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'X-Session-Token':currentAuthPassword},
+          body: JSON.stringify({default_code_expire_minutes: minutes})
+        });
+        const json = await res.json();
+        if (json.code !== 0 || !json.data) {
+          showToast(json.message || '保存失败', false);
+          return;
+        }
+        cachedVerificationSettings = json.data;
+        const seconds = Number(json.data.default_code_expire_seconds || minutes * 60);
+        const tag = document.getElementById('runtimeExpiryRuleTag');
+        if (tag) tag.textContent = `验证码默认寿命：${minutes} 分钟 (${seconds}秒)`;
+        showToast(`默认验证码有效期已改为 ${minutes} 分钟，新验证码立即生效`);
+        renderReplyStudio();
+      } catch (e) {
+        showToast('保存验证码时效失败：' + e, false);
+      }
+    }
+
     function studioSetDigitResult(field) { studioDigitResult = field; renderReplyStudio(); }
     function studioMarkDirty() {
       studioDirty = true;
@@ -5750,6 +5935,10 @@ async function handleWechatScanLogin() {
       studioInsertVariable(pending.value, pending.start, pending.end);
       studioVariablePending = null;
     }
+    function copyPreviewedVariable() {
+      if (!studioVariablePending) return;
+      copyText(studioVariablePending.value);
+    }
     function studioInsertVariable(value, savedStart, savedEnd) {
       const el = document.getElementById('studioReplyTextarea');
       if (!el) return;
@@ -5770,7 +5959,7 @@ async function handleWechatScanLogin() {
         const rule = (cachedRules.custom || []).find(r => r.enabled) || cachedRules.custom[0];
         return rule ? { field: 'custom:' + rule.id, message: (rule.keywords || ['自定义'])[0] } : { field: 'fallback', message: '自定义消息' };
       }
-      if (studioScene === 'library') return { field: '', message: '' };
+      if (['library', 'variables', 'verification_settings'].includes(studioScene)) return { field: '', message: '' };
       const meta = STUDIO_META[studioScene];
       return { field: meta.field, message: meta.sample };
     }
@@ -5797,6 +5986,17 @@ async function handleWechatScanLogin() {
       if (studioScene === 'library') {
         userEl.style.display = 'none';
         messageEl.textContent = '常用内容只用于编辑，不会单独触发发送。勾选插入后，它会成为当前回复的一部分。';
+        return;
+      }
+      if (studioScene === 'variables') {
+        userEl.style.display = 'none';
+        messageEl.textContent = '动态变量会在实际发送时替换为对应数据。请复制到变量支持的回复场景中使用。';
+        return;
+      }
+      if (studioScene === 'verification_settings') {
+        userEl.style.display = 'none';
+        const minutes = Math.round(Number(cachedVerificationSettings?.default_code_expire_seconds || 180) / 60);
+        messageEl.textContent = `新生成验证码默认有效期：${minutes} 分钟。修改不会影响已经存在的验证码。`;
         return;
       }
       const current = studioCurrentPreview();

@@ -471,7 +471,6 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">🖥️【流向二】网站弹码 ➔ 手机回复纯数字 ➔ 网页免动自动登录</div>
-          <span style="font-size: 12px; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px;">适合 PC 网站端</span>
         </div>
 
         <div class="verify-box">
@@ -515,7 +514,6 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">📱【流向一】微信索码 ➔ 获得通行码 ➔ 网站表单填码核销</div>
-          <span style="font-size: 12px; background: #f0fdf4; color: #15803d; padding: 2px 8px; border-radius: 4px;">适合短信替代方案</span>
         </div>
 
         <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
@@ -699,7 +697,7 @@
         const res = await fetch('/api/code/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project, key, session_tag: extra, expire_seconds: 180 })
+          body: JSON.stringify({ project, key, session_tag: extra })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {

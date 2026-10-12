@@ -60,6 +60,10 @@ func (h *VerifyHandler) CreateCode(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, 400, "缺少必填参数 'project'（项目标识）")
 		return
 	}
+	if req.ExpireSeconds != 0 && (req.ExpireSeconds < 60 || req.ExpireSeconds > 600) {
+		writeError(w, http.StatusBadRequest, 400, "expire_seconds 必须在 60～600 秒之间；省略或传 0 时使用控制台默认值")
+		return
+	}
 
 	clientIP := getClientIP(r)
 	hasForwardedIP := r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Real-IP") != ""

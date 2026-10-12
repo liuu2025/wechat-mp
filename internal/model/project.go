@@ -109,7 +109,7 @@ type RepliesConfig struct {
 	CodeSuccess   string `json:"code_success"`   // 验证成功通知模版（支持 {project_name} 变量）
 	CodeInvalid   string `json:"code_invalid"`   // 验证码不存在或已过期提示（支持 {code} 变量）
 	CodeUsed      string `json:"code_used"`      // 验证码已核销过提示（支持 {code} 变量）
-	UniversalCode string `json:"universal_code"` // 通用通行码下发模版（支持 {code} 变量）
+	UniversalCode string `json:"universal_code"` // 通用通行码下发模版（支持验证码与有效期变量）
 	Projects      string `json:"projects"`       // 支持的业务项目清单模版（支持 {project_list} 变量）
 	Help          string `json:"help"`           // 帮助指南指引
 	UnknownText   string `json:"unknown_text"`   // 未识别的文字兜底回复

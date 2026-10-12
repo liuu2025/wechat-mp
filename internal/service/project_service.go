@@ -23,31 +23,66 @@ var (
 )
 
 type ProjectService struct {
-	mu                sync.RWMutex
-	projectsPath      string
-	authPath          string
-	footersPath       string
-	repliesPath       string
-	rulesPath         string
-	replySettingsPath string
-	replyLibraryPath  string
+	mu                       sync.RWMutex
+	projectsPath             string
+	authPath                 string
+	footersPath              string
+	repliesPath              string
+	rulesPath                string
+	replySettingsPath        string
+	replyLibraryPath         string
+	verificationSettingsPath string
 }
 
 func NewProjectService(configDir string) *ProjectService {
 	s := &ProjectService{
-		projectsPath:      filepath.Join(configDir, "projects.json"),
-		authPath:          filepath.Join(configDir, "auth.json"),
-		footersPath:       filepath.Join(configDir, "footers.json"),
-		repliesPath:       filepath.Join(configDir, "replies.json"),
-		rulesPath:         filepath.Join(configDir, "rules.json"),
-		replySettingsPath: filepath.Join(configDir, "reply_settings.json"),
-		replyLibraryPath:  filepath.Join(configDir, "reply_library.json"),
+		projectsPath:             filepath.Join(configDir, "projects.json"),
+		authPath:                 filepath.Join(configDir, "auth.json"),
+		footersPath:              filepath.Join(configDir, "footers.json"),
+		repliesPath:              filepath.Join(configDir, "replies.json"),
+		rulesPath:                filepath.Join(configDir, "rules.json"),
+		replySettingsPath:        filepath.Join(configDir, "reply_settings.json"),
+		replyLibraryPath:         filepath.Join(configDir, "reply_library.json"),
+		verificationSettingsPath: filepath.Join(configDir, "verification_settings.json"),
 	}
 
 	// 确保存储文件存在，如不存在则初始化默认值
 	s.ensureInitialized()
 	s.ensureReplyEditorInitialized()
 	return s
+}
+
+// GetVerificationSettings 返回当前运行时验证码设置。配置文件尚未创建时沿用环境变量默认值。
+func (s *ProjectService) GetVerificationSettings(fallbackSeconds int) (*model.VerificationSettings, error) {
+	if fallbackSeconds < 60 || fallbackSeconds > 600 {
+		fallbackSeconds = 180
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	data, err := os.ReadFile(s.verificationSettingsPath)
+	if os.IsNotExist(err) {
+		return &model.VerificationSettings{DefaultCodeExpireSeconds: fallbackSeconds}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var settings model.VerificationSettings
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return nil, err
+	}
+	if settings.DefaultCodeExpireSeconds < 60 || settings.DefaultCodeExpireSeconds > 600 {
+		return nil, fmt.Errorf("验证码默认有效期超出 60～600 秒范围")
+	}
+	return &settings, nil
+}
+
+func (s *ProjectService) SaveVerificationSettings(settings *model.VerificationSettings) error {
+	if settings == nil || settings.DefaultCodeExpireSeconds < 60 || settings.DefaultCodeExpireSeconds > 600 {
+		return fmt.Errorf("验证码默认有效期必须为 1～10 分钟")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return writeReplyJSON(s.verificationSettingsPath, settings)
 }
 
 func (s *ProjectService) ensureInitialized() {
@@ -72,7 +107,7 @@ func (s *ProjectService) ensureInitialized() {
 				CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 				CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 				CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
-				UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：3 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
+				UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 				Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
 				Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 				UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
@@ -695,7 +730,7 @@ func (s *ProjectService) defaultReplies() *model.RepliesConfig {
 		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
-		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：3 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
+		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 		Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
 		Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 		UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",

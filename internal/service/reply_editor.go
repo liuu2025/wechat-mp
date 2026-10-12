@@ -196,6 +196,7 @@ func validateReplyVariables(field, content string) error {
 		allowed["code"] = true
 		allowed["expire_seconds"] = true
 		allowed["expire_minutes"] = true
+		allowed["expire_time"] = true
 	case "projects", "custom":
 		allowed["project_list"] = true
 	}

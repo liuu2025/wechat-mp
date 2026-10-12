@@ -46,11 +46,12 @@ type CreateCodeReq struct {
 	Source        string `json:"-"`              // 内部来源标记；外部请求始终按 web 处理
 }
 
-// VerificationRecord 长期保留的最小取码/核销流水，不包含完整验证码、轮询密钥或聊天内容。
+// VerificationRecord 保留最近 90 天的最小取码/核销流水；包含验证码用于审计，不包含轮询密钥或聊天内容。
 type VerificationRecord struct {
 	ID             string `json:"id"`
-	Source         string `json:"source"` // wechat | web
-	Status         string `json:"status"` // pending | verified | expired
+	Code           string `json:"code,omitempty"` // 90 天审计期内保留；旧记录可能为空
+	Source         string `json:"source"`         // wechat | web
+	Status         string `json:"status"`         // pending | verified | expired
 	OpenID         string `json:"openid,omitempty"`
 	UserNumber     int64  `json:"user_number,omitempty"` // 根据 OpenID 派生的永久用户编号，不写入流水文件
 	Project        string `json:"project,omitempty"`
@@ -59,6 +60,18 @@ type VerificationRecord struct {
 	CreatedAt      int64  `json:"created_at"`
 	ExpiresAt      int64  `json:"expires_at"`
 	VerifiedAt     int64  `json:"verified_at,omitempty"`
+}
+
+// VerificationSettings 可在控制台即时调整的验证码运行设置。
+// 环境变量仅作为文件尚未创建时的默认值。
+type VerificationSettings struct {
+	DefaultCodeExpireSeconds int    `json:"default_code_expire_seconds"`
+	UpdatedAt                int64  `json:"updated_at,omitempty"`
+	UpdatedBy                string `json:"updated_by,omitempty"`
+}
+
+type UpdateVerificationSettingsReq struct {
+	DefaultCodeExpireMinutes int `json:"default_code_expire_minutes"`
 }
 
 // VerificationRecordEvent JSONL 中的一次完整状态快照。事件只追加，不原地修改旧行。

@@ -65,7 +65,7 @@ func TestRecordServiceLifecycleAndTenantIsolation(t *testing.T) {
 			gotWeb = &admin.Items[i]
 		}
 	}
-	if gotWeb == nil || gotWeb.Status != model.StatusVerified || gotWeb.OpenID != "openid_a" {
+	if gotWeb == nil || gotWeb.Status != model.StatusVerified || gotWeb.OpenID != "openid_a" || gotWeb.Code != "123456" {
 		t.Fatalf("网页取码最新核销快照不正确: %#v", gotWeb)
 	}
 
@@ -89,8 +89,8 @@ func TestRecordServiceLifecycleAndTenantIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), "123456") || strings.Contains(string(raw), "poll-secret") {
-		t.Fatal("流水文件不得包含完整验证码或 poll_token")
+	if !strings.Contains(string(raw), "123456") || strings.Contains(string(raw), "poll-secret") {
+		t.Fatal("流水文件应保留验证码用于审计，但不得包含 poll_token")
 	}
 }
 

@@ -36,6 +36,20 @@ func NewVerifyService(cfg *config.Config, store *storage.Storage, ps *ProjectSer
 	return svc
 }
 
+// CodeExpireSeconds 返回当前即时生效的默认验证码有效期。
+func (s *VerifyService) CodeExpireSeconds() int {
+	fallback := 180
+	if s.cfg != nil && s.cfg.DefaultCodeExpire >= 60 && s.cfg.DefaultCodeExpire <= 600 {
+		fallback = s.cfg.DefaultCodeExpire
+	}
+	if s.projectService != nil {
+		if settings, err := s.projectService.GetVerificationSettings(fallback); err == nil {
+			return settings.DefaultCodeExpireSeconds
+		}
+	}
+	return fallback
+}
+
 // GenerateCode 为业务项目生成唯一的 6 位数字验证码（集成准入契约、四道防线与轮询密钥）
 func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeReq, clientIP string, hasForwardedIP bool) (*model.CreateCodeResp, error) {
 	projectSlug := strings.TrimSpace(req.Project)
@@ -94,7 +108,9 @@ func (s *VerifyService) GenerateCode(ctx context.Context, req *model.CreateCodeR
 
 	expireSec := req.ExpireSeconds
 	if expireSec <= 0 {
-		expireSec = s.cfg.DefaultCodeExpire
+		expireSec = s.CodeExpireSeconds()
+	} else if expireSec < 60 || expireSec > 600 {
+		return nil, fmt.Errorf("field 'expire_seconds' 必须在 60～600 秒之间")
 	}
 	ttl := time.Duration(expireSec) * time.Second
 
@@ -218,11 +234,13 @@ func (s *VerifyService) CheckCodeByPollToken(ctx context.Context, pollToken, cli
 }
 
 // GenerateUniversalCode 为指定微信用户生成或复用通用的通行验证码（流向一）
-func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string) (string, error) {
+func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string) (*model.CodeRecord, error) {
 	// 1. 防刷：先检查用户当前是否有尚未过期的有效通用码
 	activeCode, err := s.storage.GetUserActiveUniversalCode(ctx, openID)
 	if err == nil && activeCode != "" {
-		return activeCode, nil
+		if record, getErr := s.storage.GetCode(ctx, activeCode); getErr == nil {
+			return record, nil
+		}
 	}
 
 	// 2. 生成全新 6 位唯一码
@@ -230,11 +248,11 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 	for i := 0; i < 5; i++ {
 		c, err := randomDigits(6)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		exists, err := s.storage.Exists(ctx, c)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if !exists {
 			code = c
@@ -242,7 +260,7 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 		}
 	}
 	if code == "" {
-		return "", fmt.Errorf("system busy, failed to generate code")
+		return nil, fmt.Errorf("system busy, failed to generate code")
 	}
 
 	now := time.Now().Unix()
@@ -257,18 +275,15 @@ func (s *VerifyService) GenerateUniversalCode(ctx context.Context, openID string
 		CreatedAt:   now,
 	}
 
-	ttl := time.Duration(s.cfg.DefaultCodeExpire) * time.Second
-	if ttl <= 0 {
-		ttl = 180 * time.Second
-	}
+	ttl := time.Duration(s.CodeExpireSeconds()) * time.Second
 	record.ExpiresAt = now + int64(ttl/time.Second)
 
 	if err := s.storage.SaveUserUniversalCode(ctx, openID, record, ttl); err != nil {
-		return "", err
+		return nil, err
 	}
 	s.recordCreated(record)
 
-	return code, nil
+	return record, nil
 }
 
 // VerifyUniversalCode 业务网站主动验证并消费用户的通用码（流向一）

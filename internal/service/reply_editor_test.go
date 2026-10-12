@@ -109,6 +109,9 @@ func TestPreviewUsesExampleDataWithoutStorage(t *testing.T) {
 	if !strings.Contains(preview.Reply, "246810") {
 		t.Fatalf("示例验证码未渲染: %q", preview.Reply)
 	}
+	if !strings.Contains(preview.Reply, "3 分钟") || strings.Contains(preview.Reply, "{expire_time}") {
+		t.Fatalf("有效期动态变量未完整渲染: %q", preview.Reply)
+	}
 }
 
 func TestLiveCodePreviewUsesRealNotFoundStateAndDraftReply(t *testing.T) {

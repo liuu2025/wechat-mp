@@ -213,7 +213,7 @@ func (s *WechatService) getRepliesConfig() *model.RepliesConfig {
 		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
-		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：3 分钟（一次性有效）\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
+		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
 		Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
 		Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 		UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
@@ -300,14 +300,11 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 		return baseMsg + projectSupplement
 
 	case ruleID == "universal_code":
-		code, err := s.verifyService.GenerateUniversalCode(ctx, openID)
+		record, err := s.verifyService.GenerateUniversalCode(ctx, openID)
 		if err != nil {
 			return "⚠️ 验证码生成繁忙，请稍后再试。"
 		}
-		msg := strings.ReplaceAll(replies.UniversalCode, "{code}", code)
-		msg = strings.ReplaceAll(msg, "{expire_seconds}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire))
-		msg = strings.ReplaceAll(msg, "{expire_minutes}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire/60))
-		return msg
+		return formatUniversalCodeMessage(replies.UniversalCode, record, s.codeExpireSeconds())
 
 	case ruleID == "help":
 		return replies.Help
@@ -398,9 +395,11 @@ func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySett
 	case matched == "code_used":
 		reply = strings.ReplaceAll(settings.Replies.CodeUsed, "{code}", code)
 	case matched == "universal_code":
-		reply = strings.ReplaceAll(settings.Replies.UniversalCode, "{code}", code)
-		reply = strings.ReplaceAll(reply, "{expire_seconds}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire))
-		reply = strings.ReplaceAll(reply, "{expire_minutes}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire/60))
+		now := time.Now().Unix()
+		expireSeconds := s.codeExpireSeconds()
+		reply = formatUniversalCodeMessage(settings.Replies.UniversalCode, &model.CodeRecord{
+			Code: code, CreatedAt: now, ExpiresAt: now + int64(expireSeconds),
+		}, expireSeconds)
 	case matched == "projects":
 		reply = strings.ReplaceAll(settings.Replies.Projects, "{project_list}", s.projectListText())
 	case matched == "help":
@@ -502,6 +501,49 @@ func (s *WechatService) renderPreviewSuccess(template, projectID, fallbackName, 
 	return reply
 }
 
+func (s *WechatService) codeExpireSeconds() int {
+	if s.verifyService != nil {
+		return s.verifyService.CodeExpireSeconds()
+	}
+	if s.cfg != nil && s.cfg.DefaultCodeExpire >= 60 && s.cfg.DefaultCodeExpire <= 600 {
+		return s.cfg.DefaultCodeExpire
+	}
+	return 180
+}
+
+func (s *WechatService) CodeExpireSeconds() int {
+	return s.codeExpireSeconds()
+}
+
+func formatUniversalCodeMessage(template string, record *model.CodeRecord, fallbackSeconds int) string {
+	if fallbackSeconds < 60 {
+		fallbackSeconds = 180
+	}
+	code := ""
+	createdAt := time.Now().Unix()
+	expiresAt := createdAt + int64(fallbackSeconds)
+	if record != nil {
+		code = record.Code
+		if record.CreatedAt > 0 {
+			createdAt = record.CreatedAt
+		}
+		if record.ExpiresAt > createdAt {
+			expiresAt = record.ExpiresAt
+		}
+	}
+	durationSeconds := int(expiresAt - createdAt)
+	if durationSeconds <= 0 {
+		durationSeconds = fallbackSeconds
+		expiresAt = createdAt + int64(durationSeconds)
+	}
+	msg := strings.ReplaceAll(template, "{code}", code)
+	msg = strings.ReplaceAll(msg, "{expire_seconds}", fmt.Sprintf("%d", durationSeconds))
+	msg = strings.ReplaceAll(msg, "{expire_minutes}", fmt.Sprintf("%d", durationSeconds/60))
+	chinaTime := time.FixedZone("北京时间", 8*60*60)
+	msg = strings.ReplaceAll(msg, "{expire_time}", time.Unix(expiresAt, 0).In(chinaTime).Format("15:04:05"))
+	return msg
+}
+
 // formatSuccessMessage 处理验证成功通知模板中的变量替换与安全消融
 func formatSuccessMessage(template, projectName, projectURL string) string {
 	msg := strings.ReplaceAll(template, "{project_name}", projectName)
@@ -563,15 +605,14 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 		if strings.HasPrefix(eventKey, "GET_CODE_") {
 			projectName := strings.TrimPrefix(eventKey, "GET_CODE_")
 			resp, err := s.verifyService.GenerateCode(ctx, &model.CreateCodeReq{
-				Project:       projectName,
-				SessionTag:    "menu:" + openID,
-				ExpireSeconds: s.cfg.DefaultCodeExpire,
-				Source:        RecordSourceWechat,
+				Project:    projectName,
+				SessionTag: "menu:" + openID,
+				Source:     RecordSourceWechat,
 			}, "menu:"+openID, true)
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"
 			}
-			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 3 分钟，请在对应网页输入完成验证)", projectName, resp.Code)
+			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 %d 分钟，请在对应网页输入完成验证)", projectName, resp.Code, resp.ExpireSeconds/60)
 		}
 
 		switch eventKey {

@@ -129,10 +129,11 @@ func (h *ConsoleHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeSuccess(w, map[string]interface{}{
-		"token":   sess.Token,
-		"role":    sess.Role,
-		"openid":  sess.OpenID,
-		"message": "本机开发登录成功",
+		"token":      sess.Token,
+		"account_id": sess.AccountID,
+		"role":       sess.Role,
+		"openid":     sess.OpenID,
+		"message":    "本机开发登录成功",
 	})
 }
 
@@ -173,11 +174,12 @@ func (h *ConsoleHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeSuccess(w, map[string]interface{}{
-		"token":   sess.Token,
-		"role":    sess.Role,
-		"openid":  sess.OpenID,
-		"is_new":  isNew,
-		"message": map[bool]string{true: "账号注册成功，欢迎加入", false: "登录成功"}[isNew],
+		"token":      sess.Token,
+		"account_id": sess.AccountID,
+		"role":       sess.Role,
+		"openid":     sess.OpenID,
+		"is_new":     isNew,
+		"message":    map[bool]string{true: "账号注册成功，欢迎加入", false: "登录成功"}[isNew],
 	})
 }
 

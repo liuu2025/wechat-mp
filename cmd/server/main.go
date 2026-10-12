@@ -116,6 +116,7 @@ func main() {
 	// 统一回复规则、常用内容库与草稿预览（仅管理员）。
 	mux.HandleFunc("/api/reply-settings", replyEditorHandler.Settings)
 	mux.HandleFunc("/api/reply-settings/preview", replyEditorHandler.Preview)
+	mux.HandleFunc("/api/verification-settings", replyEditorHandler.VerificationSettings)
 	mux.HandleFunc("/api/reply-library", replyEditorHandler.Library)
 	mux.HandleFunc("/api/reply-library/delete", replyEditorHandler.DeleteSnippet)
 	mux.HandleFunc("/api/reply-library/reorder", replyEditorHandler.ReorderSnippets)
