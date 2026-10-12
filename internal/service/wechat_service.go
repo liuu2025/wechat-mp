@@ -19,6 +19,10 @@ import (
 
 var digitRegex = regexp.MustCompile(`^\d{6}$`)
 
+type previewCodeStateReader interface {
+	GetCode(context.Context, string) (*model.CodeRecord, error)
+}
+
 // verifyMaxFailures 单 openid 在时间窗口内允许的核销失败次数上限（防 6 位码盲猜爆破）
 const verifyMaxFailures = 20
 
@@ -88,6 +92,8 @@ func RuleNameZh(ruleID string) string {
 		return "六位数字无效或已过期"
 	case ruleID == "code_used":
 		return "六位数字重复核销"
+	case ruleID == "code_project_unavailable":
+		return "六位数字所属项目不可用"
 	case ruleID == "universal_code":
 		return "公众号取码"
 	case ruleID == "help":
@@ -105,8 +111,7 @@ func RuleNameZh(ruleID string) string {
 
 // TestMessage 规则试跑：只做匹配和模拟渲染，不生成或核销真实验证码。
 func (s *WechatService) TestMessage(ctx context.Context, message string) (string, string) {
-	_ = ctx
-	resp, err := s.PreviewReply(nil, "", strings.TrimSpace(message), "", "839201")
+	resp, err := s.PreviewReply(ctx, nil, "", strings.TrimSpace(message), "", "839201", false)
 	if err != nil {
 		return "fallback", "预览失败：" + err.Error()
 	}
@@ -114,11 +119,12 @@ func (s *WechatService) TestMessage(ctx context.Context, message string) (string
 }
 
 type WechatService struct {
-	cfg            *config.Config
-	storage        *storage.Storage
-	verifyService  *VerifyService
-	projectService *ProjectService
-	userIdentities *UserIdentityService
+	cfg               *config.Config
+	storage           *storage.Storage
+	verifyService     *VerifyService
+	projectService    *ProjectService
+	userIdentities    *UserIdentityService
+	previewCodeReader previewCodeStateReader
 }
 
 func NewWechatService(cfg *config.Config, store *storage.Storage, vSvc *VerifyService, ps *ProjectService, identities ...*UserIdentityService) *WechatService {
@@ -127,6 +133,9 @@ func NewWechatService(cfg *config.Config, store *storage.Storage, vSvc *VerifySe
 		storage:        store,
 		verifyService:  vSvc,
 		projectService: ps,
+	}
+	if store != nil {
+		s.previewCodeReader = store
 	}
 	if len(identities) > 0 {
 		s.userIdentities = identities[0]
@@ -347,8 +356,8 @@ func (s *WechatService) projectListText() string {
 	return listStr
 }
 
-// PreviewReply 使用草稿规则和示例数据渲染，不读写验证码状态。
-func (s *WechatService) PreviewReply(draft *model.ReplySettings, field, message, projectID, code string) (*model.ReplyPreviewResp, error) {
+// PreviewReply 使用草稿规则渲染回复。useLiveCodeState 仅只读查询验证码真实状态，绝不核销。
+func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySettings, field, message, projectID, code string, useLiveCodeState bool) (*model.ReplyPreviewResp, error) {
 	settings := draft
 	if settings == nil {
 		if s.projectService == nil {
@@ -367,28 +376,22 @@ func (s *WechatService) PreviewReply(draft *model.ReplySettings, field, message,
 	matched := field
 	if matched == "" {
 		matched = s.matchTextRule(&settings.Rules, message)
-		if matched == "verify_code" {
-			matched = "code_invalid"
+	}
+	if matched == "verify_code" {
+		if useLiveCodeState {
+			liveCode := strings.TrimSpace(message)
+			if !digitRegex.MatchString(liveCode) {
+				liveCode = code
+			}
+			return s.previewLiveVerification(ctx, settings, liveCode)
 		}
+		matched = "code_invalid"
 	}
 
 	reply := ""
 	switch {
 	case matched == "code_success":
-		name, url, title, supplement := "示例项目", "https://example.com", "", ""
-		if s.projectService != nil && projectID != "" {
-			if p, err := s.projectService.GetProject(projectID); err == nil {
-				name, url, title, supplement = p.Name, p.URL, p.CustomAdTitle, p.CustomAd
-			}
-		}
-		reply = formatSuccessMessage(settings.Replies.CodeSuccess, name, url)
-		if strings.TrimSpace(supplement) != "" {
-			block := strings.TrimSpace(supplement)
-			if strings.TrimSpace(title) != "" {
-				block = fmt.Sprintf("【%s】\n%s", strings.TrimSpace(title), block)
-			}
-			reply += "\n\n-------------------\n" + block
-		}
+		reply = s.renderPreviewSuccess(settings.Replies.CodeSuccess, projectID, "示例项目", "https://example.com")
 	case matched == "verify_code" || matched == "code_invalid":
 		matched = "code_invalid"
 		reply = strings.ReplaceAll(settings.Replies.CodeInvalid, "{code}", code)
@@ -421,6 +424,82 @@ func (s *WechatService) PreviewReply(draft *model.ReplySettings, field, message,
 	}
 
 	return &model.ReplyPreviewResp{Matched: matched, MatchedZh: RuleNameZh(matched), Reply: reply}, nil
+}
+
+func (s *WechatService) previewLiveVerification(ctx context.Context, settings *model.ReplySettings, code string) (*model.ReplyPreviewResp, error) {
+	reader := s.previewCodeReader
+	if reader == nil && s.storage != nil {
+		reader = s.storage
+	}
+	if reader == nil {
+		return nil, errors.New("验证码存储不可用")
+	}
+	record, err := reader.GetCode(ctx, code)
+	if errors.Is(err, storage.ErrCodeNotFound) {
+		return &model.ReplyPreviewResp{
+			Matched:       "code_invalid",
+			MatchedZh:     RuleNameZh("code_invalid"),
+			Reply:         strings.ReplaceAll(settings.Replies.CodeInvalid, "{code}", code),
+			LiveCodeState: true,
+			CodeState:     "not_found_or_expired",
+		}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("读取验证码真实状态失败: %w", err)
+	}
+
+	// 与正式消息处理顺序一致：先判断项目是否可用，再判断是否已核销。
+	if s.projectService != nil {
+		if project, projectErr := s.projectService.GetProject(record.Project); projectErr == nil && !IsProjectUsable(project) {
+			return &model.ReplyPreviewResp{
+				Matched:       "code_project_unavailable",
+				MatchedZh:     RuleNameZh("code_project_unavailable"),
+				Reply:         "⚠️ 该验证码所属项目已停用或授权到期，无法完成核销。",
+				LiveCodeState: true,
+				CodeState:     "project_unavailable",
+			}, nil
+		}
+	}
+
+	if record.Status == model.StatusVerified || record.Status == model.StatusUsed {
+		return &model.ReplyPreviewResp{
+			Matched:       "code_used",
+			MatchedZh:     RuleNameZh("code_used"),
+			Reply:         strings.ReplaceAll(settings.Replies.CodeUsed, "{code}", code),
+			LiveCodeState: true,
+			CodeState:     "used",
+		}, nil
+	}
+
+	fallbackName := record.Project
+	if fallbackName == "" {
+		fallbackName = "默认项目"
+	}
+	return &model.ReplyPreviewResp{
+		Matched:       "code_success",
+		MatchedZh:     RuleNameZh("code_success"),
+		Reply:         s.renderPreviewSuccess(settings.Replies.CodeSuccess, record.Project, fallbackName, ""),
+		LiveCodeState: true,
+		CodeState:     "pending",
+	}, nil
+}
+
+func (s *WechatService) renderPreviewSuccess(template, projectID, fallbackName, fallbackURL string) string {
+	name, url, title, supplement := fallbackName, fallbackURL, "", ""
+	if s.projectService != nil && projectID != "" {
+		if project, err := s.projectService.GetProject(projectID); err == nil {
+			name, url, title, supplement = project.Name, project.URL, project.CustomAdTitle, project.CustomAd
+		}
+	}
+	reply := formatSuccessMessage(template, name, url)
+	if strings.TrimSpace(supplement) != "" {
+		block := strings.TrimSpace(supplement)
+		if strings.TrimSpace(title) != "" {
+			block = fmt.Sprintf("【%s】\n%s", strings.TrimSpace(title), block)
+		}
+		reply += "\n\n-------------------\n" + block
+	}
+	return reply
 }
 
 // formatSuccessMessage 处理验证成功通知模板中的变量替换与安全消融

@@ -10,7 +10,7 @@ import (
 	"wechat-mp/internal/service"
 )
 
-// ReplyEditorHandler 管理统一回复配置、常用内容库和无副作用预览。
+// ReplyEditorHandler 管理统一回复配置、常用内容库和只读预览。
 type ReplyEditorHandler struct {
 	projectService *service.ProjectService
 	wechatService  *service.WechatService
@@ -138,7 +138,7 @@ func (h *ReplyEditorHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, 400, "JSON 请求体格式不正确: "+err.Error())
 		return
 	}
-	resp, err := h.wechatService.PreviewReply(req.Draft, strings.TrimSpace(req.Field), strings.TrimSpace(req.Message), strings.TrimSpace(req.ProjectID), strings.TrimSpace(req.Code))
+	resp, err := h.wechatService.PreviewReply(r.Context(), req.Draft, strings.TrimSpace(req.Field), strings.TrimSpace(req.Message), strings.TrimSpace(req.ProjectID), strings.TrimSpace(req.Code), req.UseLiveCodeState)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, 400, "预览失败: "+err.Error())
 		return

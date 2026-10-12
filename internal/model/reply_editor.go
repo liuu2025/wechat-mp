@@ -16,17 +16,20 @@ type ReplySnippet struct {
 }
 
 type ReplyPreviewReq struct {
-	Draft     *ReplySettings `json:"draft,omitempty"`
-	Field     string         `json:"field,omitempty"`
-	Message   string         `json:"message,omitempty"`
-	ProjectID string         `json:"project_id,omitempty"`
-	Code      string         `json:"code,omitempty"`
+	Draft            *ReplySettings `json:"draft,omitempty"`
+	Field            string         `json:"field,omitempty"`
+	Message          string         `json:"message,omitempty"`
+	ProjectID        string         `json:"project_id,omitempty"`
+	Code             string         `json:"code,omitempty"`
+	UseLiveCodeState bool           `json:"use_live_code_state,omitempty"`
 }
 
 type ReplyPreviewResp struct {
-	Matched   string `json:"matched"`
-	MatchedZh string `json:"matched_zh"`
-	Reply     string `json:"reply"`
+	Matched       string `json:"matched"`
+	MatchedZh     string `json:"matched_zh"`
+	Reply         string `json:"reply"`
+	LiveCodeState bool   `json:"live_code_state,omitempty"`
+	CodeState     string `json:"code_state,omitempty"`
 }
 
 type DeleteReplySnippetReq struct {
