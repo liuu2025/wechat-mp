@@ -328,6 +328,7 @@ func (s *ProjectService) AddProject(req *model.AddProjectReq, ownerAccountID str
 		Enabled:       true,
 		CustomAdTitle: req.CustomAdTitle,
 		CustomAd:      req.CustomAd,
+		CustomAdLabel: req.CustomAdLabel,
 		// 公共内容库只用于编辑时复制插入，不再参与项目回复拼装。
 		IncludeGlobal:  false,
 		CreatedAt:      time.Now().Unix(),
@@ -335,6 +336,9 @@ func (s *ProjectService) AddProject(req *model.AddProjectReq, ownerAccountID str
 		ExpiresAt:      expiresAt,
 	}
 
+	if req.CustomAdTitleBlankLine != nil {
+		item.CustomAdTitleBlankLine = *req.CustomAdTitleBlankLine
+	}
 	projects = append(projects, item)
 	updatedData, err := json.MarshalIndent(projects, "", "  ")
 	if err != nil {
@@ -404,6 +408,12 @@ func (s *ProjectService) UpdateProject(req *model.UpdateProjectReq) error {
 			p.URL = strings.TrimSpace(req.URL)
 			p.CustomAdTitle = req.CustomAdTitle
 			p.CustomAd = req.CustomAd
+			if req.CustomAdLabel != nil {
+				p.CustomAdLabel = req.CustomAdLabel
+			}
+			if req.CustomAdTitleBlankLine != nil {
+				p.CustomAdTitleBlankLine = *req.CustomAdTitleBlankLine
+			}
 			p.IncludeGlobal = false
 			found = true
 			break

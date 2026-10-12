@@ -2,18 +2,20 @@ package model
 
 // ProjectItem 接入的独立业务项目实体
 type ProjectItem struct {
-	ID              string `json:"id"`                          // 项目唯一英文代号（如 "shop", "blog"）
-	Name            string `json:"name"`                        // 项目中文名称（如 "商城系统"）
-	URL             string `json:"url,omitempty"`               // 项目网站网址（选填，如 "https://shop.example.com"）
-	Secret          string `json:"secret"`                      // 该项目对接时使用的安全密钥
-	Enabled         bool   `json:"enabled"`                     // 是否启用该项目（true=允许对接，false=暂时停用）
-	CustomAdTitle   string `json:"custom_ad_title,omitempty"`   // 项目补充信息标题（兼容旧字段名）
-	CustomAd        string `json:"custom_ad"`                   // 项目验证成功后的补充信息（兼容旧字段名）
-	IncludeGlobal   bool   `json:"include_global"`              // 仅兼容旧数据；公共内容不再自动追加
-	CreatedAt       int64  `json:"created_at"`                  // 创建时间戳
-	SecretRotatedAt int64  `json:"secret_rotated_at,omitempty"` // 最近一次密钥轮换时间戳
-	OwnerAccountID  string `json:"owner_account_id,omitempty"`  // 归属账号ID（租户项目；管理员项目为空）
-	ExpiresAt       int64  `json:"expires_at,omitempty"`        // 授权到期时间戳（0=永久）
+	ID                     string  `json:"id"`                          // 项目唯一英文代号（如 "shop", "blog"）
+	Name                   string  `json:"name"`                        // 项目中文名称（如 "商城系统"）
+	URL                    string  `json:"url,omitempty"`               // 项目网站网址（选填，如 "https://shop.example.com"）
+	Secret                 string  `json:"secret"`                      // 该项目对接时使用的安全密钥
+	Enabled                bool    `json:"enabled"`                     // 是否启用该项目（true=允许对接，false=暂时停用）
+	CustomAdTitle          string  `json:"custom_ad_title,omitempty"`   // 项目补充信息标题（兼容旧字段名）
+	CustomAd               string  `json:"custom_ad"`                   // 项目验证成功后的补充信息（兼容旧字段名）
+	CustomAdLabel          *string `json:"custom_ad_label,omitempty"`   // 分区说明；nil 沿用“项目说明：”，空字符串隐藏
+	CustomAdTitleBlankLine bool    `json:"custom_ad_title_blank_line"`  // 标题与正文之间是否空一行
+	IncludeGlobal          bool    `json:"include_global"`              // 仅兼容旧数据；公共内容不再自动追加
+	CreatedAt              int64   `json:"created_at"`                  // 创建时间戳
+	SecretRotatedAt        int64   `json:"secret_rotated_at,omitempty"` // 最近一次密钥轮换时间戳
+	OwnerAccountID         string  `json:"owner_account_id,omitempty"`  // 归属账号ID（租户项目；管理员项目为空）
+	ExpiresAt              int64   `json:"expires_at,omitempty"`        // 授权到期时间戳（0=永久）
 }
 
 // FooterItem 默认尾注模版实体
@@ -68,13 +70,15 @@ type LoginReq struct {
 
 // AddProjectReq 新增项目请求
 type AddProjectReq struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	URL           string `json:"url"`
-	CustomAdTitle string `json:"custom_ad_title"`
-	CustomAd      string `json:"custom_ad"`
-	IncludeGlobal bool   `json:"include_global"`
-	LicenseCode   string `json:"license_code"` // 普通用户创建项目必须携带的有效激活码
+	ID                     string  `json:"id"`
+	Name                   string  `json:"name"`
+	URL                    string  `json:"url"`
+	CustomAdTitle          string  `json:"custom_ad_title"`
+	CustomAd               string  `json:"custom_ad"`
+	CustomAdLabel          *string `json:"custom_ad_label"`
+	CustomAdTitleBlankLine *bool   `json:"custom_ad_title_blank_line"`
+	IncludeGlobal          bool    `json:"include_global"`
+	LicenseCode            string  `json:"license_code"` // 普通用户创建项目必须携带的有效激活码
 }
 
 // ToggleProjectReq 切换项目启停状态请求
@@ -85,12 +89,14 @@ type ToggleProjectReq struct {
 
 // UpdateProjectReq 编辑项目信息请求
 type UpdateProjectReq struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	URL           string `json:"url"`
-	CustomAdTitle string `json:"custom_ad_title"`
-	CustomAd      string `json:"custom_ad"`
-	IncludeGlobal bool   `json:"include_global"`
+	ID                     string  `json:"id"`
+	Name                   string  `json:"name"`
+	URL                    string  `json:"url"`
+	CustomAdTitle          string  `json:"custom_ad_title"`
+	CustomAd               string  `json:"custom_ad"`
+	CustomAdLabel          *string `json:"custom_ad_label"`
+	CustomAdTitleBlankLine *bool   `json:"custom_ad_title_blank_line"`
+	IncludeGlobal          bool    `json:"include_global"`
 }
 
 // DeleteProjectReq 删除项目请求

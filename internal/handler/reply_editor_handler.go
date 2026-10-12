@@ -131,7 +131,9 @@ func (h *ReplyEditorHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, 405, "不支持的请求方法")
 		return
 	}
-	if authAdmin(h.accountService, w, r) == nil {
+	sess := authSession(h.accountService, r)
+	if sess == nil {
+		writeError(w, http.StatusUnauthorized, 401, "未登录或会话已过期")
 		return
 	}
 	var req model.ReplyPreviewReq
@@ -139,7 +141,15 @@ func (h *ReplyEditorHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, 400, "JSON 请求体格式不正确: "+err.Error())
 		return
 	}
-	resp, err := h.wechatService.PreviewReply(r.Context(), req.Draft, strings.TrimSpace(req.Field), strings.TrimSpace(req.Message), strings.TrimSpace(req.ProjectID), strings.TrimSpace(req.Code), req.UseLiveCodeState)
+	if sess.Role != model.RoleAdmin {
+		// 普通用户仅能预览自己正在填写的项目表单；使用已保存成功模板，不能试跑其他规则或查询验证码。
+		if req.ProjectDraft == nil || req.Field != "code_success" || req.UseLiveCodeState {
+			writeError(w, http.StatusForbidden, 403, "仅允许预览项目表单")
+			return
+		}
+		req.Draft, req.Message, req.ProjectID = nil, "", ""
+	}
+	resp, err := h.wechatService.PreviewReply(r.Context(), req.Draft, strings.TrimSpace(req.Field), strings.TrimSpace(req.Message), strings.TrimSpace(req.ProjectID), strings.TrimSpace(req.Code), req.UseLiveCodeState, req.ProjectDraft)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, 400, "预览失败: "+err.Error())
 		return

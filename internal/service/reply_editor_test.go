@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -88,14 +89,75 @@ func TestCommonLibraryNeverAutoAppendsToProjectReply(t *testing.T) {
 	if !strings.Contains(preview.Reply, "只属于演示项目的补充信息") {
 		t.Fatalf("项目补充信息未显示: %q", preview.Reply)
 	}
-	if !strings.Contains(preview.Reply, "项目须知\n\n只属于演示项目的补充信息") {
-		t.Fatalf("项目补充标题和内容没有用空行分区: %q", preview.Reply)
+	if !strings.Contains(preview.Reply, "项目说明：\n项目须知\n只属于演示项目的补充信息") {
+		t.Fatalf("项目说明、标题和内容没有按行紧凑排列: %q", preview.Reply)
 	}
 	if strings.Contains(preview.Reply, "-------------------") || strings.Contains(preview.Reply, "【项目须知】") {
 		t.Fatalf("项目补充信息仍含写死的横线或括号: %q", preview.Reply)
 	}
 	if strings.Contains(preview.Reply, "推荐站点") || strings.Contains(preview.Reply, "站长微信") {
 		t.Fatalf("公共内容被错误追加到项目回复: %q", preview.Reply)
+	}
+}
+
+func TestProjectSupplementDraftAndSavedPreviewStayConsistent(t *testing.T) {
+	ps, ws := newReplyEditorTestService(t)
+	label := "项目说明："
+	blankLine := false
+	p, err := ps.AddProject(&model.AddProjectReq{
+		ID: "layout_demo", Name: "示例项目", URL: "https://example.com",
+		CustomAdLabel: &label, CustomAdTitle: "项目标题",
+		CustomAd: "内容1\n内容2\n\n内容4", CustomAdTitleBlankLine: &blankLine,
+	}, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	savedPreview, err := ws.PreviewReply(context.Background(), settings, "code_success", "", p.ID, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(savedPreview.Reply, "\n\n项目说明：\n项目标题\n内容1\n内容2\n\n内容4") {
+		t.Fatalf("保存的项目未使用紧凑分区格式: %q", savedPreview.Reply)
+	}
+	draft := *p
+	hiddenLabel := ""
+	draft.CustomAdLabel = &hiddenLabel
+	draft.CustomAdTitleBlankLine = true
+	draftPreview, err := ws.PreviewReply(context.Background(), settings, "code_success", "", p.ID, "", false, &draft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(draftPreview.Reply, "项目说明：") || !strings.HasSuffix(draftPreview.Reply, "\n\n项目标题\n\n内容1\n内容2\n\n内容4") {
+		t.Fatalf("草稿的留空说明或空行设置未生效: %q", draftPreview.Reply)
+	}
+	persisted, err := ps.GetProject(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persisted.CustomAdLabel == nil || *persisted.CustomAdLabel != label || persisted.CustomAdTitleBlankLine {
+		t.Fatal("只读预览修改了已保存项目")
+	}
+	if err := ps.UpdateProject(&model.UpdateProjectReq{
+		ID: p.ID, Name: p.Name, URL: p.URL, CustomAdTitle: p.CustomAdTitle, CustomAd: p.CustomAd,
+		CustomAdLabel: &hiddenLabel, CustomAdTitleBlankLine: &draft.CustomAdTitleBlankLine,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := NewProjectService(filepath.Dir(ps.projectsPath))
+	persisted, err = reloaded.GetProject(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persisted.CustomAdLabel == nil || *persisted.CustomAdLabel != "" || !persisted.CustomAdTitleBlankLine {
+		t.Fatal("项目说明留空或间距设置未持久化")
+	}
+	draft.CustomAd = ""
+	if got := appendProjectSupplement("验证成功", &draft); got != "验证成功" {
+		t.Fatalf("没有正文时仍追加了说明或空白: %q", got)
 	}
 }
 

@@ -2822,8 +2822,16 @@ async function handleWechatScanLogin() {
             <input type="text" id="newProjectUrl" placeholder="如 https://shop.example.com (选填)" oninput="updateAddPreview()">
           </div>
           <div class="input-row">
+            <label>分区说明文字:</label>
+            <input type="text" id="newProjectAdLabel" value="项目说明：" placeholder="可修改，留空则不显示" oninput="updateAddPreview()">
+          </div>
+          <div class="input-row">
             <label>补充信息标题:</label>
-            <input type="text" id="newProjectAdTitle" placeholder="如 网盘必读、使用说明 (选填，留空则不加方括号标题)" oninput="updateAddPreview()">
+            <input type="text" id="newProjectAdTitle" placeholder="如 网盘必读、使用说明（选填）" oninput="updateAddPreview()">
+          </div>
+          <div class="input-row">
+            <label>标题与正文间距:</label>
+            <select id="newProjectAdSpacing" onchange="updateAddPreview()" style="flex:1; min-width:0; padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);"><option value="compact">紧凑，仅换行</option><option value="blank">空一行</option></select>
           </div>
           <div class="input-row" style="align-items: flex-start;">
             <label style="margin-top: 8px;">项目补充信息:</label>
@@ -2876,8 +2884,16 @@ async function handleWechatScanLogin() {
             <input type="text" id="editProjectUrl" placeholder="如 https://shop.example.com (选填)" oninput="updateEditPreview()">
           </div>
           <div class="input-row">
+            <label>分区说明文字:</label>
+            <input type="text" id="editProjectAdLabel" placeholder="可修改，留空则不显示" oninput="updateEditPreview()">
+          </div>
+          <div class="input-row">
             <label>补充信息标题:</label>
-            <input type="text" id="editProjectAdTitle" placeholder="如 网盘必读、使用说明 (选填，留空则不加方括号标题)" oninput="updateEditPreview()">
+            <input type="text" id="editProjectAdTitle" placeholder="如 网盘必读、使用说明（选填）" oninput="updateEditPreview()">
+          </div>
+          <div class="input-row">
+            <label>标题与正文间距:</label>
+            <select id="editProjectAdSpacing" onchange="updateEditPreview()" style="flex:1; min-width:0; padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);"><option value="compact">紧凑，仅换行</option><option value="blank">空一行</option></select>
           </div>
           <div class="input-row" style="align-items: flex-start;">
             <label style="margin-top: 8px;">项目补充信息:</label>
@@ -3518,49 +3534,43 @@ async function handleWechatScanLogin() {
       return el ? el.value.trim() : '';
     }
 
-    function openEditProjectModal(id) {
-      const p = cachedProjects.find(item => item.id === id);
-      if (!p) return;
-      document.getElementById('editProjectId').value = p.id;
-      document.getElementById('editProjectName').value = p.name;
-      document.getElementById('editProjectAd').value = p.custom_ad || '';
-      openModal('editProjectModal');
-      updateEditPreview();
-    }
-
-    // 实时同步预览公众号真实回复效果
+    // 项目表单通过后端的真实回复排版入口预览，序号防止旧请求覆盖新输入。
+    const projectPreviewTimers = {};
+    const projectPreviewVersions = {};
     function updateAddPreview() {
-      const name = document.getElementById('newProjectName').value.trim() || '新业务项目';
-      const url = document.getElementById('newProjectUrl') ? document.getElementById('newProjectUrl').value.trim() : '';
-      const adTitle = document.getElementById('newProjectAdTitle').value.trim();
-      const ad = document.getElementById('newProjectAd').value.trim();
-      const previewEl = document.getElementById('addMessagePreview');
-      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad);
+      scheduleProjectFormPreview('newProject', 'addMessagePreview');
     }
 
     function updateEditPreview() {
-      const name = document.getElementById('editProjectName').value.trim() || '业务项目';
-      const url = document.getElementById('editProjectUrl') ? document.getElementById('editProjectUrl').value.trim() : '';
-      const adTitle = document.getElementById('editProjectAdTitle').value.trim();
-      const ad = document.getElementById('editProjectAd').value.trim();
-      const previewEl = document.getElementById('editMessagePreview');
-      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad);
+      scheduleProjectFormPreview('editProject', 'editMessagePreview');
     }
 
-    function buildReplyHtml(projectName, projectURL, customAdTitle, customAd) {
-      let pAd = (customAd || '').trim();
-      if (pAd && customAdTitle && customAdTitle.trim()) {
-        pAd = `【${customAdTitle.trim()}】\n${pAd}`;
-      }
-
-      let footerStr = '';
-      if (pAd) {
-        footerStr = '\n\n-------------------\n' + pAd;
-      }
-
-      const tpl = (cachedReplies && cachedReplies.code_success) ? cachedReplies.code_success : '恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。';
-      const rawText = formatSuccessText(tpl, projectName, projectURL) + footerStr;
-      return linkify(escapeHtml(rawText));
+    function scheduleProjectFormPreview(prefix, targetId) {
+      clearTimeout(projectPreviewTimers[targetId]);
+      const version = (projectPreviewVersions[targetId] || 0) + 1;
+      projectPreviewVersions[targetId] = version;
+      document.getElementById(targetId).textContent = '正在生成预览…';
+      projectPreviewTimers[targetId] = setTimeout(async () => {
+        const project = {
+          name: document.getElementById(prefix + 'Name').value.trim() || '业务项目',
+          url: document.getElementById(prefix + 'Url').value.trim(),
+          custom_ad_label: document.getElementById(prefix + 'AdLabel').value,
+          custom_ad_title: document.getElementById(prefix + 'AdTitle').value,
+          custom_ad: document.getElementById(prefix + 'Ad').value,
+          custom_ad_title_blank_line: document.getElementById(prefix + 'AdSpacing').value === 'blank'
+        };
+        try {
+          const res = await fetch('/api/reply-settings/preview', {
+            method:'POST', headers:{'Content-Type':'application/json','X-Session-Token':currentAuthPassword},
+            body:JSON.stringify({field:'code_success', project_draft:project})
+          });
+          const json = await res.json();
+          if (projectPreviewVersions[targetId] !== version) return;
+          document.getElementById(targetId).textContent = json.code === 0 && json.data ? json.data.reply : ('预览失败：' + (json.message || '未知错误'));
+        } catch (e) {
+          if (projectPreviewVersions[targetId] === version) document.getElementById(targetId).textContent = '预览请求失败：' + e;
+        }
+      }, 180);
     }
 
     function openEditProjectModal(id) {
@@ -3572,6 +3582,8 @@ async function handleWechatScanLogin() {
         document.getElementById('editProjectUrl').value = p.url || '';
       }
       document.getElementById('editProjectAdTitle').value = p.custom_ad_title || '';
+      document.getElementById('editProjectAdLabel').value = p.custom_ad_label ?? '项目说明：';
+      document.getElementById('editProjectAdSpacing').value = p.custom_ad_title_blank_line ? 'blank' : 'compact';
       document.getElementById('editProjectAd').value = p.custom_ad || '';
       openModal('editProjectModal');
       updateEditPreview();
@@ -3583,6 +3595,8 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('newProjectUrl') ? document.getElementById('newProjectUrl').value.trim() : '';
       const custom_ad_title = document.getElementById('newProjectAdTitle').value.trim();
       const custom_ad = document.getElementById('newProjectAd').value;
+      const custom_ad_label = document.getElementById('newProjectAdLabel').value;
+      const custom_ad_title_blank_line = document.getElementById('newProjectAdSpacing').value === 'blank';
 
       if (!id || !name) {
         alert("请完整填写项目唯一标识和名称！");
@@ -3596,7 +3610,7 @@ async function handleWechatScanLogin() {
             'Content-Type': 'application/json',
             'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global: false, license_code: licenseCodeValue() })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, custom_ad_label, custom_ad_title_blank_line, include_global: false, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -3606,6 +3620,8 @@ async function handleWechatScanLogin() {
           if (document.getElementById('newProjectUrl')) document.getElementById('newProjectUrl').value = '';
           document.getElementById('newProjectAdTitle').value = '';
           document.getElementById('newProjectAd').value = '';
+          document.getElementById('newProjectAdLabel').value = '项目说明：';
+          document.getElementById('newProjectAdSpacing').value = 'compact';
           alert("新增项目成功并已保存至 config/projects.json！");
           loadProjects();
         } else {
@@ -3622,6 +3638,8 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('editProjectUrl') ? document.getElementById('editProjectUrl').value.trim() : '';
       const custom_ad_title = document.getElementById('editProjectAdTitle').value.trim();
       const custom_ad = document.getElementById('editProjectAd').value;
+      const custom_ad_label = document.getElementById('editProjectAdLabel').value;
+      const custom_ad_title_blank_line = document.getElementById('editProjectAdSpacing').value === 'blank';
 
       if (!name) {
         alert("项目中文名称不能为空！");
@@ -3635,7 +3653,7 @@ async function handleWechatScanLogin() {
             'Content-Type': 'application/json',
             'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global: false, license_code: licenseCodeValue() })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, custom_ad_label, custom_ad_title_blank_line, include_global: false, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -4672,7 +4690,9 @@ async function handleWechatScanLogin() {
       return cleanLines.join('\n');
     }
 
-    function renderScenarioPreview() {
+    let scenarioPreviewVersion = 0;
+    async function renderScenarioPreview() {
+      const version = ++scenarioPreviewVersion;
       if (!document.getElementById('scenarioChatSimulation')) return;
       const container = document.getElementById('scenarioChatSimulation');
       if (!container) return;
@@ -4694,20 +4714,22 @@ async function handleWechatScanLogin() {
 
         case 'code_success':
           const sampleProject = (cachedProjects && cachedProjects.length > 0) ? cachedProjects[0] : { name: '商城系统', url: 'https://shop.example.com', custom_ad_title: '商城特惠', custom_ad: '全场商品首单 8 折，限时抢购！' };
-          const pName = sampleProject.name || '商城系统';
-          const pUrl = sampleProject.url || '';
-          const pTitle = sampleProject.custom_ad_title || '';
-          const pAd = sampleProject.custom_ad || '';
-
-          let pBlock = pAd;
-          if (pBlock && pTitle) pBlock = `【${pTitle}】\n${pBlock}`;
-
-          let successFooter = '';
-          if (pBlock) {
-            successFooter = '\n\n-------------------\n' + pBlock;
+          try {
+            const res = await fetch('/api/reply-settings/preview', {
+              method:'POST', headers:{'Content-Type':'application/json','X-Session-Token':currentAuthPassword},
+              body:JSON.stringify({draft:cachedReplySettings,field:'code_success',project_draft:{
+                name:sampleProject.name,url:sampleProject.url,custom_ad:sampleProject.custom_ad,
+                custom_ad_title:sampleProject.custom_ad_title,custom_ad_label:sampleProject.custom_ad_label,
+                custom_ad_title_blank_line:sampleProject.custom_ad_title_blank_line
+              }})
+            });
+            const json = await res.json();
+            if (version !== scenarioPreviewVersion) return;
+            officialMsg = json.code === 0 && json.data ? json.data.reply : ('预览失败：' + (json.message || '未知错误'));
+          } catch (e) {
+            if (version !== scenarioPreviewVersion) return;
+            officialMsg = '预览请求失败：' + e;
           }
-
-          officialMsg = formatSuccessText(tpl, pName, pUrl) + successFooter;
           break;
 
         case 'code_invalid':

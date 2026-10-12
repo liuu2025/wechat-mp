@@ -31,6 +31,7 @@ type ReplySnippetSection struct {
 }
 
 type ReplyPreviewReq struct {
+	ProjectDraft     *ProjectItem   `json:"project_draft,omitempty"` // 只读预览项目表单，绝不保存
 	Draft            *ReplySettings `json:"draft,omitempty"`
 	Field            string         `json:"field,omitempty"`
 	Message          string         `json:"message,omitempty"`

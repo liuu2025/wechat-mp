@@ -287,33 +287,20 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 		}
 
 		// 项目补充说明只属于当前项目；公共内容库不会在发送阶段自动追加。
-		projectCustomAd := ""
-		projectCustomTitle := ""
+		var project *model.ProjectItem
 		projectURL := ""
 
 		if s.projectService != nil {
 			if p, err := s.projectService.GetProject(record.Project); err == nil {
+				project = p
 				if p.Name != "" {
 					projectName = p.Name
 				}
 				projectURL = strings.TrimSpace(p.URL)
-				projectCustomAd = strings.TrimSpace(p.CustomAd)
-				projectCustomTitle = strings.TrimSpace(p.CustomAdTitle)
 			}
 		}
 
-		// 项目补充信有标题时独占一行；若留空则只输出正文。
-		projectBlock := projectCustomAd
-		if projectBlock != "" && projectCustomTitle != "" {
-			projectBlock = projectCustomTitle + "\n\n" + projectBlock
-		}
-
-		projectSupplement := ""
-		if projectBlock != "" {
-			projectSupplement = "\n\n" + projectBlock
-		}
-
-		baseMsg := formatSuccessMessage(replies.CodeSuccess, projectName, projectURL) + projectSupplement
+		baseMsg := appendProjectSupplement(formatSuccessMessage(replies.CodeSuccess, projectName, projectURL), project)
 		return formatSuccessMessage(replyTemplateWithSnippets(settings, "code_success", baseMsg), projectName, projectURL)
 
 	case ruleID == "universal_code":
@@ -376,7 +363,7 @@ func formatProjectListText(projects []*model.ProjectItem) string {
 }
 
 // PreviewReply 使用草稿规则渲染回复。useLiveCodeState 仅只读查询验证码真实状态，绝不核销。
-func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySettings, field, message, projectID, code string, useLiveCodeState bool) (*model.ReplyPreviewResp, error) {
+func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySettings, field, message, projectID, code string, useLiveCodeState bool, projectDrafts ...*model.ProjectItem) (*model.ReplyPreviewResp, error) {
 	settings := draft
 	if settings == nil {
 		if s.projectService == nil {
@@ -410,7 +397,7 @@ func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySett
 	reply := ""
 	switch {
 	case matched == "code_success":
-		reply = s.renderPreviewSuccess(settings, projectID, "示例项目", "https://example.com")
+		reply = s.renderPreviewSuccess(settings, projectID, "示例项目", "https://example.com", projectDrafts...)
 	case matched == "verify_code" || matched == "code_invalid":
 		matched = "code_invalid"
 		reply = strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_invalid", settings.Replies.CodeInvalid), "{code}", code)
@@ -505,22 +492,44 @@ func (s *WechatService) previewLiveVerification(ctx context.Context, settings *m
 	}, nil
 }
 
-func (s *WechatService) renderPreviewSuccess(settings *model.ReplySettings, projectID, fallbackName, fallbackURL string) string {
-	name, url, title, supplement := fallbackName, fallbackURL, "", ""
-	if s.projectService != nil && projectID != "" {
-		if project, err := s.projectService.GetProject(projectID); err == nil {
-			name, url, title, supplement = project.Name, project.URL, project.CustomAdTitle, project.CustomAd
+func (s *WechatService) renderPreviewSuccess(settings *model.ReplySettings, projectID, fallbackName, fallbackURL string, projectDrafts ...*model.ProjectItem) string {
+	name, url := fallbackName, fallbackURL
+	var project *model.ProjectItem
+	if len(projectDrafts) > 0 && projectDrafts[0] != nil {
+		project = projectDrafts[0]
+	} else if s.projectService != nil && projectID != "" {
+		if saved, err := s.projectService.GetProject(projectID); err == nil {
+			project = saved
 		}
 	}
-	reply := formatSuccessMessage(settings.Replies.CodeSuccess, name, url)
-	if strings.TrimSpace(supplement) != "" {
-		block := strings.TrimSpace(supplement)
-		if strings.TrimSpace(title) != "" {
-			block = strings.TrimSpace(title) + "\n\n" + block
-		}
-		reply += "\n\n" + block
+	if project != nil {
+		name, url = project.Name, project.URL
 	}
+	reply := appendProjectSupplement(formatSuccessMessage(settings.Replies.CodeSuccess, name, url), project)
 	return formatSuccessMessage(replyTemplateWithSnippets(settings, "code_success", reply), name, url)
+}
+
+// appendProjectSupplement 是实际发送和所有项目预览共用的排版入口。
+func appendProjectSupplement(base string, project *model.ProjectItem) string {
+	if project == nil || strings.TrimSpace(project.CustomAd) == "" {
+		return base
+	}
+	label := "项目说明："
+	if project.CustomAdLabel != nil {
+		label = strings.TrimSpace(*project.CustomAdLabel)
+	}
+	parts := []string{}
+	if label != "" {
+		parts = append(parts, label)
+	}
+	if title := strings.TrimSpace(project.CustomAdTitle); title != "" {
+		if project.CustomAdTitleBlankLine {
+			title += "\n"
+		}
+		parts = append(parts, title)
+	}
+	parts = append(parts, strings.TrimSpace(project.CustomAd))
+	return strings.TrimRight(base, "\n") + "\n\n" + strings.Join(parts, "\n")
 }
 
 func (s *WechatService) codeExpireSeconds() int {
