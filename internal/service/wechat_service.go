@@ -179,8 +179,8 @@ func (s *WechatService) ProcessMessage(ctx context.Context, body []byte) (string
 		replyContent = s.handleEvent(ctx, in.FromUserName, in.Event, in.EventKey)
 	default:
 		// 暂不支持的消息类型（语音、图片、表情包等），返回提示
-		replies := s.getRepliesConfig()
-		replyContent = replies.MediaMessage
+		settings := s.getReplySettingsSafe()
+		replyContent = replyTemplateWithSnippets(settings, "media_message", settings.Replies.MediaMessage)
 	}
 
 	if replyContent == "" {
@@ -203,28 +203,45 @@ func (s *WechatService) ProcessMessage(ctx context.Context, body []byte) (string
 }
 
 func (s *WechatService) getRepliesConfig() *model.RepliesConfig {
+	settings := s.getReplySettingsSafe()
+	return &settings.Replies
+}
+
+func (s *WechatService) getReplySettingsSafe() *model.ReplySettings {
 	if s.projectService != nil {
 		if settings, err := s.projectService.GetReplySettings(); err == nil && settings != nil {
-			return &settings.Replies
+			return settings
 		}
 	}
-	return &model.RepliesConfig{
+	return &model.ReplySettings{Version: 2, Rules: *factoryDefaultRules(), SnippetSections: map[string]model.ReplySnippetSection{}, Replies: model.RepliesConfig{
 		Welcome:       "您好！欢迎使用验证码中枢。\n👉 方式 1：回复【验证码】获取 6 位通行码填入网站；\n👉 方式 2：输入网站上显示的 6 位数字直接验证；\n👉 回复【帮助】或【项目】可查看支持的业务。",
 		CodeSuccess:   "✅ 恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。",
 		CodeInvalid:   "⚠️ 验证码【{code}】不存在或已过期，请在网站刷新重试。",
 		CodeUsed:      "ℹ️ 验证码【{code}】已于早前完成核销，请勿重复使用。",
 		UniversalCode: "🔑 您的通用通行码为：【{code}】\n\n⏱️ 有效期：{expire_minutes} 分钟（一次性有效）\n⌛ 请在 {expire_time} 前使用\n📌 使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！",
-		Projects:      "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中...",
+		Projects:      "当前已支持的业务平台\n\n{project_list}\n更多项目持续接入中...",
 		Help:          "📖【使用指南】\n👉 方式 1（索取填码）：发送【验证码】或【登录】，即可获取 6 位通行码填入网站！\n👉 方式 2（极速免填）：若网站已显示 6 位数字，直接在聊天框发送该数字，网页自动完成验证！",
 		UnknownText:   "🤖 您好，未能识别您的指令。\n👉 电脑登录：直接发送网页显示的 6 位数字；\n👉 索取通行码：回复【验证码】获取 6 位通行码填入网站；\n👉 了解更多：回复【帮助】或【项目】。",
 		MediaMessage:  "💡 抱歉，本中枢暂不支持语音/图片/表情包识别，请发送 6 位纯数字验证码或文字指令。",
+	}}
+}
+
+func replyTemplateWithSnippets(settings *model.ReplySettings, key, base string) string {
+	if settings == nil || settings.SnippetSections == nil {
+		return base
 	}
+	section, ok := settings.SnippetSections[key]
+	if !ok {
+		return base
+	}
+	return formatReplySnippetSection(base, section)
 }
 
 // handleText 处理用户发送的文本内容（按规则引擎路由：六位数字 → 内置规则 → 自定义规则 → 兜底）
 func (s *WechatService) handleText(ctx context.Context, openID, text string) string {
-	replies := s.getRepliesConfig()
-	rules := s.getRulesSafe()
+	settings := s.getReplySettingsSafe()
+	replies := &settings.Replies
+	rules := &settings.Rules
 	ruleID := s.matchTextRule(rules, text)
 
 	// 防爆破：六位数字核销尝试按 openid 记失败频次，超限临时拉黑
@@ -240,7 +257,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 		if err != nil {
 			if errors.Is(err, storage.ErrCodeNotFound) {
 				s.storage.RecordVerifyFailure(ctx, openID)
-				msg := strings.ReplaceAll(replies.CodeInvalid, "{code}", text)
+				msg := strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_invalid", replies.CodeInvalid), "{code}", text)
 				return msg
 			}
 			return "系统繁忙，请稍后重试。"
@@ -254,7 +271,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 		}
 
 		if record.Status == model.StatusVerified || record.Status == model.StatusUsed {
-			msg := strings.ReplaceAll(replies.CodeUsed, "{code}", text)
+			msg := strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_used", replies.CodeUsed), "{code}", text)
 			return msg
 		}
 
@@ -296,34 +313,35 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 			projectSupplement = "\n\n-------------------\n" + projectBlock
 		}
 
-		baseMsg := formatSuccessMessage(replies.CodeSuccess, projectName, projectURL)
-		return baseMsg + projectSupplement
+		baseMsg := formatSuccessMessage(replies.CodeSuccess, projectName, projectURL) + projectSupplement
+		return formatSuccessMessage(replyTemplateWithSnippets(settings, "code_success", baseMsg), projectName, projectURL)
 
 	case ruleID == "universal_code":
 		record, err := s.verifyService.GenerateUniversalCode(ctx, openID)
 		if err != nil {
 			return "⚠️ 验证码生成繁忙，请稍后再试。"
 		}
-		return formatUniversalCodeMessage(replies.UniversalCode, record, s.codeExpireSeconds())
+		return formatUniversalCodeMessage(replyTemplateWithSnippets(settings, "universal_code", replies.UniversalCode), record, s.codeExpireSeconds())
 
 	case ruleID == "help":
-		return replies.Help
+		return replyTemplateWithSnippets(settings, "help", replies.Help)
 
 	case ruleID == "projects":
-		return strings.ReplaceAll(replies.Projects, "{project_list}", s.projectListText())
+		return strings.ReplaceAll(replyTemplateWithSnippets(settings, "projects", replies.Projects), "{project_list}", s.projectListText())
 
 	case strings.HasPrefix(ruleID, "custom:"):
 		// 自定义回复规则命中（先配先中已在路由阶段保证）
 		for i := range rules.Custom {
 			if rules.Custom[i].ID == strings.TrimPrefix(ruleID, "custom:") {
-				return strings.ReplaceAll(rules.Custom[i].Reply, "{project_list}", s.projectListText())
+				key := "custom:" + rules.Custom[i].ID
+				return strings.ReplaceAll(replyTemplateWithSnippets(settings, key, rules.Custom[i].Reply), "{project_list}", s.projectListText())
 			}
 		}
-		return replies.UnknownText
+		return replyTemplateWithSnippets(settings, "unknown_text", replies.UnknownText)
 
 	default:
 		// 默认未知消息兜底回复
-		return replies.UnknownText
+		return replyTemplateWithSnippets(settings, "unknown_text", replies.UnknownText)
 	}
 }
 
@@ -392,33 +410,33 @@ func (s *WechatService) PreviewReply(ctx context.Context, draft *model.ReplySett
 	reply := ""
 	switch {
 	case matched == "code_success":
-		reply = s.renderPreviewSuccess(settings.Replies.CodeSuccess, projectID, "示例项目", "https://example.com")
+		reply = s.renderPreviewSuccess(settings, projectID, "示例项目", "https://example.com")
 	case matched == "verify_code" || matched == "code_invalid":
 		matched = "code_invalid"
-		reply = strings.ReplaceAll(settings.Replies.CodeInvalid, "{code}", code)
+		reply = strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_invalid", settings.Replies.CodeInvalid), "{code}", code)
 	case matched == "code_used":
-		reply = strings.ReplaceAll(settings.Replies.CodeUsed, "{code}", code)
+		reply = strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_used", settings.Replies.CodeUsed), "{code}", code)
 	case matched == "universal_code":
 		now := time.Now().Unix()
 		expireSeconds := s.codeExpireSeconds()
-		reply = formatUniversalCodeMessage(settings.Replies.UniversalCode, &model.CodeRecord{
+		reply = formatUniversalCodeMessage(replyTemplateWithSnippets(settings, "universal_code", settings.Replies.UniversalCode), &model.CodeRecord{
 			Code: code, CreatedAt: now, ExpiresAt: now + int64(expireSeconds),
 		}, expireSeconds)
 	case matched == "projects":
-		reply = strings.ReplaceAll(settings.Replies.Projects, "{project_list}", s.projectListText())
+		reply = strings.ReplaceAll(replyTemplateWithSnippets(settings, "projects", settings.Replies.Projects), "{project_list}", s.projectListText())
 	case matched == "help":
-		reply = settings.Replies.Help
+		reply = replyTemplateWithSnippets(settings, "help", settings.Replies.Help)
 	case matched == "welcome":
-		reply = settings.Replies.Welcome
+		reply = replyTemplateWithSnippets(settings, "welcome", settings.Replies.Welcome)
 	case matched == "media_message":
-		reply = settings.Replies.MediaMessage
+		reply = replyTemplateWithSnippets(settings, "media_message", settings.Replies.MediaMessage)
 	case matched == "fallback" || matched == "unknown_text":
 		matched = "fallback"
-		reply = settings.Replies.UnknownText
+		reply = replyTemplateWithSnippets(settings, "unknown_text", settings.Replies.UnknownText)
 	case strings.HasPrefix(matched, "custom:"):
 		for _, rule := range settings.Rules.Custom {
 			if rule.ID == strings.TrimPrefix(matched, "custom:") {
-				reply = strings.ReplaceAll(rule.Reply, "{project_list}", s.projectListText())
+				reply = strings.ReplaceAll(replyTemplateWithSnippets(settings, matched, rule.Reply), "{project_list}", s.projectListText())
 				break
 			}
 		}
@@ -442,7 +460,7 @@ func (s *WechatService) previewLiveVerification(ctx context.Context, settings *m
 		return &model.ReplyPreviewResp{
 			Matched:       "code_invalid",
 			MatchedZh:     RuleNameZh("code_invalid"),
-			Reply:         strings.ReplaceAll(settings.Replies.CodeInvalid, "{code}", code),
+			Reply:         strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_invalid", settings.Replies.CodeInvalid), "{code}", code),
 			LiveCodeState: true,
 			CodeState:     "not_found_or_expired",
 		}, nil
@@ -468,7 +486,7 @@ func (s *WechatService) previewLiveVerification(ctx context.Context, settings *m
 		return &model.ReplyPreviewResp{
 			Matched:       "code_used",
 			MatchedZh:     RuleNameZh("code_used"),
-			Reply:         strings.ReplaceAll(settings.Replies.CodeUsed, "{code}", code),
+			Reply:         strings.ReplaceAll(replyTemplateWithSnippets(settings, "code_used", settings.Replies.CodeUsed), "{code}", code),
 			LiveCodeState: true,
 			CodeState:     "used",
 		}, nil
@@ -481,20 +499,20 @@ func (s *WechatService) previewLiveVerification(ctx context.Context, settings *m
 	return &model.ReplyPreviewResp{
 		Matched:       "code_success",
 		MatchedZh:     RuleNameZh("code_success"),
-		Reply:         s.renderPreviewSuccess(settings.Replies.CodeSuccess, record.Project, fallbackName, ""),
+		Reply:         s.renderPreviewSuccess(settings, record.Project, fallbackName, ""),
 		LiveCodeState: true,
 		CodeState:     "pending",
 	}, nil
 }
 
-func (s *WechatService) renderPreviewSuccess(template, projectID, fallbackName, fallbackURL string) string {
+func (s *WechatService) renderPreviewSuccess(settings *model.ReplySettings, projectID, fallbackName, fallbackURL string) string {
 	name, url, title, supplement := fallbackName, fallbackURL, "", ""
 	if s.projectService != nil && projectID != "" {
 		if project, err := s.projectService.GetProject(projectID); err == nil {
 			name, url, title, supplement = project.Name, project.URL, project.CustomAdTitle, project.CustomAd
 		}
 	}
-	reply := formatSuccessMessage(template, name, url)
+	reply := formatSuccessMessage(settings.Replies.CodeSuccess, name, url)
 	if strings.TrimSpace(supplement) != "" {
 		block := strings.TrimSpace(supplement)
 		if strings.TrimSpace(title) != "" {
@@ -502,7 +520,7 @@ func (s *WechatService) renderPreviewSuccess(template, projectID, fallbackName, 
 		}
 		reply += "\n\n-------------------\n" + block
 	}
-	return reply
+	return formatSuccessMessage(replyTemplateWithSnippets(settings, "code_success", reply), name, url)
 }
 
 func (s *WechatService) codeExpireSeconds() int {
@@ -599,10 +617,11 @@ func formatSuccessMessage(template, projectName, projectURL string) string {
 
 // handleEvent 处理关注事件或菜单点击事件
 func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey string) string {
-	replies := s.getRepliesConfig()
+	settings := s.getReplySettingsSafe()
+	replies := &settings.Replies
 	switch event {
 	case "subscribe": // 用户新关注公众号
-		return replies.Welcome
+		return replyTemplateWithSnippets(settings, "welcome", replies.Welcome)
 	case "unsubscribe": // 用户取消关注（微信不需要回复）
 		return ""
 	case "CLICK": // 用户点击了自定义菜单

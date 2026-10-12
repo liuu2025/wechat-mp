@@ -20,7 +20,7 @@ func (s *ProjectService) ensureReplyEditorInitialized() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, err := os.Stat(s.replySettingsPath); os.IsNotExist(err) {
-		settings := model.ReplySettings{Version: 1, Revision: generateRandomHex(12), Rules: *factoryDefaultRules(), Replies: *s.defaultReplies()}
+		settings := model.ReplySettings{Version: 2, Revision: generateRandomHex(12), Rules: *factoryDefaultRules(), Replies: *s.defaultReplies(), SnippetSections: map[string]model.ReplySnippetSection{}}
 		if data, err := os.ReadFile(s.rulesPath); err == nil {
 			if err := json.Unmarshal(data, &settings.Rules); err != nil {
 				log.Printf("[Replies] 旧规则读取失败: %v", err)
@@ -55,6 +55,124 @@ func (s *ProjectService) ensureReplyEditorInitialized() {
 		library = append(library, model.ReplySnippet{ID: "snippet_project_list", Title: "动态项目列表", Content: "{project_list}"})
 		if err := writeReplyJSON(s.replyLibraryPath, library); err != nil {
 			log.Printf("[Replies] 内容库迁移失败: %v", err)
+		}
+	}
+	s.migrateReplyEditorV2Locked()
+}
+
+func plainDefaultSnippetContent(content string) string {
+	for _, prefix := range []string{"🌟 ", "💬 ", "📢 ", "📌 "} {
+		if strings.HasPrefix(content, prefix) {
+			return strings.TrimPrefix(content, prefix)
+		}
+	}
+	return content
+}
+
+func extractLegacySnippetSuffix(value string, library []model.ReplySnippet) (string, []model.ReplySnippetSelection) {
+	cursor := strings.TrimRight(value, "\n")
+	selected := []model.ReplySnippetSelection{}
+	for {
+		matched := false
+		for index, item := range library {
+			block := fmt.Sprintf("【%02d｜%s】\n%s", index+1, item.Title, item.Content)
+			if !strings.HasSuffix(cursor, block) {
+				continue
+			}
+			selected = append(selected, model.ReplySnippetSelection{
+				SourceID: item.ID,
+				Title:    strings.TrimSpace(item.Title),
+				Content:  plainDefaultSnippetContent(item.Content),
+			})
+			cursor = strings.TrimSuffix(cursor, block)
+			cursor = strings.TrimSuffix(cursor, "\n\n")
+			matched = true
+			break
+		}
+		if !matched {
+			break
+		}
+	}
+	for left, right := 0, len(selected)-1; left < right; left, right = left+1, right-1 {
+		selected[left], selected[right] = selected[right], selected[left]
+	}
+	return strings.TrimRight(cursor, "\n"), selected
+}
+
+func (s *ProjectService) migrateReplyEditorV2Locked() {
+	settingsData, err := os.ReadFile(s.replySettingsPath)
+	if err != nil {
+		return
+	}
+	var settings model.ReplySettings
+	if err := json.Unmarshal(settingsData, &settings); err != nil {
+		return
+	}
+	libraryData, err := os.ReadFile(s.replyLibraryPath)
+	if err != nil {
+		return
+	}
+	var library []model.ReplySnippet
+	if err := json.Unmarshal(libraryData, &library); err != nil {
+		return
+	}
+
+	settingsChanged := settings.Version < 2 || settings.SnippetSections == nil
+	if settings.SnippetSections == nil {
+		settings.SnippetSections = map[string]model.ReplySnippetSection{}
+	}
+	migrateField := func(key string, value *string) {
+		clean, items := extractLegacySnippetSuffix(*value, library)
+		if len(items) == 0 {
+			return
+		}
+		*value = clean
+		settings.SnippetSections[key] = model.ReplySnippetSection{Title: "补充信息", Items: items}
+		settingsChanged = true
+	}
+	migrateField("welcome", &settings.Replies.Welcome)
+	migrateField("code_success", &settings.Replies.CodeSuccess)
+	migrateField("code_invalid", &settings.Replies.CodeInvalid)
+	migrateField("code_used", &settings.Replies.CodeUsed)
+	migrateField("universal_code", &settings.Replies.UniversalCode)
+	migrateField("projects", &settings.Replies.Projects)
+	migrateField("help", &settings.Replies.Help)
+	migrateField("unknown_text", &settings.Replies.UnknownText)
+	migrateField("media_message", &settings.Replies.MediaMessage)
+	for i := range settings.Rules.Custom {
+		migrateField("custom:"+settings.Rules.Custom[i].ID, &settings.Rules.Custom[i].Reply)
+	}
+
+	plainProjects := strings.Replace(settings.Replies.Projects, "🌐【当前已支持的业务平台】\n", "当前已支持的业务平台\n\n", 1)
+	if plainProjects != settings.Replies.Projects {
+		settings.Replies.Projects = plainProjects
+		settingsChanged = true
+	}
+
+	libraryChanged := false
+	for i := range library {
+		clean := plainDefaultSnippetContent(library[i].Content)
+		if clean != library[i].Content {
+			library[i].Content = clean
+			libraryChanged = true
+		}
+	}
+	if libraryChanged {
+		if _, err := os.Stat(s.replyLibraryPath + ".v1.bak"); os.IsNotExist(err) {
+			_ = os.WriteFile(s.replyLibraryPath+".v1.bak", libraryData, 0644)
+		}
+		if err := writeReplyJSON(s.replyLibraryPath, library); err != nil {
+			log.Printf("[Replies] 常用内容纯文字迁移失败: %v", err)
+		}
+	}
+	if settingsChanged {
+		if _, err := os.Stat(s.replySettingsPath + ".v1.bak"); os.IsNotExist(err) {
+			_ = os.WriteFile(s.replySettingsPath+".v1.bak", settingsData, 0644)
+		}
+		settings.Version = 2
+		settings.Revision = generateRandomHex(12)
+		if err := writeReplyJSON(s.replySettingsPath, settings); err != nil {
+			log.Printf("[Replies] 常用内容分区迁移失败: %v", err)
 		}
 	}
 }
@@ -117,6 +235,9 @@ func (s *ProjectService) readReplySettingsLocked() (*model.ReplySettings, error)
 	if settings.Rules.Custom == nil {
 		settings.Rules.Custom = []model.CustomRule{}
 	}
+	if settings.SnippetSections == nil {
+		settings.SnippetSections = map[string]model.ReplySnippetSection{}
+	}
 	return &settings, nil
 }
 
@@ -136,7 +257,7 @@ func (s *ProjectService) SaveReplySettings(settings *model.ReplySettings) error 
 	if err := writeReplyJSON(s.replySettingsPath+".bak", current); err != nil {
 		return err
 	}
-	settings.Version = 1
+	settings.Version = 2
 	settings.Revision = generateRandomHex(12)
 	for i := range settings.Rules.Custom {
 		settings.Rules.Custom[i].AppendFooter = false
@@ -176,6 +297,93 @@ func validateReplySettings(settings *model.ReplySettings) error {
 	for _, rule := range settings.Rules.Custom {
 		if err := validateReplyVariables("custom", rule.Reply); err != nil {
 			return err
+		}
+	}
+	return validateSnippetSections(settings)
+}
+
+func formatReplySnippetSection(base string, section model.ReplySnippetSection) string {
+	if len(section.Items) == 0 {
+		return base
+	}
+	parts := make([]string, 0, len(section.Items)+1)
+	if title := strings.TrimSpace(section.Title); title != "" {
+		parts = append(parts, title)
+	}
+	for index, item := range section.Items {
+		contentLines := strings.Split(strings.TrimSpace(item.Content), "\n")
+		for i := range contentLines {
+			contentLines[i] = "   " + contentLines[i]
+		}
+		parts = append(parts, fmt.Sprintf("%d. %s\n%s", index+1, strings.TrimSpace(item.Title), strings.Join(contentLines, "\n")))
+	}
+	sectionText := strings.Join(parts, "\n\n")
+	base = strings.TrimRight(base, "\n")
+	if strings.TrimSpace(base) == "" {
+		return sectionText
+	}
+	return base + "\n\n" + sectionText
+}
+
+func replyBaseForSection(settings *model.ReplySettings, key string) (string, string, bool) {
+	switch key {
+	case "welcome":
+		return settings.Replies.Welcome, key, true
+	case "code_success":
+		return settings.Replies.CodeSuccess, key, true
+	case "code_invalid":
+		return settings.Replies.CodeInvalid, key, true
+	case "code_used":
+		return settings.Replies.CodeUsed, key, true
+	case "universal_code":
+		return settings.Replies.UniversalCode, key, true
+	case "projects":
+		return settings.Replies.Projects, key, true
+	case "help":
+		return settings.Replies.Help, key, true
+	case "unknown_text":
+		return settings.Replies.UnknownText, key, true
+	case "media_message":
+		return settings.Replies.MediaMessage, key, true
+	}
+	if strings.HasPrefix(key, "custom:") {
+		id := strings.TrimPrefix(key, "custom:")
+		for _, rule := range settings.Rules.Custom {
+			if rule.ID == id {
+				return rule.Reply, "custom", true
+			}
+		}
+	}
+	return "", "", false
+}
+
+func validateSnippetSections(settings *model.ReplySettings) error {
+	for key, section := range settings.SnippetSections {
+		base, variableField, ok := replyBaseForSection(settings, key)
+		if !ok {
+			return fmt.Errorf("常用内容关联了不存在的回复场景: %s", key)
+		}
+		if len([]rune(section.Title)) > 80 {
+			return fmt.Errorf("%s 的常用内容分区标题最多 80 字", key)
+		}
+		seen := map[string]bool{}
+		for _, item := range section.Items {
+			if strings.TrimSpace(item.SourceID) == "" || strings.TrimSpace(item.Title) == "" || strings.TrimSpace(item.Content) == "" {
+				return fmt.Errorf("%s 的常用内容缺少编号、名称或正文", key)
+			}
+			if seen[item.SourceID] {
+				return fmt.Errorf("%s 重复选择了同一条常用内容", key)
+			}
+			seen[item.SourceID] = true
+			if len([]rune(item.Title)) > 80 || len([]rune(item.Content)) > 4000 {
+				return fmt.Errorf("%s 的常用内容名称或正文过长", key)
+			}
+			if err := validateReplyVariables(variableField, item.Content); err != nil {
+				return err
+			}
+		}
+		if len([]rune(formatReplySnippetSection(base, section))) > 4000 {
+			return fmt.Errorf("%s 合并常用内容后超过 4000 字上限", key)
 		}
 	}
 	return nil

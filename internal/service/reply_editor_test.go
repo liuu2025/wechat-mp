@@ -257,3 +257,96 @@ func TestReplySnippetReorderPersists(t *testing.T) {
 		t.Fatalf("排序未持久化: %#v", after)
 	}
 }
+
+func TestSnippetSectionUsesLocalNumbersAndEditableTitle(t *testing.T) {
+	section := model.ReplySnippetSection{
+		Title: "其他说明",
+		Items: []model.ReplySnippetSelection{
+			{SourceID: "item_3", Title: "服务维护公告", Content: "温馨提示：系统运行平稳。"},
+			{SourceID: "item_4", Title: "管理员尾注", Content: "管理员尾注内容"},
+		},
+	}
+	want := "项目清单\n\n其他说明\n\n1. 服务维护公告\n   温馨提示：系统运行平稳。\n\n2. 管理员尾注\n   管理员尾注内容"
+	if got := formatReplySnippetSection("项目清单", section); got != want {
+		t.Fatalf("常用内容分区排版错误:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	section.Title = ""
+	got := formatReplySnippetSection("项目清单", section)
+	if strings.Contains(got, "其他说明") || !strings.Contains(got, "项目清单\n\n1. 服务维护公告") {
+		t.Fatalf("标题留空时应只用空行分隔: %q", got)
+	}
+}
+
+func TestPreviewRendersSavedSnippetSelectionWithoutLibraryDependency(t *testing.T) {
+	ps, ws := newReplyEditorTestService(t)
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.Replies.Projects = "当前已支持的业务平台\n\n{project_list}"
+	settings.SnippetSections["projects"] = model.ReplySnippetSection{
+		Title: "补充信息",
+		Items: []model.ReplySnippetSelection{
+			{SourceID: "ft_notice", Title: "服务维护公告", Content: "温馨提示：系统运行平稳。"},
+			{SourceID: "ft_admin", Title: "管理员尾注", Content: "管理员尾注内容"},
+		},
+	}
+	if err := ps.SaveReplySettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := ws.PreviewReply(context.Background(), nil, "projects", "", "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"\n\n补充信息\n\n1. 服务维护公告", "\n\n2. 管理员尾注"} {
+		if !strings.Contains(preview.Reply, expected) {
+			t.Fatalf("预览未渲染已保存常用内容: %q", preview.Reply)
+		}
+	}
+	if strings.ContainsAny(preview.Reply, "🌐📌📢") || strings.Contains(preview.Reply, "【03｜") {
+		t.Fatalf("预览仍含旧图标或库内固定序号: %q", preview.Reply)
+	}
+	if actual := ws.handleText(context.Background(), "test-openid", "项目"); actual != preview.Reply {
+		t.Fatalf("真实消息与预览的常用内容排版不一致:\nactual:\n%s\npreview:\n%s", actual, preview.Reply)
+	}
+}
+
+func TestReplyEditorV2MigratesExactLegacySnippetSuffix(t *testing.T) {
+	dir := t.TempDir()
+	ps := NewProjectService(dir)
+	library := []model.ReplySnippet{
+		{ID: "item_1", Title: "内容1", Content: "正文1"},
+		{ID: "item_2", Title: "内容2", Content: "正文2"},
+		{ID: "item_3", Title: "服务维护公告", Content: "📢 温馨提示：请稍后重试。"},
+		{ID: "item_4", Title: "管理员尾注", Content: "管理员尾注内容"},
+	}
+	if err := writeReplyJSON(ps.replyLibraryPath, library); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.Version = 1
+	settings.SnippetSections = nil
+	settings.Replies.Projects = "🌐【当前已支持的业务平台】\n{project_list}\n\n【03｜服务维护公告】\n📢 温馨提示：请稍后重试。\n\n【04｜管理员尾注】\n管理员尾注内容"
+	if err := writeReplyJSON(ps.replySettingsPath, settings); err != nil {
+		t.Fatal(err)
+	}
+
+	migrated := NewProjectService(dir)
+	got, err := migrated.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	section := got.SnippetSections["projects"]
+	if got.Version != 2 || len(section.Items) != 2 || section.Items[0].SourceID != "item_3" || section.Items[1].SourceID != "item_4" {
+		t.Fatalf("旧式常用内容未正确迁移: %#v", got)
+	}
+	if strings.Contains(got.Replies.Projects, "【03｜") || strings.Contains(got.Replies.Projects, "🌐") {
+		t.Fatalf("旧区块或项目标题图标未移除: %q", got.Replies.Projects)
+	}
+	if section.Items[0].Content != "温馨提示：请稍后重试。" {
+		t.Fatalf("迁移副本未去掉默认图标: %#v", section.Items[0])
+	}
+}

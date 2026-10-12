@@ -2687,7 +2687,8 @@ async function handleWechatScanLogin() {
         <div>
           <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">回复内容：</label>
           <textarea id="customRuleReply" rows="5" placeholder="用户命中这些词时，机器人回复的内容" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px; resize:vertical;"></textarea>
-          <button class="btn-action-sm" style="margin-top:8px;" onclick="openSnippetPicker('customRuleReply', 'custom')">插入常用内容</button>
+          <button class="btn-action-sm" style="margin-top:8px;" onclick="openSnippetPicker('customRuleReply', 'custom')">选择常用内容</button>
+          <div id="customSnippetSectionControls" style="margin-top:8px;"></div>
         </div>
         <label style="font-size:13px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:6px;">
           <input type="checkbox" id="customRuleEnabled" checked> 立即启用此规则
@@ -2934,13 +2935,13 @@ async function handleWechatScanLogin() {
         <div class="modal-title">插入常用内容</div>
         <button class="modal-close" onclick="closeModal('snippetPickerModal')"></button>
       </div>
-      <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">选中后会复制到当前光标位置，插入后可独立修改，不会与内容库保持自动关联。</div>
+      <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">勾选状态会随当前回复保存。已选内容使用独立副本，内容库以后的修改不会自动覆盖它。</div>
       <div id="snippetPickerList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow:auto;"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border-color);">
         <span id="snippetPickerCount" style="font-size:12px; color:var(--text-muted);">已选择 0 项</span>
         <div style="display:flex; gap:8px;">
           <button class="btn-action-sm" onclick="closeModal('snippetPickerModal')">取消</button>
-          <button class="btn-primary" id="snippetInsertBtn" onclick="insertSelectedSnippets()" disabled>插入所选内容</button>
+          <button class="btn-primary" id="snippetInsertBtn" onclick="insertSelectedSnippets()">应用选择</button>
         </div>
       </div>
     </div>
@@ -4456,6 +4457,7 @@ async function handleWechatScanLogin() {
           cachedReplySettings = json.data;
           cachedReplies = json.data.replies;
           cachedRules = json.data.rules;
+          if (!cachedReplySettings.snippet_sections) cachedReplySettings.snippet_sections = {};
           if (!cachedRules.custom) cachedRules.custom = [];
           if (typeof renderReplyStudio === 'function') renderReplyStudio();
         }
@@ -4945,6 +4947,7 @@ async function handleWechatScanLogin() {
 
     async function saveReplySettings() {
       if (!cachedReplySettings || !cachedRules || !cachedReplies) return false;
+      if (cachedReplySettings.snippet_sections) delete cachedReplySettings.snippet_sections['custom:new'];
       cachedReplySettings.rules = cachedRules;
       cachedReplySettings.replies = cachedReplies;
       try {
@@ -5190,13 +5193,27 @@ async function handleWechatScanLogin() {
 
     function openCustomRuleModal(id) {
       editingCustomRuleId = id || null;
+      if (!id && cachedReplySettings?.snippet_sections) delete cachedReplySettings.snippet_sections['custom:new'];
       const modal = document.getElementById('customRuleModal');
       document.getElementById('customRuleModalTitle').textContent = id ? '编辑自定义回复规则' : '新增自定义回复规则';
       const rule = id ? cachedRules.custom.find(r => r.id === id) : null;
       document.getElementById('customRuleKeywords').value = rule ? (rule.keywords || []).join(', ') : '';
       document.getElementById('customRuleReply').value = rule ? rule.reply : '';
       document.getElementById('customRuleEnabled').checked = rule ? !!rule.enabled : true;
+      renderCustomSnippetSectionControls();
       modal.style.display = 'flex';
+    }
+
+    function renderCustomSnippetSectionControls() {
+      const box = document.getElementById('customSnippetSectionControls');
+      if (!box) return;
+      const section = getSnippetSection('custom', false);
+      if (!section || !section.items || section.items.length === 0) {
+        box.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">当前未选常用内容</span>';
+        return;
+      }
+      box.innerHTML = `<label style="font-size:12px; color:var(--text-muted);">分区标题（可留空）<input type="text" value="${escapeHtml(section.title || '')}" oninput="studioUpdateSnippetTitle('custom', this.value)" style="display:block; width:100%; height:34px; margin-top:5px; padding:0 9px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);"></label>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">已选 ${section.items.length} 项：${section.items.map((item,index)=>`${index+1}. ${escapeHtml(item.title)}`).join(' / ')}</div>`;
     }
 
     function saveCustomRule() {
@@ -5210,11 +5227,16 @@ async function handleWechatScanLogin() {
         const rule = cachedRules.custom.find(r => r.id === editingCustomRuleId);
         if (rule) { rule.keywords = keywords; rule.reply = reply; rule.append_footer = false; rule.enabled = enabled; }
       } else {
+        const newID = 'cr_' + Date.now().toString(36);
         cachedRules.custom.push({
-          id: 'cr_' + Date.now().toString(36),
+          id: newID,
           keywords: keywords, reply: reply, append_footer: false, enabled: enabled,
           created_at: Math.floor(Date.now() / 1000)
         });
+        if (cachedReplySettings.snippet_sections?.['custom:new']) {
+          cachedReplySettings.snippet_sections[`custom:${newID}`] = cachedReplySettings.snippet_sections['custom:new'];
+          delete cachedReplySettings.snippet_sections['custom:new'];
+        }
       }
       closeModal('customRuleModal');
       renderCustomRules();
@@ -5229,6 +5251,7 @@ async function handleWechatScanLogin() {
     function deleteCustomRule(id) {
       if (!confirm('确认删除这条自定义规则？')) return;
       cachedRules.custom = cachedRules.custom.filter(r => r.id !== id);
+      if (cachedReplySettings.snippet_sections) delete cachedReplySettings.snippet_sections[`custom:${id}`];
       renderCustomRules();
       persistRules().then(() => renderReplyStudio());
     }
@@ -5751,6 +5774,54 @@ async function handleWechatScanLogin() {
       }
     }
 
+    function snippetSectionKey(field) {
+      if (field !== 'custom') return field;
+      return editingCustomRuleId ? `custom:${editingCustomRuleId}` : 'custom:new';
+    }
+
+    function getSnippetSection(field, create) {
+      if (!cachedReplySettings) return null;
+      if (!cachedReplySettings.snippet_sections) cachedReplySettings.snippet_sections = {};
+      const key = snippetSectionKey(field);
+      if (!cachedReplySettings.snippet_sections[key] && create) {
+        cachedReplySettings.snippet_sections[key] = { title: '补充信息', items: [] };
+      }
+      return cachedReplySettings.snippet_sections[key] || null;
+    }
+
+    function studioSnippetSectionHTML(field) {
+      const section = getSnippetSection(field, false);
+      if (!section || !Array.isArray(section.items) || section.items.length === 0) {
+        return '<div style="font-size:12px; color:var(--text-muted); margin-top:10px;">当前未选常用内容。选中后会与正文自动留出空行。</div>';
+      }
+      return `<div class="studio-block" style="margin-top:12px;">
+        <div class="studio-block-label">已选常用内容</div>
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:10px;">分区标题（可修改或留空）
+          <input type="text" value="${escapeHtml(section.title || '')}" oninput="studioUpdateSnippetTitle('${field}', this.value)" placeholder="留空则只使用空行分隔" style="display:block; width:100%; height:36px; margin-top:6px; padding:0 10px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+        </label>
+        <div style="display:flex; flex-direction:column; gap:9px;">${section.items.map((item,index)=>`<div class="snippet-manage-row" style="align-items:flex-start;">
+          <div class="snippet-order">${index+1}</div>
+          <div style="flex:1; min-width:0;">
+            <input type="text" value="${escapeHtml(item.title || '')}" oninput="studioUpdateSnippetItem('${field}', ${index}, 'title', this.value)" style="width:100%; height:34px; padding:0 9px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-weight:700;">
+            <textarea rows="3" oninput="studioUpdateSnippetItem('${field}', ${index}, 'content', this.value)" style="width:100%; margin-top:7px; padding:8px 9px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;">${escapeHtml(item.content || '')}</textarea>
+          </div>
+        </div>`).join('')}</div>
+      </div>`;
+    }
+
+    function studioUpdateSnippetTitle(field, value) {
+      const section = getSnippetSection(field, true);
+      section.title = value;
+      studioMarkDirty(); scheduleStudioPreview();
+    }
+
+    function studioUpdateSnippetItem(field, index, prop, value) {
+      const section = getSnippetSection(field, false);
+      if (!section || !section.items[index] || !['title','content'].includes(prop)) return;
+      section.items[index][prop] = value;
+      studioMarkDirty(); scheduleStudioPreview();
+    }
+
     function studioRuleEditorHTML(key) {
       const meta = STUDIO_META[key];
       const isVerify = key === 'verify';
@@ -5778,11 +5849,12 @@ async function handleWechatScanLogin() {
           <div class="studio-block-label">完整回复</div>
           <textarea class="studio-textarea" id="studioReplyTextarea" oninput="studioUpdateReply('${field}', this.value)">${escapeHtml(cachedReplies[field] || '')}</textarea>
           <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-top:9px;">
-            <button class="btn-action-sm" onclick="openSnippetPicker('studioReplyTextarea', '${field}')">多选插入常用内容</button>
+            <button class="btn-action-sm" onclick="openSnippetPicker('studioReplyTextarea', '${field}')">选择常用内容</button>
             ${vars.length ? '<span style="font-size:11.5px; color:var(--text-muted);">动态变量（点击预览）：</span>' : ''}
             ${vars.map(v => `<button class="copy-var-pill" title="预览变量含义和替换结果" onclick="openVariablePreview('${v}', '${field}')">${v}</button>`).join('')}
             ${vars.length ? '' : '<span style="font-size:11.5px; color:var(--text-muted);">本场景无动态变量</span>'}
           </div>
+          ${studioSnippetSectionHTML(field)}
         </div>
         <div class="studio-editor-actions">
           <span style="font-size:12px; color:var(--text-muted);">预览会实时更新；只有保存后公众号才使用新内容。</span>
@@ -6051,30 +6123,49 @@ async function handleWechatScanLogin() {
       } catch(e){showToast('排序请求失败：'+e,false);}
     }
 
-    // 常用内容选择器：可自由多选，按内容库顺序插入“序号 + 名称 + 正文”。
+    // 常用内容选择器：保存当前场景的选择关系，输出时按已选集合重新连续编号。
     function openSnippetPicker(targetId, field) {
       snippetPickerTargetId = targetId;
       snippetPickerField = field;
       const list = document.getElementById('snippetPickerList');
       if (!list) return;
-      list.innerHTML = cachedFooters.length ? cachedFooters.map((item,index) => {
+      const section = getSnippetSection(field, false);
+      const selected = new Set((section?.items || []).map(item => item.source_id));
+      const libraryIDs = new Set(cachedFooters.map(item => item.id));
+      const missingSelected = (section?.items || []).filter(item => !libraryIDs.has(item.source_id)).map(item => ({id:item.source_id,title:item.title,content:item.content,missing:true}));
+      const pickerItems = [...cachedFooters, ...missingSelected];
+      list.innerHTML = pickerItems.length ? pickerItems.map(item => {
         const allowed=snippetAllowedForField(item.content,field);
-        const number=String(index+1).padStart(2,'0');
         return `<label style="display:flex; gap:10px; padding:11px; border:1px solid var(--border-color); border-radius:9px; background:var(--panel-soft); cursor:${allowed?'pointer':'not-allowed'}; opacity:${allowed?'1':'.45'};">
-          <input class="snippet-picker-check" type="checkbox" value="${escapeHtml(item.id)}" ${allowed?'onchange="updateSnippetPickerCount()"':'disabled'} style="margin-top:5px;">
-          <span class="snippet-order">${number}</span>
-          <span style="min-width:0;"><b style="color:var(--text-main);">${escapeHtml(item.title)}</b><span style="display:block; color:var(--text-muted); font-size:12px; white-space:pre-wrap; margin-top:4px;">${escapeHtml(item.content)}</span>${allowed?'':'<small style="color:#f59e0b;">包含当前场景不支持的变量</small>'}</span>
+          <input class="snippet-picker-check" type="checkbox" value="${escapeHtml(item.id)}" ${selected.has(item.id)?'checked':''} ${allowed?'onchange="updateSnippetPickerCount()"':'disabled'} style="margin-top:5px;">
+          <span style="min-width:0;"><b style="color:var(--text-main);">${escapeHtml(item.title)}</b>${item.missing?'<small style="color:#f59e0b; margin-left:7px;">内容库中已删除，已保存副本仍保留</small>':''}<span style="display:block; color:var(--text-muted); font-size:12px; white-space:pre-wrap; margin-top:4px;">${escapeHtml(item.content)}</span>${allowed?'':'<small style="color:#f59e0b;">包含当前场景不支持的变量</small>'}</span>
         </label>`;
       }).join('') : '<div style="color:var(--text-muted);">常用内容库为空，请先新建内容。</div>';
       updateSnippetPickerCount(); openModal('snippetPickerModal');
     }
-    function updateSnippetPickerCount(){const count=document.querySelectorAll('.snippet-picker-check:checked').length;const text=document.getElementById('snippetPickerCount');const btn=document.getElementById('snippetInsertBtn');if(text)text.textContent=`已选择 ${count} 项`;if(btn)btn.disabled=count===0;}
+    function updateSnippetPickerCount(){const count=document.querySelectorAll('.snippet-picker-check:checked').length;const text=document.getElementById('snippetPickerCount');const btn=document.getElementById('snippetInsertBtn');if(text)text.textContent=`已选择 ${count} 项`;if(btn)btn.disabled=false;}
     function insertSelectedSnippets() {
       const selected = new Set([...document.querySelectorAll('.snippet-picker-check:checked')].map(x=>x.value));
-      const blocks = cachedFooters.map((item,index)=>({item,index})).filter(x=>selected.has(x.item.id)).map(x=>`【${String(x.index+1).padStart(2,'0')}｜${x.item.title}】\n${x.item.content}`);
-      const el=document.getElementById(snippetPickerTargetId); if(!el||!blocks.length)return;
-      const start=el.selectionStart??el.value.length,end=el.selectionEnd??start,prefix=start>0&&el.value.slice(0,start).trim()?'\n\n':'';
-      const content=blocks.join('\n\n'); el.value=el.value.slice(0,start)+prefix+content+el.value.slice(end); const pos=start+prefix.length+content.length; el.focus(); if(el.setSelectionRange)el.setSelectionRange(pos,pos); el.dispatchEvent(new Event('input',{bubbles:true})); closeModal('snippetPickerModal');
+      const key = snippetSectionKey(snippetPickerField);
+      const oldSection = getSnippetSection(snippetPickerField, false);
+      const oldByID = new Map((oldSection?.items || []).map(item => [item.source_id, item]));
+      const items = cachedFooters.filter(item => selected.has(item.id)).map(item => {
+        const existing = oldByID.get(item.id);
+        return existing ? {...existing} : {source_id:item.id, title:item.title, content:item.content};
+      });
+      for (const oldItem of (oldSection?.items || [])) {
+        if (selected.has(oldItem.source_id) && !cachedFooters.some(item => item.id === oldItem.source_id)) items.push({...oldItem});
+      }
+      if (items.length === 0) {
+        delete cachedReplySettings.snippet_sections[key];
+      } else {
+        cachedReplySettings.snippet_sections[key] = {title: oldSection?.title ?? '补充信息', items};
+      }
+      studioMarkDirty();
+      closeModal('snippetPickerModal');
+      if (snippetPickerField === 'custom') renderCustomSnippetSectionControls();
+      renderReplyStudio();
+      scheduleStudioPreview();
     }
 
     function autoGrowReplyTextareas() {
