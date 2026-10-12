@@ -1,6 +1,9 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -101,5 +104,54 @@ func TestFormatUniversalCodeMessageUsesRecordExpiry(t *testing.T) {
 	wantTime := time.Unix(record.ExpiresAt, 0).In(time.FixedZone("北京时间", 8*60*60)).Format("15:04:05")
 	if !strings.Contains(got, "截止："+wantTime) {
 		t.Fatalf("真实截止时间渲染错误: got %q want %q", got, wantTime)
+	}
+}
+
+// ---------- 项目清单排版 ----------
+
+func TestFormatProjectListText_连续编号并用空行分隔(t *testing.T) {
+	now := time.Now().Unix()
+	projects := []*model.ProjectItem{
+		{ID: "first", Name: "新增测试项目", URL: " https://first.example.com ", Enabled: true},
+		{ID: "disabled", Name: "已停用项目", Enabled: false},
+		{ID: "expired", Name: "已过期项目", Enabled: true, ExpiresAt: now - 1},
+		{ID: "test01", Name: "测试用户项目01", Enabled: true, ExpiresAt: now + 60},
+	}
+	want := "1. 新增测试项目\n   网址：https://first.example.com\n\n2. 测试用户项目01\n   项目标识：test01"
+	if got := formatProjectListText(projects); got != want {
+		t.Fatalf("项目清单排版不符合预期:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestFormatProjectListText_无可用项目(t *testing.T) {
+	projects := []*model.ProjectItem{{ID: "disabled", Name: "已停用项目", Enabled: false}}
+	if got := formatProjectListText(projects); got != "暂无已启用的业务平台" {
+		t.Fatalf("无可用项目时的提示错误: %q", got)
+	}
+}
+
+func TestPreviewReply_项目清单使用新排版(t *testing.T) {
+	projectService := NewProjectService(t.TempDir())
+	projects := []*model.ProjectItem{
+		{ID: "first", Name: "新增测试项目", URL: "https://first.example.com", Enabled: true},
+		{ID: "test01", Name: "测试用户项目01", URL: "https://second.example.com", Enabled: true},
+	}
+	data, err := json.Marshal(projects)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(projectService.projectsPath, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	service := &WechatService{projectService: projectService}
+	draft := &model.ReplySettings{Replies: model.RepliesConfig{Projects: "🌐【当前已支持的业务平台】\n{project_list}\n更多项目持续接入中..."}}
+	preview, err := service.PreviewReply(context.Background(), draft, "projects", "", "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "🌐【当前已支持的业务平台】\n1. 新增测试项目\n   网址：https://first.example.com\n\n2. 测试用户项目01\n   网址：https://second.example.com\n更多项目持续接入中..."
+	if preview.Reply != want {
+		t.Fatalf("项目清单预览排版不符合预期:\ngot:\n%s\nwant:\n%s", preview.Reply, want)
 	}
 }

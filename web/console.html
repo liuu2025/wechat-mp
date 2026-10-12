@@ -4723,14 +4723,15 @@ async function handleWechatScanLogin() {
         case 'projects':
           let projectListStr = '暂无已启用的业务平台';
           if (cachedProjects && cachedProjects.length > 0) {
-            const enabledList = cachedProjects.filter(p => p.enabled);
+            const nowSec = Math.floor(Date.now() / 1000);
+            const enabledList = cachedProjects.filter(p => p.enabled && (!p.expires_at || p.expires_at >= nowSec));
             if (enabledList.length > 0) {
-              projectListStr = enabledList.map(p => {
+              projectListStr = enabledList.map((p, index) => {
                 if (p.url && p.url.trim()) {
-                  return `• ${p.name}：${p.url.trim()}`;
+                  return `${index + 1}. ${p.name}\n   网址：${p.url.trim()}`;
                 }
-                return `• ${p.name} (${p.id})`;
-              }).join('\n');
+                return `${index + 1}. ${p.name}\n   项目标识：${p.id}`;
+              }).join('\n\n');
             }
           }
           officialMsg = (tpl || '').replace('{project_list}', projectListStr);
@@ -5668,7 +5669,7 @@ async function handleWechatScanLogin() {
       { token:'{expire_time}', meaning:'该验证码真实截止时刻（北京时间）', scenes:'公众号取码', sample:'00:05:35' },
       { token:'{project_name}', meaning:'本次验证码对应的项目名称', scenes:'验证成功', sample:'示例项目' },
       { token:'{project_url}', meaning:'项目访问地址；未配置时自动移除相关空行', scenes:'验证成功', sample:'https://example.com' },
-      { token:'{project_list}', meaning:'发送时实时生成的可用项目列表', scenes:'项目清单、自定义回复', sample:'示例项目：https://example.com' }
+      { token:'{project_list}', meaning:'发送时实时生成的可用项目列表', scenes:'项目清单、自定义回复', sample:'1. 示例项目\n   网址：https://example.com' }
     ];
 
     const STUDIO_META = {

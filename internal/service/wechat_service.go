@@ -328,29 +328,33 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 }
 
 func (s *WechatService) projectListText() string {
-	listStr := "暂无已启用的业务平台"
 	if s.projectService == nil {
-		return listStr
+		return "暂无已启用的业务平台"
 	}
 	projects, err := s.projectService.ListProjects()
 	if err != nil {
-		return listStr
+		return "暂无已启用的业务平台"
 	}
-	var lines []string
+	return formatProjectListText(projects)
+}
+
+func formatProjectListText(projects []*model.ProjectItem) string {
+	var items []string
 	for _, p := range projects {
 		if !IsProjectUsable(p) {
 			continue
 		}
+		index := len(items) + 1
 		if strings.TrimSpace(p.URL) != "" {
-			lines = append(lines, fmt.Sprintf("• %s：%s", p.Name, strings.TrimSpace(p.URL)))
+			items = append(items, fmt.Sprintf("%d. %s\n   网址：%s", index, strings.TrimSpace(p.Name), strings.TrimSpace(p.URL)))
 		} else {
-			lines = append(lines, fmt.Sprintf("• %s (%s)", p.Name, p.ID))
+			items = append(items, fmt.Sprintf("%d. %s\n   项目标识：%s", index, strings.TrimSpace(p.Name), strings.TrimSpace(p.ID)))
 		}
 	}
-	if len(lines) > 0 {
-		return strings.Join(lines, "\n")
+	if len(items) > 0 {
+		return strings.Join(items, "\n\n")
 	}
-	return listStr
+	return "暂无已启用的业务平台"
 }
 
 // PreviewReply 使用草稿规则渲染回复。useLiveCodeState 仅只读查询验证码真实状态，绝不核销。
