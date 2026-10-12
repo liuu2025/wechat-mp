@@ -23,25 +23,30 @@ var (
 )
 
 type ProjectService struct {
-	mu           sync.RWMutex
-	projectsPath string
-	authPath     string
-	footersPath  string
-	repliesPath  string
-	rulesPath    string
+	mu                sync.RWMutex
+	projectsPath      string
+	authPath          string
+	footersPath       string
+	repliesPath       string
+	rulesPath         string
+	replySettingsPath string
+	replyLibraryPath  string
 }
 
 func NewProjectService(configDir string) *ProjectService {
 	s := &ProjectService{
-		projectsPath: filepath.Join(configDir, "projects.json"),
-		authPath:     filepath.Join(configDir, "auth.json"),
-		footersPath:  filepath.Join(configDir, "footers.json"),
-		repliesPath:  filepath.Join(configDir, "replies.json"),
-		rulesPath:    filepath.Join(configDir, "rules.json"),
+		projectsPath:      filepath.Join(configDir, "projects.json"),
+		authPath:          filepath.Join(configDir, "auth.json"),
+		footersPath:       filepath.Join(configDir, "footers.json"),
+		repliesPath:       filepath.Join(configDir, "replies.json"),
+		rulesPath:         filepath.Join(configDir, "rules.json"),
+		replySettingsPath: filepath.Join(configDir, "reply_settings.json"),
+		replyLibraryPath:  filepath.Join(configDir, "reply_library.json"),
 	}
 
 	// 确保存储文件存在，如不存在则初始化默认值
 	s.ensureInitialized()
+	s.ensureReplyEditorInitialized()
 	return s
 }
 
@@ -288,8 +293,9 @@ func (s *ProjectService) AddProject(req *model.AddProjectReq, ownerAccountID str
 		Enabled:       true,
 		CustomAdTitle: req.CustomAdTitle,
 		CustomAd:      req.CustomAd,
-		IncludeGlobal: req.IncludeGlobal,
-		CreatedAt:     time.Now().Unix(),
+		// 公共内容库只用于编辑时复制插入，不再参与项目回复拼装。
+		IncludeGlobal:  false,
+		CreatedAt:      time.Now().Unix(),
 		OwnerAccountID: ownerAccountID,
 		ExpiresAt:      expiresAt,
 	}
@@ -340,7 +346,7 @@ func (s *ProjectService) ToggleProject(id string, enabled bool) error {
 	return os.WriteFile(s.projectsPath, updatedData, 0644)
 }
 
-// UpdateProject 编辑项目信息（名称、定制尾注/推广语）
+// UpdateProject 编辑项目信息（名称、网址、项目补充信息）
 func (s *ProjectService) UpdateProject(req *model.UpdateProjectReq) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -363,7 +369,7 @@ func (s *ProjectService) UpdateProject(req *model.UpdateProjectReq) error {
 			p.URL = strings.TrimSpace(req.URL)
 			p.CustomAdTitle = req.CustomAdTitle
 			p.CustomAd = req.CustomAd
-			p.IncludeGlobal = req.IncludeGlobal
+			p.IncludeGlobal = false
 			found = true
 			break
 		}
@@ -765,8 +771,8 @@ func validateRules(rules *model.RulesConfig) error {
 
 	builtin := map[string]*model.BuiltinRule{
 		"索取通行码": {Enabled: rules.UniversalCode.Enabled, Keywords: rules.UniversalCode.Keywords},
-		"使用指南": {Enabled: rules.Help.Enabled, Keywords: rules.Help.Keywords},
-		"项目清单": {Enabled: rules.Projects.Enabled, Keywords: rules.Projects.Keywords},
+		"使用指南":  {Enabled: rules.Help.Enabled, Keywords: rules.Help.Keywords},
+		"项目清单":  {Enabled: rules.Projects.Enabled, Keywords: rules.Projects.Keywords},
 	}
 	for name, rule := range builtin {
 		if len(rule.Keywords) == 0 && rule.Enabled {

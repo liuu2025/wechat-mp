@@ -2,18 +2,18 @@ package model
 
 // ProjectItem 接入的独立业务项目实体
 type ProjectItem struct {
-	ID            string `json:"id"`                       // 项目唯一英文代号（如 "shop", "blog"）
-	Name          string `json:"name"`                     // 项目中文名称（如 "商城系统"）
-	URL           string `json:"url,omitempty"`            // 项目网站网址（选填，如 "https://shop.example.com"）
-	Secret        string `json:"secret"`                   // 该项目对接时使用的安全密钥
-	Enabled       bool   `json:"enabled"`                  // 是否启用该项目（true=允许对接，false=暂时停用）
-	CustomAdTitle string `json:"custom_ad_title,omitempty"`// 项目专属尾注标题（选填，如：项目特惠、网盘须知）
-	CustomAd      string `json:"custom_ad"`                // 该项目的专属定制尾注说明文案
-	IncludeGlobal bool   `json:"include_global"`           // 是否同时追加系统默认尾注（true=两者叠加，false=仅项目尾注）
-	CreatedAt     int64  `json:"created_at"`               // 创建时间戳
-	SecretRotatedAt int64 `json:"secret_rotated_at,omitempty"` // 最近一次密钥轮换时间戳
-	OwnerAccountID  string `json:"owner_account_id,omitempty"` // 归属账号ID（租户项目；管理员项目为空）
-	ExpiresAt       int64  `json:"expires_at,omitempty"`       // 授权到期时间戳（0=永久）
+	ID              string `json:"id"`                          // 项目唯一英文代号（如 "shop", "blog"）
+	Name            string `json:"name"`                        // 项目中文名称（如 "商城系统"）
+	URL             string `json:"url,omitempty"`               // 项目网站网址（选填，如 "https://shop.example.com"）
+	Secret          string `json:"secret"`                      // 该项目对接时使用的安全密钥
+	Enabled         bool   `json:"enabled"`                     // 是否启用该项目（true=允许对接，false=暂时停用）
+	CustomAdTitle   string `json:"custom_ad_title,omitempty"`   // 项目补充信息标题（兼容旧字段名）
+	CustomAd        string `json:"custom_ad"`                   // 项目验证成功后的补充信息（兼容旧字段名）
+	IncludeGlobal   bool   `json:"include_global"`              // 仅兼容旧数据；公共内容不再自动追加
+	CreatedAt       int64  `json:"created_at"`                  // 创建时间戳
+	SecretRotatedAt int64  `json:"secret_rotated_at,omitempty"` // 最近一次密钥轮换时间戳
+	OwnerAccountID  string `json:"owner_account_id,omitempty"`  // 归属账号ID（租户项目；管理员项目为空）
+	ExpiresAt       int64  `json:"expires_at,omitempty"`        // 授权到期时间戳（0=永久）
 }
 
 // FooterItem 默认尾注模版实体

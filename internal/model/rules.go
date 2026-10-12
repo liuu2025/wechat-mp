@@ -11,7 +11,7 @@ type CustomRule struct {
 	ID           string   `json:"id"`
 	Keywords     []string `json:"keywords"`
 	Reply        string   `json:"reply"`
-	AppendFooter bool     `json:"append_footer"`
+	AppendFooter bool     `json:"append_footer,omitempty"` // 仅兼容旧配置；不再自动追加内容
 	Enabled      bool     `json:"enabled"`
 	CreatedAt    int64    `json:"created_at"`
 }
@@ -37,7 +37,7 @@ type TestRuleReq struct {
 
 // TestRuleResp 规则试跑响应：命中规则 + 实际回复文本
 type TestRuleResp struct {
-	Matched   string `json:"matched"`   // 命中的规则标识：verify_code/universal_code/help/projects/custom:<id>/fallback
-	Reply     string `json:"reply"`     // 实际回复内容（不含 XML 包装）
+	Matched   string `json:"matched"`    // 命中的规则标识：verify_code/universal_code/help/projects/custom:<id>/fallback
+	Reply     string `json:"reply"`      // 实际回复内容（不含 XML 包装）
 	MatchedZh string `json:"matched_zh"` // 命中规则的中文名
 }

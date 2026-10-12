@@ -35,8 +35,8 @@ func factoryDefaultRules() *model.RulesConfig {
 // getRulesSafe 读取规则配置，任何异常都退回出厂默认，保证消息管道永不因配置问题哑火
 func (s *WechatService) getRulesSafe() *model.RulesConfig {
 	if s.projectService != nil {
-		if r, err := s.projectService.GetRules(); err == nil {
-			return r
+		if settings, err := s.projectService.GetReplySettings(); err == nil && settings != nil {
+			return &settings.Rules
 		}
 	}
 	return factoryDefaultRules()
@@ -81,9 +81,15 @@ func (s *WechatService) matchTextRule(rules *model.RulesConfig, text string) str
 func RuleNameZh(ruleID string) string {
 	switch {
 	case ruleID == "verify_code":
-		return "六位数字核销（流向二）"
+		return "发送网页验证码"
+	case ruleID == "code_success":
+		return "六位数字验证成功"
+	case ruleID == "code_invalid":
+		return "六位数字无效或已过期"
+	case ruleID == "code_used":
+		return "六位数字重复核销"
 	case ruleID == "universal_code":
-		return "索取通行码（流向一）"
+		return "公众号取码"
 	case ruleID == "help":
 		return "使用指南"
 	case ruleID == "projects":
@@ -97,15 +103,14 @@ func RuleNameZh(ruleID string) string {
 	}
 }
 
-// TestMessage 规则试跑：以测试身份走一遍真实消息处理，返回命中规则与实际回复文本
+// TestMessage 规则试跑：只做匹配和模拟渲染，不生成或核销真实验证码。
 func (s *WechatService) TestMessage(ctx context.Context, message string) (string, string) {
-	message = strings.TrimSpace(message)
-	rules := s.getRulesSafe()
-	ruleID := s.matchTextRule(rules, message)
-	// 每次试跑使用独立测试身份，避免污染真实用户的失败计数与活跃码
-	testOpenID := fmt.Sprintf("console_tester_%d", time.Now().UnixNano())
-	reply := s.handleText(ctx, testOpenID, message)
-	return ruleID, reply
+	_ = ctx
+	resp, err := s.PreviewReply(nil, "", strings.TrimSpace(message), "", "839201")
+	if err != nil {
+		return "fallback", "预览失败：" + err.Error()
+	}
+	return resp.Matched, resp.Reply
 }
 
 type WechatService struct {
@@ -156,7 +161,7 @@ func (s *WechatService) ProcessMessage(ctx context.Context, body []byte) (string
 	default:
 		// 暂不支持的消息类型（语音、图片、表情包等），返回提示
 		replies := s.getRepliesConfig()
-		replyContent = replies.MediaMessage + s.getActiveGlobalFooter()
+		replyContent = replies.MediaMessage
 	}
 
 	if replyContent == "" {
@@ -180,8 +185,8 @@ func (s *WechatService) ProcessMessage(ctx context.Context, body []byte) (string
 
 func (s *WechatService) getRepliesConfig() *model.RepliesConfig {
 	if s.projectService != nil {
-		if r, err := s.projectService.GetReplies(); err == nil && r != nil {
-			return r
+		if settings, err := s.projectService.GetReplySettings(); err == nil && settings != nil {
+			return &settings.Replies
 		}
 	}
 	return &model.RepliesConfig{
@@ -217,7 +222,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 			if errors.Is(err, storage.ErrCodeNotFound) {
 				s.storage.RecordVerifyFailure(ctx, openID)
 				msg := strings.ReplaceAll(replies.CodeInvalid, "{code}", text)
-				return msg + s.getActiveGlobalFooter()
+				return msg
 			}
 			return "系统繁忙，请稍后重试。"
 		}
@@ -231,7 +236,7 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 
 		if record.Status == model.StatusVerified || record.Status == model.StatusUsed {
 			msg := strings.ReplaceAll(replies.CodeUsed, "{code}", text)
-			return msg + s.getActiveGlobalFooter()
+			return msg
 		}
 
 		// 执行核销（成功即清空失败计数）
@@ -245,11 +250,10 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 			projectName = "默认项目"
 		}
 
-		// 组装尾注与项目信息
+		// 项目补充说明只属于当前项目；公共内容库不会在发送阶段自动追加。
 		projectCustomAd := ""
 		projectCustomTitle := ""
 		projectURL := ""
-		includeGlobal := true // 默认兼容
 
 		if s.projectService != nil {
 			if p, err := s.projectService.GetProject(record.Project); err == nil {
@@ -259,90 +263,154 @@ func (s *WechatService) handleText(ctx context.Context, openID, text string) str
 				projectURL = strings.TrimSpace(p.URL)
 				projectCustomAd = strings.TrimSpace(p.CustomAd)
 				projectCustomTitle = strings.TrimSpace(p.CustomAdTitle)
-				includeGlobal = p.IncludeGlobal
 			}
 		}
 
-		// 如果用户填写了项目专属尾注，且填写了专属标题，加上【标题】；若留空则原样输出绝不瞎猜
+		// 项目补充信息有标题时加上【标题】；若留空则原样输出。
 		projectBlock := projectCustomAd
 		if projectBlock != "" && projectCustomTitle != "" {
 			projectBlock = fmt.Sprintf("【%s】\n%s", projectCustomTitle, projectBlock)
 		}
 
-		globalFooter := ""
-		if includeGlobal && s.projectService != nil {
-			globalFooter = strings.TrimSpace(s.projectService.GetActiveFootersContent())
-		}
-
-		// 构建最终尾注：
-		// 1. 如果两者都有：中间用虚线 "┈┈┈┈┈┈┈┈┈┈┈┈┈┈" 隔开
-		// 2. 如果只有其中一个：直接展示
-		finalFooter := ""
-		if projectBlock != "" && globalFooter != "" {
-			finalFooter = "\n\n-------------------\n" + projectBlock + "\n\n┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n" + globalFooter
-		} else if projectBlock != "" {
-			finalFooter = "\n\n-------------------\n" + projectBlock
-		} else if globalFooter != "" {
-			finalFooter = "\n\n-------------------\n" + globalFooter
+		projectSupplement := ""
+		if projectBlock != "" {
+			projectSupplement = "\n\n-------------------\n" + projectBlock
 		}
 
 		baseMsg := formatSuccessMessage(replies.CodeSuccess, projectName, projectURL)
-		return fmt.Sprintf("%s%s", baseMsg, finalFooter)
+		return baseMsg + projectSupplement
 
 	case ruleID == "universal_code":
 		code, err := s.verifyService.GenerateUniversalCode(ctx, openID)
 		if err != nil {
 			return "⚠️ 验证码生成繁忙，请稍后再试。"
 		}
-		globalFooter := s.getActiveGlobalFooter()
 		msg := strings.ReplaceAll(replies.UniversalCode, "{code}", code)
-		return msg + globalFooter
+		msg = strings.ReplaceAll(msg, "{expire_seconds}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire))
+		msg = strings.ReplaceAll(msg, "{expire_minutes}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire/60))
+		return msg
 
 	case ruleID == "help":
-		globalFooter := s.getActiveGlobalFooter()
-		return replies.Help + globalFooter
+		return replies.Help
 
 	case ruleID == "projects":
-		listStr := "暂无已启用的业务平台"
-		if s.projectService != nil {
-			if projects, err := s.projectService.ListProjects(); err == nil && len(projects) > 0 {
-				var lines []string
-				for _, p := range projects {
-					if p.Enabled {
-						if strings.TrimSpace(p.URL) != "" {
-							lines = append(lines, fmt.Sprintf("• %s：%s", p.Name, strings.TrimSpace(p.URL)))
-						} else {
-							lines = append(lines, fmt.Sprintf("• %s (%s)", p.Name, p.ID))
-						}
-					}
-				}
-				if len(lines) > 0 {
-					listStr = strings.Join(lines, "\n")
-				}
-			}
-		}
-		globalFooter := s.getActiveGlobalFooter()
-		msg := strings.ReplaceAll(replies.Projects, "{project_list}", listStr)
-		return msg + globalFooter
+		return strings.ReplaceAll(replies.Projects, "{project_list}", s.projectListText())
 
 	case strings.HasPrefix(ruleID, "custom:"):
 		// 自定义回复规则命中（先配先中已在路由阶段保证）
 		for i := range rules.Custom {
 			if rules.Custom[i].ID == strings.TrimPrefix(ruleID, "custom:") {
-				msg := rules.Custom[i].Reply
-				if rules.Custom[i].AppendFooter {
-					msg += s.getActiveGlobalFooter()
-				}
-				return msg
+				return strings.ReplaceAll(rules.Custom[i].Reply, "{project_list}", s.projectListText())
 			}
 		}
-		return replies.UnknownText + s.getActiveGlobalFooter()
+		return replies.UnknownText
 
 	default:
 		// 默认未知消息兜底回复
-		globalFooter := s.getActiveGlobalFooter()
-		return replies.UnknownText + globalFooter
+		return replies.UnknownText
 	}
+}
+
+func (s *WechatService) projectListText() string {
+	listStr := "暂无已启用的业务平台"
+	if s.projectService == nil {
+		return listStr
+	}
+	projects, err := s.projectService.ListProjects()
+	if err != nil {
+		return listStr
+	}
+	var lines []string
+	for _, p := range projects {
+		if !IsProjectUsable(p) {
+			continue
+		}
+		if strings.TrimSpace(p.URL) != "" {
+			lines = append(lines, fmt.Sprintf("• %s：%s", p.Name, strings.TrimSpace(p.URL)))
+		} else {
+			lines = append(lines, fmt.Sprintf("• %s (%s)", p.Name, p.ID))
+		}
+	}
+	if len(lines) > 0 {
+		return strings.Join(lines, "\n")
+	}
+	return listStr
+}
+
+// PreviewReply 使用草稿规则和示例数据渲染，不读写验证码状态。
+func (s *WechatService) PreviewReply(draft *model.ReplySettings, field, message, projectID, code string) (*model.ReplyPreviewResp, error) {
+	settings := draft
+	if settings == nil {
+		if s.projectService == nil {
+			return nil, errors.New("回复配置服务不可用")
+		}
+		current, err := s.projectService.GetReplySettings()
+		if err != nil {
+			return nil, err
+		}
+		settings = current
+	}
+	if code == "" {
+		code = "839201"
+	}
+
+	matched := field
+	if matched == "" {
+		matched = s.matchTextRule(&settings.Rules, message)
+		if matched == "verify_code" {
+			matched = "code_invalid"
+		}
+	}
+
+	reply := ""
+	switch {
+	case matched == "code_success":
+		name, url, title, supplement := "示例项目", "https://example.com", "", ""
+		if s.projectService != nil && projectID != "" {
+			if p, err := s.projectService.GetProject(projectID); err == nil {
+				name, url, title, supplement = p.Name, p.URL, p.CustomAdTitle, p.CustomAd
+			}
+		}
+		reply = formatSuccessMessage(settings.Replies.CodeSuccess, name, url)
+		if strings.TrimSpace(supplement) != "" {
+			block := strings.TrimSpace(supplement)
+			if strings.TrimSpace(title) != "" {
+				block = fmt.Sprintf("【%s】\n%s", strings.TrimSpace(title), block)
+			}
+			reply += "\n\n-------------------\n" + block
+		}
+	case matched == "verify_code" || matched == "code_invalid":
+		matched = "code_invalid"
+		reply = strings.ReplaceAll(settings.Replies.CodeInvalid, "{code}", code)
+	case matched == "code_used":
+		reply = strings.ReplaceAll(settings.Replies.CodeUsed, "{code}", code)
+	case matched == "universal_code":
+		reply = strings.ReplaceAll(settings.Replies.UniversalCode, "{code}", code)
+		reply = strings.ReplaceAll(reply, "{expire_seconds}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire))
+		reply = strings.ReplaceAll(reply, "{expire_minutes}", fmt.Sprintf("%d", s.cfg.DefaultCodeExpire/60))
+	case matched == "projects":
+		reply = strings.ReplaceAll(settings.Replies.Projects, "{project_list}", s.projectListText())
+	case matched == "help":
+		reply = settings.Replies.Help
+	case matched == "welcome":
+		reply = settings.Replies.Welcome
+	case matched == "media_message":
+		reply = settings.Replies.MediaMessage
+	case matched == "fallback" || matched == "unknown_text":
+		matched = "fallback"
+		reply = settings.Replies.UnknownText
+	case strings.HasPrefix(matched, "custom:"):
+		for _, rule := range settings.Rules.Custom {
+			if rule.ID == strings.TrimPrefix(matched, "custom:") {
+				reply = strings.ReplaceAll(rule.Reply, "{project_list}", s.projectListText())
+				break
+			}
+		}
+	default:
+		return nil, fmt.Errorf("不支持的预览场景: %s", matched)
+	}
+
+	return &model.ReplyPreviewResp{Matched: matched, MatchedZh: RuleNameZh(matched), Reply: reply}, nil
 }
 
 // formatSuccessMessage 处理验证成功通知模板中的变量替换与安全消融
@@ -394,24 +462,12 @@ func formatSuccessMessage(template, projectName, projectURL string) string {
 	return strings.Join(cleanLines, "\n")
 }
 
-// getActiveGlobalFooter 获取格式化好的全局激活尾注（尾注模版库为唯一来源，未激活任何模版时返回空）
-func (s *WechatService) getActiveGlobalFooter() string {
-	content := ""
-	if s.projectService != nil {
-		content = strings.TrimSpace(s.projectService.GetActiveFootersContent())
-	}
-	if content == "" {
-		return ""
-	}
-	return "\n\n-------------------\n" + content
-}
-
 // handleEvent 处理关注事件或菜单点击事件
 func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey string) string {
 	replies := s.getRepliesConfig()
 	switch event {
 	case "subscribe": // 用户新关注公众号
-		return replies.Welcome + s.getActiveGlobalFooter()
+		return replies.Welcome
 	case "unsubscribe": // 用户取消关注（微信不需要回复）
 		return ""
 	case "CLICK": // 用户点击了自定义菜单
@@ -426,22 +482,22 @@ func (s *WechatService) handleEvent(ctx context.Context, openID, event, eventKey
 			if err != nil {
 				return "生成验证码异常，请稍后重试。"
 			}
-			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 3 分钟，请在对应网页输入完成验证)%s", projectName, resp.Code, s.getActiveGlobalFooter())
+			return fmt.Sprintf("🔑【%s】专属验证码已生成：\n\n👉【%s】👈\n\n(有效时间 3 分钟，请在对应网页输入完成验证)", projectName, resp.Code)
 		}
 
 		switch eventKey {
 		case "HELP_INFO":
-			return fmt.Sprintf(`📖【使用指引】
+			return `📖【使用指引】
 1. 网站登录：如果在电脑网站上看到了 6 位数字验证码，直接发给本公众号即可瞬间完成核销登录；
 2. 主动取码：也可以点击下方菜单获取专属验证码后填入网站；
-3. 遇到问题：请核对网站最新生成的验证码。%s`, s.getActiveGlobalFooter())
+3. 遇到问题：请核对网站最新生成的验证码。`
 		case "AD_INFO":
-			return fmt.Sprintf(`🌟【站长精选推荐】
+			return `🌟【站长精选推荐】
 1. 实用导航：https://example.com/nav
 2. 开源工具箱：https://example.com/tools
-3. 商务合作与技术咨询请联系管理员。%s`, s.getActiveGlobalFooter())
+3. 商务合作与技术咨询请联系管理员。`
 		default:
-			return fmt.Sprintf("您点击了菜单【%s】。\n如需验证，可直接输入 6 位数字验证码，或在网页上使用。%s", eventKey, s.getActiveGlobalFooter())
+			return fmt.Sprintf("您点击了菜单【%s】。\n如需验证，可直接输入 6 位数字验证码，或在网页上使用。", eventKey)
 		}
 	default:
 		return ""

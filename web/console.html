@@ -1861,26 +1861,30 @@
       </div>
     </div>
 
-    <!-- ================== 规则中心：触发关键词 / 自定义回复 / 场景文案 / 尾注规则 / 规则试跑 ================== -->
+    <!-- ================== 规则中心：触发条件 / 完整回复 / 常用内容 / 安全试跑 ================== -->
     <div id="tab-rules" class="tab-content">
       <div class="doc-container">
 
         <!-- 二级分类导航（顶部横排） -->
         <div class="rules-nav">
           <button class="rules-nav-btn active" id="rulesNavBtnScenes" onclick="switchRulesSection('scenes')">回复规则</button>
-          <button class="rules-nav-btn" id="rulesNavBtnFooters" onclick="switchRulesSection('footers')">尾注规则</button>
+          <button class="rules-nav-btn" id="rulesNavBtnFooters" onclick="switchRulesSection('footers')">常用内容库</button>
           <button class="rules-nav-btn" id="rulesNavBtnTest" onclick="switchRulesSection('test')">规则试跑</button>
         </div>
 
         <div class="rules-section active" id="rulesSectionScenes">
 
+        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; background:var(--panel-soft); line-height:1.7;">
+          文字触发词采用完整匹配：忽略英文大小写和首尾空格；“帮助”会匹配，“请帮助我”不会匹配。6 位纯数字始终优先用于网页验证码验证。回复编辑区里的常用内容只会复制插入，不会自动附加。
+        </div>
+
         <div class="rules-nav" id="scenePillNav">
-          <button class="rules-nav-btn active" id="sceneBtn_verify" onclick="switchSceneCard('verify')">六位数字核验</button>
-          <button class="rules-nav-btn" id="sceneBtn_universal_code" onclick="switchSceneCard('universal_code')">索取通行码</button>
+          <button class="rules-nav-btn active" id="sceneBtn_verify" onclick="switchSceneCard('verify')">发送网页验证码</button>
+          <button class="rules-nav-btn" id="sceneBtn_universal_code" onclick="switchSceneCard('universal_code')">公众号取码</button>
           <button class="rules-nav-btn" id="sceneBtn_help" onclick="switchSceneCard('help')">使用指南</button>
           <button class="rules-nav-btn" id="sceneBtn_projects" onclick="switchSceneCard('projects')">项目清单</button>
           <button class="rules-nav-btn" id="sceneBtn_custom" onclick="switchSceneCard('custom')">自定义场景</button>
-          <button class="rules-nav-btn" id="sceneBtn_fallback" onclick="switchSceneCard('fallback')">乱发文字</button>
+          <button class="rules-nav-btn" id="sceneBtn_fallback" onclick="switchSceneCard('fallback')">未识别文字</button>
           <button class="rules-nav-btn" id="sceneBtn_media" onclick="switchSceneCard('media')">表情包/语音</button>
           <button class="rules-nav-btn" id="sceneBtn_welcome" onclick="switchSceneCard('welcome')">粉丝新关注</button>
         </div>
@@ -1890,8 +1894,8 @@
         <div class="card scene-card" id="sceneCard_verify" style="display:none;">
           <div class="card-header">
             <div>
-              <div class="card-title">六位数字核验（流向二）<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
-              <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">用户发送任意 6 位数字即触发本组场景，按结果三选一。触发条件是与业务网站的对接契约，不可修改。</div>
+              <div class="card-title">发送网页验证码<span class="badge-tag" style="margin-left:8px;">触发条件固定</span></div>
+              <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">用户把网页显示的 6 位数字发送给公众号时触发，再按验证结果选择下面一条回复。该条件是网站对接约定，不可修改。</div>
             </div>
           </div>
           <div class="rules-nav" style="margin-bottom:12px;">
@@ -1930,7 +1934,7 @@
         <!-- 场景卡：索取通行码（关键词可编辑） -->
         <div class="card scene-card" id="sceneCard_universal_code" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">索取通行码（流向一）<span id="state_universal_code" style="font-size:12px; margin-left:6px;"></span></div>
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">公众号取码<span id="state_universal_code" style="font-size:12px; margin-left:6px;"></span></div>
             <label style="font-size:12.5px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:5px;">
               <input type="checkbox" id="enabled_universal_code" onchange="toggleBuiltin('universal_code', this.checked)"> 启用
             </label>
@@ -2003,7 +2007,7 @@
         <!-- 场景卡：兜底（锁定） -->
         <div class="card scene-card" id="sceneCard_fallback" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">乱发文字（兜底）<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">未识别文字<span class="badge-tag" style="margin-left:8px;">触发条件固定</span></div>
           </div>
           <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">文字消息未命中以上任何规则时回复本内容。</div>
           <textarea id="reply_unknown_text" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
@@ -2015,7 +2019,7 @@
         <!-- 场景卡：非文字消息（锁定） -->
         <div class="card scene-card" id="sceneCard_media" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">表情包 / 语音 / 图片<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">表情包 / 语音 / 图片<span class="badge-tag" style="margin-left:8px;">触发条件固定</span></div>
           </div>
           <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">用户发送非文字消息时回复本内容。</div>
           <textarea id="reply_media_message" rows="2" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
@@ -2027,7 +2031,7 @@
         <!-- 场景卡：粉丝新关注（锁定） -->
         <div class="card scene-card" id="sceneCard_welcome" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">粉丝新关注<span class="badge-tag" style="margin-left:8px;">触发锁定</span></div>
+            <div style="font-size:14.5px; font-weight:700; color:var(--text-main);">粉丝新关注<span class="badge-tag" style="margin-left:8px;">触发条件固定</span></div>
           </div>
           <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">用户关注公众号时自动回复本内容。</div>
           <textarea id="reply_welcome" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); resize:vertical;"></textarea>
@@ -2045,22 +2049,17 @@
         <div class="card" style="flex:1; min-width:360px;">
           <div class="card-header">
             <div>
-              <div class="card-title">系统全局默认尾注池（支持勾选即生效、支持多选/单选叠加）</div>
+                <div class="card-title">常用内容库</div>
               <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-                当公众号下发通行码、关注欢迎语、帮助指南，或业务项目选择了【叠加系统默认尾注】时，勾选的模版内容将作为尾注自动附加在微信回复末尾。
+                保存经常复用的文字。编辑回复时选择一项即可复制插入；插入后可自由修改或删除，内容库本身不会自动发送，也不会悄悄改动已经保存的回复。
               </div>
             </div>
-            <button class="btn-primary" onclick="openAddFooterModal()">新建尾注模版</button>
+            <button class="btn-primary" onclick="openAddFooterModal()">新建常用内容</button>
           </div>
 
-          <!-- 模式切换与当前生效状态提示 -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 10px 14px; background: var(--panel-soft); border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
-            <div style="font-size: 13px; color: var(--text-main);">
-              选择模式：
-              <label style="margin-right: 14px; cursor: pointer;"><input type="radio" name="footerSelectMode" value="multi" checked onchange="switchFooterMode('multi')"> 自由多选（组合追加）</label>
-              <label style="cursor: pointer;"><input type="radio" name="footerSelectMode" value="single" onchange="switchFooterMode('single')"> 互斥单选（唯一指定）</label>
-            </div>
-            <button class="btn-action-sm" onclick="clearAllFooters()">一键全不选（清空尾注）</button>
+          <div style="margin-bottom:16px; padding:10px 14px; background:var(--panel-soft); border-radius:8px; border:1px solid var(--border-color); font-size:13px; color:var(--text-main); line-height:1.7;">
+            使用方法：进入任一回复场景 → 点击“插入常用内容” → 选择内容。<br>
+            动态项目列表只适用于“项目清单”和自定义回复；项目自己的补充说明仍在项目编辑页单独维护。
           </div>
 
           <!-- 尾注列表 -->
@@ -2069,17 +2068,17 @@
           </div>
         </div>
 
-        <!-- 实时回复预览卡片 -->
+        <!-- 内容库行为说明 -->
         <div class="card" style="flex:1.5; min-width:400px;">
           <div class="card-header">
-            <div class="card-title">当前默认尾注在微信中的实际回复预览（勾选状态实时联动）</div>
-            <span style="font-size: 12px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 4px;">所见即所得</span>
+            <div class="card-title">内容预览</div>
+            <span style="font-size: 12px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 8px; border-radius: 4px;">仅用于编辑</span>
           </div>
           <div style="background: var(--preview-wrap-bg); border-radius: 10px; padding: 16px; border: 1px solid var(--border-color);">
             <div class="preview-bubble-wrap">
               <div class="wx-avatar official" style="width:36px; height:36px; font-size:16px;">睡</div>
               <div class="preview-bubble" id="globalFooterLivePreview">
-                <!-- 实时渲染预览 -->
+                点击左侧任一常用内容查看。它不会自动附加到任何公众号回复。
               </div>
             </div>
           </div>
@@ -2093,8 +2092,8 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">规则试跑</div>
-                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">模拟一条用户消息，立刻看到命中哪条规则、机器人实际回复什么。改完规则先在这里验证。</div>
+                <div class="card-title">安全试跑</div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">模拟一条用户消息，查看命中规则和回复效果。这里只使用示例验证码，不会生成或核销真实验证码。</div>
               </div>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -2516,10 +2515,8 @@ async function handleWechatScanLogin() {
         <div>
           <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">回复内容：</label>
           <textarea id="customRuleReply" rows="5" placeholder="用户命中这些词时，机器人回复的内容" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); margin-top:4px; resize:vertical;"></textarea>
+          <button class="btn-action-sm" style="margin-top:8px;" onclick="openSnippetPicker('customRuleReply', 'custom')">插入常用内容</button>
         </div>
-        <label style="font-size:13px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="customRuleFooter" checked> 回复末尾追加系统默认尾注
-        </label>
         <label style="font-size:13px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:6px;">
           <input type="checkbox" id="customRuleEnabled" checked> 立即启用此规则
         </label>
@@ -2652,21 +2649,12 @@ async function handleWechatScanLogin() {
             <input type="text" id="newProjectUrl" placeholder="如 https://shop.example.com (选填)" oninput="updateAddPreview()">
           </div>
           <div class="input-row">
-            <label>专属尾注标题:</label>
-            <input type="text" id="newProjectAdTitle" placeholder="如 网盘必读、福利专区 (选填，留空则不加方括号标题)" oninput="updateAddPreview()">
+            <label>补充信息标题:</label>
+            <input type="text" id="newProjectAdTitle" placeholder="如 网盘必读、使用说明 (选填，留空则不加方括号标题)" oninput="updateAddPreview()">
           </div>
           <div class="input-row" style="align-items: flex-start;">
-            <label style="margin-top: 8px;">专属尾注说明:</label>
-            <textarea id="newProjectAd" rows="4" placeholder="（选填，支持多行换行）&#10;可填专属推广、客服微信、业务温馨提示等。&#10;留空则不附加项目专属内容" oninput="updateAddPreview()"></textarea>
-          </div>
-          <div class="input-row" style="margin-bottom: 4px;">
-            <label style="width: auto; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-              <input type="checkbox" id="newProjectIncludeGlobal" checked onchange="updateAddPreview()">
-              <span style="font-size: 13.5px; color: var(--text-main); font-weight: 500;">同时追加系统默认尾注（两者叠加）</span>
-            </label>
-          </div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; padding-left: 20px;">
-            勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
+            <label style="margin-top: 8px;">项目补充信息:</label>
+            <textarea id="newProjectAd" rows="4" placeholder="（选填，支持多行换行）&#10;仅在本项目验证码验证成功后，显示在正常成功回复后面。&#10;不会加入其他公共内容" oninput="updateAddPreview()"></textarea>
           </div>
         </div>
 
@@ -2715,21 +2703,12 @@ async function handleWechatScanLogin() {
             <input type="text" id="editProjectUrl" placeholder="如 https://shop.example.com (选填)" oninput="updateEditPreview()">
           </div>
           <div class="input-row">
-            <label>专属尾注标题:</label>
-            <input type="text" id="editProjectAdTitle" placeholder="如 网盘必读、福利专区 (选填，留空则不加方括号标题)" oninput="updateEditPreview()">
+            <label>补充信息标题:</label>
+            <input type="text" id="editProjectAdTitle" placeholder="如 网盘必读、使用说明 (选填，留空则不加方括号标题)" oninput="updateEditPreview()">
           </div>
           <div class="input-row" style="align-items: flex-start;">
-            <label style="margin-top: 8px;">专属尾注说明:</label>
-            <textarea id="editProjectAd" rows="4" placeholder="（选填，支持多行换行）&#10;可修改专属推广词、温馨提示、客服信息等。&#10;留空则不附加项目专属内容" oninput="updateEditPreview()"></textarea>
-          </div>
-          <div class="input-row" style="margin-bottom: 4px;">
-            <label style="width: auto; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-              <input type="checkbox" id="editProjectIncludeGlobal" checked onchange="updateEditPreview()">
-              <span style="font-size: 13.5px; color: var(--text-main); font-weight: 500;">同时追加系统默认尾注（两者叠加）</span>
-            </label>
-          </div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; padding-left: 20px;">
-            勾选则“项目专属尾注 + 当前选中的默认尾注”一起出现；取消勾选则只显示项目自身尾注。
+            <label style="margin-top: 8px;">项目补充信息:</label>
+            <textarea id="editProjectAd" rows="4" placeholder="（选填，支持多行换行）&#10;仅在本项目验证码验证成功后，显示在正常成功回复后面。&#10;不会加入其他公共内容" oninput="updateEditPreview()"></textarea>
           </div>
         </div>
 
@@ -2754,32 +2733,37 @@ async function handleWechatScanLogin() {
     </div>
   </div>
 
-  <!-- ================== 模态弹窗：新增/编辑默认尾注模版 ================== -->
+  <!-- ================== 模态弹窗：新增/编辑常用内容 ================== -->
   <div class="modal-overlay" id="footerModal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title" id="footerModalTitle">新建默认尾注模版</div>
+        <div class="modal-title" id="footerModalTitle">新建常用内容</div>
         <button class="modal-close" onclick="closeModal('footerModal')"></button>
       </div>
       <input type="hidden" id="modalFooterId" value="">
       <div class="input-row">
-        <label><span class="req-star">*</span>模版标题:</label>
-        <input type="text" id="modalFooterTitle" placeholder="如：日常网站推广、客服联系方式 (必填)">
+        <label><span class="req-star">*</span>内容名称:</label>
+        <input type="text" id="modalFooterTitle" placeholder="如：客服联系方式、使用说明 (必填)">
       </div>
       <div class="input-row" style="align-items: flex-start;">
-        <label style="margin-top: 6px;"><span class="req-star">*</span>尾注文案:</label>
-        <textarea id="modalFooterContent" rows="4" placeholder="支持多行回车换行。&#10;如：推荐站点：实用工具导航站（https://example.com）"></textarea>
-      </div>
-      <div class="input-row" style="margin-bottom: 4px;">
-        <label style="width: auto; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          <input type="checkbox" id="modalFooterActive" checked>
-          <span style="font-size: 13.5px; color: var(--text-main); font-weight: 500;">创建后立即激活生效</span>
-        </label>
+        <label style="margin-top: 6px;"><span class="req-star">*</span>内容:</label>
+        <textarea id="modalFooterContent" rows="4" placeholder="支持多行回车换行。保存后可在回复编辑器中快速插入。"></textarea>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
         <button class="btn-action-sm" onclick="closeModal('footerModal')">取消</button>
         <button class="btn-primary" onclick="submitFooterModal()">保存模版</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="snippetPickerModal">
+    <div class="modal-card" style="width:560px;">
+      <div class="modal-header">
+        <div class="modal-title">插入常用内容</div>
+        <button class="modal-close" onclick="closeModal('snippetPickerModal')"></button>
+      </div>
+      <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">选中后会复制到当前光标位置，插入后可独立修改，不会与内容库保持自动关联。</div>
+      <div id="snippetPickerList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow:auto;"></div>
     </div>
   </div>
 
@@ -2830,7 +2814,7 @@ async function handleWechatScanLogin() {
     updateClock();
 
     let cachedFooters = [];
-    let footerMode = 'multi'; // 'multi' | 'single'
+    let cachedReplySettings = null;
     let cachedReplies = null;
     let currentPreviewScenario = 'welcome';
     let currentTheme = localStorage.getItem('console_theme') || 'dark'; // 默认夜间模式
@@ -2941,7 +2925,7 @@ async function handleWechatScanLogin() {
             currentRole = json.data.role;
             hideLockScreen();
             applyRoleUI();
-            loadProjects(); loadFooters(); loadReplies(); loadRules();
+            loadProjects(); loadFooters(); loadReplies();
             return;
           }
         } catch (e) {}
@@ -2957,7 +2941,7 @@ async function handleWechatScanLogin() {
               adminToken = '';
               hideLockScreen();
               applyRoleUI();
-              loadProjects(); loadFooters(); loadReplies(); loadRules();
+              loadProjects(); loadFooters(); loadReplies();
               return;
             }
           } catch (e2) {}
@@ -3014,7 +2998,7 @@ async function handleWechatScanLogin() {
           saveToken(json.data.token);
           hideLockScreen();
           applyRoleUI();
-          loadProjects(); loadFooters(); loadReplies(); loadRules();
+          loadProjects(); loadFooters(); loadReplies();
         } else {
           const errEl = document.getElementById('lockErrorMsg');
           errEl.textContent = json.message || '本地开发登录失败';
@@ -3130,7 +3114,7 @@ async function handleWechatScanLogin() {
           saveToken(json.data.token);
           hideLockScreen();
           applyRoleUI();
-          loadProjects(); loadFooters(); loadReplies(); loadRules();
+          loadProjects(); loadFooters(); loadReplies();
           if (json.data.is_new) {
             showToast('✅ 首次登录已自动注册账号，欢迎加入');
           }
@@ -3187,7 +3171,7 @@ async function handleWechatScanLogin() {
 
       if (tabId === 'projects') loadProjects();
       if (tabId === 'records') loadRecords(1);
-      if (tabId === 'rules') loadRules();
+      if (tabId === 'rules') { loadReplies(); loadFooters(); }
       if (tabId === 'accounts') { loadAccounts(); loadLicenses(); }
       if (tabId === 'docs') regenerateAiPrompt();
 
@@ -3260,9 +3244,8 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('newProjectUrl') ? document.getElementById('newProjectUrl').value.trim() : '';
       const adTitle = document.getElementById('newProjectAdTitle').value.trim();
       const ad = document.getElementById('newProjectAd').value.trim();
-      const includeGlobal = document.getElementById('newProjectIncludeGlobal').checked;
       const previewEl = document.getElementById('addMessagePreview');
-      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad, includeGlobal);
+      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad);
     }
 
     function updateEditPreview() {
@@ -3270,39 +3253,19 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('editProjectUrl') ? document.getElementById('editProjectUrl').value.trim() : '';
       const adTitle = document.getElementById('editProjectAdTitle').value.trim();
       const ad = document.getElementById('editProjectAd').value.trim();
-      const includeGlobal = document.getElementById('editProjectIncludeGlobal').checked;
       const previewEl = document.getElementById('editMessagePreview');
-      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad, includeGlobal);
+      previewEl.innerHTML = buildReplyHtml(name, url, adTitle, ad);
     }
 
-    function getActiveFootersText() {
-      const activeList = cachedFooters.filter(f => f.active && f.content && f.content.trim() !== '');
-      if (activeList.length === 0) return '';
-      return activeList.map(f => {
-        const title = (f.title || '').trim();
-        const content = f.content.trim();
-        return title ? `【${title}】\n${content}` : content;
-      }).join('\n\n');
-    }
-
-    function buildReplyHtml(projectName, projectURL, customAdTitle, customAd, includeGlobal) {
+    function buildReplyHtml(projectName, projectURL, customAdTitle, customAd) {
       let pAd = (customAd || '').trim();
       if (pAd && customAdTitle && customAdTitle.trim()) {
         pAd = `【${customAdTitle.trim()}】\n${pAd}`;
       }
 
-      let gFooter = '';
-      if (includeGlobal) {
-        gFooter = getActiveFootersText();
-      }
-
       let footerStr = '';
-      if (pAd && gFooter) {
-        footerStr = '\n\n-------------------\n' + pAd + '\n\n┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n' + gFooter;
-      } else if (pAd) {
+      if (pAd) {
         footerStr = '\n\n-------------------\n' + pAd;
-      } else if (gFooter) {
-        footerStr = '\n\n-------------------\n' + gFooter;
       }
 
       const tpl = (cachedReplies && cachedReplies.code_success) ? cachedReplies.code_success : '恭喜！【{project_name}】验证成功。\n您的身份已核销，请回到网页继续操作。';
@@ -3320,7 +3283,6 @@ async function handleWechatScanLogin() {
       }
       document.getElementById('editProjectAdTitle').value = p.custom_ad_title || '';
       document.getElementById('editProjectAd').value = p.custom_ad || '';
-      document.getElementById('editProjectIncludeGlobal').checked = (p.include_global !== false);
       openModal('editProjectModal');
       updateEditPreview();
     }
@@ -3331,7 +3293,6 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('newProjectUrl') ? document.getElementById('newProjectUrl').value.trim() : '';
       const custom_ad_title = document.getElementById('newProjectAdTitle').value.trim();
       const custom_ad = document.getElementById('newProjectAd').value;
-      const include_global = document.getElementById('newProjectIncludeGlobal').checked;
 
       if (!id || !name) {
         alert("请完整填写项目唯一标识和名称！");
@@ -3345,7 +3306,7 @@ async function handleWechatScanLogin() {
             'Content-Type': 'application/json',
             'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global, license_code: licenseCodeValue() })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global: false, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -3371,7 +3332,6 @@ async function handleWechatScanLogin() {
       const url = document.getElementById('editProjectUrl') ? document.getElementById('editProjectUrl').value.trim() : '';
       const custom_ad_title = document.getElementById('editProjectAdTitle').value.trim();
       const custom_ad = document.getElementById('editProjectAd').value;
-      const include_global = document.getElementById('editProjectIncludeGlobal').checked;
 
       if (!name) {
         alert("项目中文名称不能为空！");
@@ -3385,7 +3345,7 @@ async function handleWechatScanLogin() {
             'Content-Type': 'application/json',
             'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global, license_code: licenseCodeValue() })
+          body: JSON.stringify({ id, name, url, custom_ad_title, custom_ad, include_global: false, license_code: licenseCodeValue() })
         });
         const json = await res.json();
         if (json.code === 0) {
@@ -3413,6 +3373,7 @@ async function handleWechatScanLogin() {
           cachedProjects = json.data;
           renderProjectsGrid(cachedProjects);
           populateProjectSelects(cachedProjects);
+          populateReplyPreviewProjectSelect();
         }
       } catch (err) {
         console.error("加载项目列表失败:", err);
@@ -3582,7 +3543,6 @@ async function handleWechatScanLogin() {
         card.className = `project-card ${p.enabled ? '' : 'disabled'}`;
 
         const hasCustomAd = !!(p.custom_ad && p.custom_ad.trim());
-        const isIncludeGlobal = (p.include_global !== false);
         const nowSec = Math.floor(Date.now() / 1000);
         let expiryText = '有效期：永久';
         let expiryStyle = 'color:var(--text-muted); background:var(--panel-soft); border:1px solid var(--border-color);';
@@ -3600,22 +3560,8 @@ async function handleWechatScanLogin() {
           }
         }
 
-        let footerModeText = '';
-        let footerModeColor = '#94a3b8';
-
-        if (hasCustomAd && isIncludeGlobal) {
-          footerModeText = '叠加模式：专属尾注 + 系统默认尾注';
-          footerModeColor = '#34d399';
-        } else if (hasCustomAd && !isIncludeGlobal) {
-          footerModeText = '专属模式：专属尾注';
-          footerModeColor = '#38bdf8';
-        } else if (!hasCustomAd && isIncludeGlobal) {
-          footerModeText = '默认模式：系统默认尾注';
-          footerModeColor = '#a78bfa';
-        } else {
-          footerModeText = '纯净模式：无任何尾注';
-          footerModeColor = '#94a3b8';
-        }
+        const footerModeText = hasCustomAd ? '验证成功后追加本项目补充信息' : '验证成功后仅发送正常回复';
+        const footerModeColor = hasCustomAd ? '#38bdf8' : '#94a3b8';
 
         card.innerHTML = `
           <div class="project-card-header">
@@ -3643,9 +3589,9 @@ async function handleWechatScanLogin() {
           ` : ''}
 
           <div class="ad-preview">
-            <b style="color:var(--text-main);">专属尾注说明：</b><br>
+            <b style="color:var(--text-main);">项目补充信息：</b><br>
             ${p.custom_ad_title ? `<span style="font-weight:600; color:var(--text-main);">【${escapeHtml(p.custom_ad_title)}】</span><br>` : ''}
-            <div style="margin: 3px 0; color:var(--text-muted);">${p.custom_ad ? linkify(escapeHtml(p.custom_ad)) : '（未设置专属尾注）'}</div>
+            <div style="margin: 3px 0; color:var(--text-muted);">${p.custom_ad ? linkify(escapeHtml(p.custom_ad)) : '（未设置项目补充信息）'}</div>
             <div style="font-size:11.5px; color:${footerModeColor}; margin-top:6px; font-weight:600;">
               ${footerModeText}
             </div>
@@ -3750,57 +3696,46 @@ async function handleWechatScanLogin() {
       }
     }
 
-    // ---------------- 尾注模版库逻辑 ----------------
+    // ---------------- 常用内容库（只在编辑时复制插入） ----------------
     async function loadFooters() {
       try {
-        const res = await fetch('/api/footers', {
+        const res = await fetch('/api/reply-library', {
           headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
           cachedFooters = json.data;
           renderFootersList(cachedFooters);
-          renderGlobalFooterPreview();
         }
       } catch (err) {
-        console.error("加载尾注模版失败:", err);
+        console.error("加载常用内容失败:", err);
       }
-    }
-
-    function switchFooterMode(mode) {
-      footerMode = mode;
-      renderFootersList(cachedFooters);
     }
 
     function renderFootersList(footers) {
       const container = document.getElementById('footersListContainer');
+      if (!container) return;
       container.innerHTML = '';
       if (!footers || footers.length === 0) {
-        container.innerHTML = '<div style="color:#64748b; font-size:14px; padding:12px;">暂无尾注模版，点击上方按钮新增。</div>';
+        container.innerHTML = '<div style="color:#64748b; font-size:14px; padding:12px;">暂无常用内容，点击上方按钮新增。</div>';
         return;
       }
 
       footers.forEach(f => {
         const row = document.createElement('div');
-        row.style.background = f.active ? 'var(--footer-active-row)' : 'var(--card-bg)';
-        row.style.border = f.active ? '1.5px solid #10b981' : '1px solid var(--border-color)';
+        row.style.background = 'var(--card-bg)';
+        row.style.border = '1px solid var(--border-color)';
         row.style.borderRadius = '8px';
         row.style.padding = '12px 14px';
         row.style.display = 'flex';
         row.style.justifyContent = 'space-between';
         row.style.alignItems = 'flex-start';
         row.style.gap = '12px';
-
-        const inputType = (footerMode === 'single') ? 'radio' : 'checkbox';
-        const inputName = (footerMode === 'single') ? 'footerRadioGroup' : `footerChk_${f.id}`;
-
         row.innerHTML = `
-          <div style="display:flex; gap:10px; align-items:flex-start; flex:1;">
-            <input type="${inputType}" name="${inputName}" ${f.active ? 'checked' : ''} style="margin-top:3px; cursor:pointer;" onchange="onFooterCheckChange('${f.id}', this.checked)">
+          <div style="display:flex; gap:10px; align-items:flex-start; flex:1; cursor:pointer;" onclick="previewSnippet('${f.id}')">
             <div style="flex:1;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <b style="font-size:14px; color:var(--text-main);">${escapeHtml(f.title)}</b>
-                ${f.active ? '<span style="font-size:11px; background:rgba(16,185,129,0.2); color:#34d399; padding:1px 6px; border-radius:4px; font-weight:600;">已激活</span>' : '<span style="font-size:11px; background:var(--panel-soft); border:1px solid var(--border-color); color:var(--text-muted); padding:1px 6px; border-radius:4px;">未勾选</span>'}
               </div>
               <div style="font-size:13px; color:var(--text-main); opacity:0.9; margin-top:6px; white-space:pre-wrap; line-height:1.5;">${linkify(escapeHtml(f.content))}</div>
             </div>
@@ -3814,75 +3749,27 @@ async function handleWechatScanLogin() {
       });
     }
 
-    async function onFooterCheckChange(id, isChecked) {
-      if (footerMode === 'single') {
-        const activeIDs = isChecked ? [id] : [];
-        await saveActiveFootersBatch(activeIDs);
-      } else {
-        try {
-          await fetch('/api/footers/toggle', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Session-Token': currentAuthPassword
-            },
-            body: JSON.stringify({ id, active: isChecked })
-          });
-          loadFooters();
-        } catch (e) {
-          alert("操作异常: " + e);
-        }
-      }
-    }
-
-    async function clearAllFooters() {
-      await saveActiveFootersBatch([]);
-    }
-
-    async function saveActiveFootersBatch(ids) {
-      try {
-        await fetch('/api/footers/set-active', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Session-Token': currentAuthPassword
-          },
-          body: JSON.stringify({ active_ids: ids })
-        });
-        loadFooters();
-      } catch (e) {
-        alert("操作异常: " + e);
-      }
-    }
-
-    function renderGlobalFooterPreview() {
+    function previewSnippet(id) {
       const previewEl = document.getElementById('globalFooterLivePreview');
-      const activeText = getActiveFootersText();
-      let footerPart = '';
-      if (activeText) {
-        footerPart = '\n\n-------------------\n' + activeText;
-      }
-      const rawText = `您的通用通行码为：【209710】\n\n有效期：3 分钟（一次性有效）\n使用方式：请在您访问的业务网站（注册/登录/绑定）输入框中填入此 6 位数字即可！${footerPart}`;
-      previewEl.innerHTML = linkify(escapeHtml(rawText));
+      const item = cachedFooters.find(f => f.id === id);
+      if (previewEl && item) previewEl.innerHTML = linkify(escapeHtml(item.content || ''));
     }
 
     function openAddFooterModal() {
-      document.getElementById('footerModalTitle').textContent = '新建默认尾注模版';
+      document.getElementById('footerModalTitle').textContent = '新建常用内容';
       document.getElementById('modalFooterId').value = '';
       document.getElementById('modalFooterTitle').value = '';
       document.getElementById('modalFooterContent').value = '';
-      document.getElementById('modalFooterActive').checked = true;
       openModal('footerModal');
     }
 
     function openEditFooterModal(id) {
       const f = cachedFooters.find(item => item.id === id);
       if (!f) return;
-      document.getElementById('footerModalTitle').textContent = '编辑默认尾注模版';
+      document.getElementById('footerModalTitle').textContent = '编辑常用内容';
       document.getElementById('modalFooterId').value = f.id;
       document.getElementById('modalFooterTitle').value = f.title;
       document.getElementById('modalFooterContent').value = f.content;
-      document.getElementById('modalFooterActive').checked = f.active;
       openModal('footerModal');
     }
 
@@ -3890,29 +3777,24 @@ async function handleWechatScanLogin() {
       const id = document.getElementById('modalFooterId').value;
       const title = document.getElementById('modalFooterTitle').value.trim();
       const content = document.getElementById('modalFooterContent').value.trim();
-      const active = document.getElementById('modalFooterActive').checked;
-
       if (!title || !content) {
-        alert("模版标题和文案内容不能为空！");
+        alert("名称和内容不能为空！");
         return;
       }
 
-      const url = id ? '/api/footers/update' : '/api/footers/add';
-      const body = id ? { id, title, content, active } : { title, content, active };
-
       try {
-        const res = await fetch(url, {
+        const res = await fetch('/api/reply-library', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Session-Token': currentAuthPassword
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify({ id, title, content })
         });
         const json = await res.json();
         if (json.code === 0) {
           closeModal('footerModal');
-          alert("尾注模版已成功保存至 config/footers.json！");
+          showToast('常用内容已保存');
           loadFooters();
         } else {
           alert("保存失败: " + json.message);
@@ -3923,9 +3805,9 @@ async function handleWechatScanLogin() {
     }
 
     async function deleteFooter(id) {
-      if (!confirm("确定要删除此尾注模版吗？")) return;
+      if (!confirm("确定删除这条常用内容吗？已插入的回复不会受影响。")) return;
       try {
-        const res = await fetch('/api/footers/delete', {
+        const res = await fetch('/api/reply-library/delete', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -4264,13 +4146,20 @@ async function handleWechatScanLogin() {
 
     async function loadReplies() {
       try {
-        const res = await fetch('/api/replies', {
+        const res = await fetch('/api/reply-settings', {
           headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
-          cachedReplies = json.data;
+          cachedReplySettings = json.data;
+          cachedReplies = json.data.replies;
+          cachedRules = json.data.rules;
+          if (!cachedRules.custom) cachedRules.custom = [];
           fillReplyTextareas();
+          renderBuiltinRules();
+          renderCustomRules();
+          renderRulesTree();
+          installReplyEditorTools();
         }
       } catch (err) {
         console.error("加载回复配置失败:", err);
@@ -4402,27 +4291,7 @@ async function handleWechatScanLogin() {
     }
 
     async function saveRepliesConfig() {
-      if (!cachedReplies) return;
-
-      try {
-        const res = await fetch('/api/replies/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Session-Token': currentAuthPassword
-          },
-          body: JSON.stringify(cachedReplies)
-        });
-        const json = await res.json();
-        if (json.code === 0) {
-          alert("" + json.data.message);
-          renderScenarioPreview();
-        } else {
-          alert("保存失败: " + json.message);
-        }
-      } catch (e) {
-        alert("请求异常: " + e);
-      }
+      await saveReplySettings();
     }
 
     function switchPreviewScenario(scenario) {
@@ -4496,10 +4365,6 @@ async function handleWechatScanLogin() {
       const meta = SCENARIO_META[currentPreviewScenario] || SCENARIO_META.welcome;
       if (descNotice) descNotice.textContent = meta.desc;
 
-      // 计算当前激活的默认尾注
-      const activeFooterText = getActiveFootersText();
-      let footerDivider = activeFooterText ? ('\n\n-------------------\n' + activeFooterText) : '';
-
       let userMsg = meta.simUserMsg;
       let isSystemNotice = meta.isSystemNotice;
       let officialMsg = '';
@@ -4508,7 +4373,7 @@ async function handleWechatScanLogin() {
 
       switch (currentPreviewScenario) {
         case 'welcome':
-          officialMsg = tpl + footerDivider;
+          officialMsg = tpl;
           break;
 
         case 'code_success':
@@ -4522,27 +4387,23 @@ async function handleWechatScanLogin() {
           if (pBlock && pTitle) pBlock = `【${pTitle}】\n${pBlock}`;
 
           let successFooter = '';
-          if (pBlock && activeFooterText) {
-            successFooter = '\n\n-------------------\n' + pBlock + '\n\n┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n' + activeFooterText;
-          } else if (pBlock) {
+          if (pBlock) {
             successFooter = '\n\n-------------------\n' + pBlock;
-          } else if (activeFooterText) {
-            successFooter = '\n\n-------------------\n' + activeFooterText;
           }
 
           officialMsg = formatSuccessText(tpl, pName, pUrl) + successFooter;
           break;
 
         case 'code_invalid':
-          officialMsg = (tpl || '').replace('{code}', '123456') + footerDivider;
+          officialMsg = (tpl || '').replace('{code}', '123456');
           break;
 
         case 'code_used':
-          officialMsg = (tpl || '').replace('{code}', '943411') + footerDivider;
+          officialMsg = (tpl || '').replace('{code}', '943411');
           break;
 
         case 'universal_code':
-          officialMsg = (tpl || '').replace('{code}', '209710') + footerDivider;
+          officialMsg = (tpl || '').replace('{code}', '209710');
           break;
 
         case 'projects':
@@ -4558,19 +4419,19 @@ async function handleWechatScanLogin() {
               }).join('\n');
             }
           }
-          officialMsg = (tpl || '').replace('{project_list}', projectListStr) + footerDivider;
+          officialMsg = (tpl || '').replace('{project_list}', projectListStr);
           break;
 
         case 'help':
-          officialMsg = tpl + footerDivider;
+          officialMsg = tpl;
           break;
 
         case 'unknown_text':
-          officialMsg = tpl + footerDivider;
+          officialMsg = tpl;
           break;
 
         case 'media_message':
-          officialMsg = tpl + footerDivider;
+          officialMsg = tpl;
           break;
       }
 
@@ -4760,34 +4621,33 @@ async function handleWechatScanLogin() {
     }
 
     async function loadRules() {
-      try {
-        const res = await fetch('/api/rules', { headers: { 'X-Session-Token': currentAuthPassword } });
-        const json = await res.json();
-        if (json.code === 0 && json.data) {
-          if (!json.data.custom) json.data.custom = [];
-          cachedRules = json.data;
-          renderBuiltinRules();
-          renderCustomRules();
-          renderRulesTree();
-        }
-      } catch (e) {}
+      await loadReplies();
     }
 
     async function persistRules() {
+      return saveReplySettings();
+    }
+
+    async function saveReplySettings() {
+      if (!cachedReplySettings || !cachedRules || !cachedReplies) return false;
+      cachedReplySettings.rules = cachedRules;
+      cachedReplySettings.replies = cachedReplies;
       try {
-        const res = await fetch('/api/rules/update', {
+        const res = await fetch('/api/reply-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
-          body: JSON.stringify({ rules: cachedRules })
+          body: JSON.stringify(cachedReplySettings)
         });
         const json = await res.json();
         if (json.code === 0) {
+          if (json.data && json.data.revision) cachedReplySettings.revision = json.data.revision;
+          document.querySelectorAll('[id^="draftState_"]').forEach(el => { el.textContent = ''; });
           showToast('已保存并即时生效');
           renderRulesTree();
           return true;
         }
         showToast('' + (json.message || '保存失败'), false);
-        await loadRules(); // 服务端拒绝时回滚到当前生效状态
+        if (res.status === 409) await loadReplies();
         return false;
       } catch (e) {
         showToast('请求异常: ' + e, false);
@@ -4796,7 +4656,7 @@ async function handleWechatScanLogin() {
     }
 
     const builtinMeta = [
-      { key: 'universal_code', title: '索取通行码（流向一）', desc: '用户发送这些词时，机器人给他发一个 6 位通行码，用于在网站表单填入核销。' },
+      { key: 'universal_code', title: '公众号取码', desc: '用户发送这些词时，公众号生成一个 6 位通行码，供用户填入网站。' },
       { key: 'help', title: '使用指南', desc: '用户发送这些词时，机器人回复使用指南文案。' },
       { key: 'projects', title: '项目清单', desc: '用户发送这些词时，机器人回复当前已启用的业务项目列表。' }
     ];
@@ -4829,21 +4689,131 @@ async function handleWechatScanLogin() {
       autoGrowReplyTextareas();
     }
 
+    let snippetPickerTargetId = '';
+    let snippetPickerField = '';
+    const replyPreviewTimers = {};
+
+    function installReplyEditorTools() {
+      document.querySelectorAll('#rulesSectionScenes textarea[id^="reply_"]').forEach(el => {
+        const field = el.id.replace('reply_', '');
+        if (!el.dataset.replyToolsInstalled) {
+          el.dataset.replyToolsInstalled = '1';
+          el.addEventListener('input', () => {
+            if (cachedReplies) cachedReplies[field] = el.value;
+            const state = document.getElementById('draftState_' + field);
+            if (state) state.textContent = '尚未保存';
+            scheduleDraftPreview(field);
+          });
+          const tools = document.createElement('div');
+          tools.style.cssText = 'display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;';
+          tools.innerHTML = `<button class="btn-action-sm" onclick="openSnippetPicker('${el.id}', '${field}')">插入常用内容</button><span id="draftState_${field}" style="font-size:11.5px; color:#f59e0b;"></span>`;
+          if (field === 'code_success') {
+            const select = document.createElement('select');
+            select.id = 'replyPreviewProjectSelect';
+            select.style.cssText = 'height:32px; padding:0 8px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);';
+            select.onchange = () => scheduleDraftPreview('code_success');
+            tools.appendChild(select);
+          }
+          el.insertAdjacentElement('afterend', tools);
+
+          const preview = document.createElement('div');
+          preview.id = 'draftPreview_' + field;
+          preview.style.cssText = 'margin-top:10px; padding:11px 13px; border:1px dashed var(--border-color); border-radius:8px; background:var(--preview-wrap-bg); color:var(--text-main); font-size:13px; line-height:1.7; white-space:pre-wrap; word-break:break-word;';
+          preview.textContent = '正在生成无副作用预览…';
+          tools.insertAdjacentElement('afterend', preview);
+        }
+        scheduleDraftPreview(field);
+      });
+      populateReplyPreviewProjectSelect();
+    }
+
+    function populateReplyPreviewProjectSelect() {
+      const select = document.getElementById('replyPreviewProjectSelect');
+      if (!select) return;
+      const current = select.value;
+      const items = (cachedProjects || []).map(p => `<option value="${escapeHtml(p.id)}">预览项目：${escapeHtml(p.name)}</option>`).join('');
+      select.innerHTML = items || '<option value="">预览项目：示例项目</option>';
+      if ([...select.options].some(o => o.value === current)) select.value = current;
+    }
+
+    function scheduleDraftPreview(field) {
+      clearTimeout(replyPreviewTimers[field]);
+      replyPreviewTimers[field] = setTimeout(() => renderDraftPreview(field), 220);
+    }
+
+    async function renderDraftPreview(field) {
+      if (!cachedReplySettings) return;
+      const preview = document.getElementById('draftPreview_' + field);
+      if (!preview) return;
+      try {
+        const projectSelect = document.getElementById('replyPreviewProjectSelect');
+        const projectId = projectSelect ? projectSelect.value : (cachedProjects && cachedProjects.length ? cachedProjects[0].id : '');
+        const res = await fetch('/api/reply-settings/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
+          body: JSON.stringify({ draft: cachedReplySettings, field, project_id: projectId, code: '839201' })
+        });
+        const json = await res.json();
+        preview.textContent = json.code === 0 && json.data ? json.data.reply : ('预览失败：' + (json.message || '未知错误'));
+      } catch (e) {
+        preview.textContent = '预览请求失败：' + e;
+      }
+    }
+
+    function snippetAllowedForField(content, field) {
+      const vars = (content || '').match(/\{[a-z_]+\}/g) || [];
+      const allowed = {
+        code_success: ['{project_name}', '{project_url}'],
+        code_invalid: ['{code}'], code_used: ['{code}'],
+        universal_code: ['{code}', '{expire_seconds}', '{expire_minutes}'],
+        projects: ['{project_list}'], custom: ['{project_list}']
+      }[field] || [];
+      return vars.every(v => allowed.includes(v));
+    }
+
+    function openSnippetPicker(targetId, field) {
+      snippetPickerTargetId = targetId;
+      snippetPickerField = field;
+      const list = document.getElementById('snippetPickerList');
+      if (!list) return;
+      if (!cachedFooters || cachedFooters.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted);">常用内容库还是空的，请先在“常用内容库”中新建。</div>';
+      } else {
+        list.innerHTML = cachedFooters.map(item => {
+          const allowed = snippetAllowedForField(item.content, field);
+          return `<button class="btn-action-sm" style="text-align:left; padding:10px 12px; opacity:${allowed ? '1' : '.45'};" ${allowed ? `onclick="insertSnippet('${item.id}')"` : 'disabled title="包含当前场景不支持的变量"'}><b>${escapeHtml(item.title)}</b><br><span style="font-weight:400; white-space:pre-wrap;">${escapeHtml(item.content)}</span></button>`;
+        }).join('');
+      }
+      openModal('snippetPickerModal');
+    }
+
+    function insertSnippet(id) {
+      const item = cachedFooters.find(f => f.id === id);
+      const el = document.getElementById(snippetPickerTargetId);
+      if (!item || !el) return;
+      const start = typeof el.selectionStart === 'number' ? el.selectionStart : el.value.length;
+      const end = typeof el.selectionEnd === 'number' ? el.selectionEnd : start;
+      const prefix = start > 0 && el.value.slice(0, start).trim() ? '\n\n' : '';
+      el.value = el.value.slice(0, start) + prefix + item.content + el.value.slice(end);
+      const pos = start + prefix.length + item.content.length;
+      el.focus();
+      if (el.setSelectionRange) el.setSelectionRange(pos, pos);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      closeModal('snippetPickerModal');
+    }
+
     async function saveReplyField(field) {
       const el = document.getElementById('reply_' + field);
       if (!el) return;
       if (!el.value.trim()) { showToast('回复内容不能为空', false); return; }
       cachedReplies[field] = el.value;
-      try {
-        const res = await fetch('/api/replies/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
-          body: JSON.stringify(cachedReplies)
-        });
-        const json = await res.json();
-        if (json.code === 0) showToast('已保存并即时生效');
-        else showToast('' + (json.message || '保存失败'), false);
-      } catch (e) { showToast('请求异常: ' + e, false); }
+      await saveReplySettings();
+    }
+
+    function markBuiltinDraft(key) {
+      const state = document.getElementById('draftState_' + key);
+      if (state) state.textContent = '触发词或启用状态尚未保存';
+      showToast('已修改草稿，请点击“保存本场景”生效');
     }
 
     function addBuiltinKeyword(key) {
@@ -4857,19 +4827,19 @@ async function handleWechatScanLogin() {
       cachedRules[key].keywords.push(kw);
       input.value = '';
       renderBuiltinRules();
-      persistRules();
+      markBuiltinDraft(key);
     }
 
     function removeBuiltinKeyword(key, idx) {
       cachedRules[key].keywords.splice(idx, 1);
       renderBuiltinRules();
-      persistRules();
+      markBuiltinDraft(key);
     }
 
     function toggleBuiltin(key, on) {
       cachedRules[key].enabled = on;
       renderBuiltinRules();
-      persistRules();
+      markBuiltinDraft(key);
     }
 
     function renderCustomRules() {
@@ -4898,7 +4868,7 @@ async function handleWechatScanLogin() {
               <button class="btn-action-sm" onclick="deleteCustomRule('${cr.id}')" style="color:#ef4444;">删除</button>
             </div>
           </div>
-          <div style="font-size:13px; color:var(--text-muted); margin-top:8px; line-height:1.6;">↳ ${preview}${cr.append_footer ? ' <span class="badge-tag">+尾注</span>' : ''}</div>`;
+          <div style="font-size:13px; color:var(--text-muted); margin-top:8px; line-height:1.6;">↳ ${preview}</div>`;
         c.appendChild(item);
       });
     }
@@ -4910,7 +4880,6 @@ async function handleWechatScanLogin() {
       const rule = id ? cachedRules.custom.find(r => r.id === id) : null;
       document.getElementById('customRuleKeywords').value = rule ? (rule.keywords || []).join(', ') : '';
       document.getElementById('customRuleReply').value = rule ? rule.reply : '';
-      document.getElementById('customRuleFooter').checked = rule ? !!rule.append_footer : true;
       document.getElementById('customRuleEnabled').checked = rule ? !!rule.enabled : true;
       modal.style.display = 'flex';
     }
@@ -4918,18 +4887,17 @@ async function handleWechatScanLogin() {
     function saveCustomRule() {
       const keywords = document.getElementById('customRuleKeywords').value.split(/[,，、\s]+/).map(s => s.trim()).filter(s => s);
       const reply = document.getElementById('customRuleReply').value;
-      const footer = document.getElementById('customRuleFooter').checked;
       const enabled = document.getElementById('customRuleEnabled').checked;
       if (keywords.length === 0) { showToast('请至少填写一个触发词', false); return; }
       if (!reply.trim()) { showToast('请填写回复内容', false); return; }
 
       if (editingCustomRuleId) {
         const rule = cachedRules.custom.find(r => r.id === editingCustomRuleId);
-        if (rule) { rule.keywords = keywords; rule.reply = reply; rule.append_footer = footer; rule.enabled = enabled; }
+        if (rule) { rule.keywords = keywords; rule.reply = reply; rule.append_footer = false; rule.enabled = enabled; }
       } else {
         cachedRules.custom.push({
           id: 'cr_' + Date.now().toString(36),
-          keywords: keywords, reply: reply, append_footer: footer, enabled: enabled,
+          keywords: keywords, reply: reply, append_footer: false, enabled: enabled,
           created_at: Math.floor(Date.now() / 1000)
         });
       }
@@ -4961,12 +4929,12 @@ async function handleWechatScanLogin() {
         '├─ 图片/语音/表情包 ──→ 「暂不支持」提示',
         '├─ 事件（关注/取关/菜单点击）──→ 欢迎语 / 菜单应答',
         '└─ 文字消息，自上而下匹配，先到先得：',
-        '    1.  是 6 位纯数字 ──→ 六位数字核销（锁定）',
-        '    2.  ' + mark(r.universal_code.enabled) + ' 索取通行码（流向一）── ' + kw(r.universal_code.keywords),
+        '    1.  是 6 位纯数字 ──→ 验证网页验证码（固定条件）',
+        '    2.  ' + mark(r.universal_code.enabled) + ' 公众号取码 ── ' + kw(r.universal_code.keywords),
         '    3.  ' + mark(r.help.enabled) + ' 使用指南 ── ' + kw(r.help.keywords),
         '    4.  ' + mark(r.projects.enabled) + ' 项目清单 ── ' + kw(r.projects.keywords),
         '    5.  自定义规则 ── ' + r.custom.filter(c => c.enabled).length + ' 条生效 / 共 ' + r.custom.length + ' 条',
-        '    6.  都不命中 ──→ 兜底回复（文字可在「场景文案」调整）'
+        '    6.  都不命中 ──→ 未识别文字回复'
       ];
       el.textContent = lines.join('\n');
     }
@@ -4976,12 +4944,12 @@ async function handleWechatScanLogin() {
       if (!msg) { showToast('请输入模拟的用户消息', false); return; }
       const area = document.getElementById('testResultArea');
       area.style.display = 'block';
-      area.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">正在按当前规则真实处理这条消息...</div>';
+      area.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">正在使用草稿和示例数据安全预览...</div>';
       try {
-        const res = await fetch('/api/rules/test', {
+        const res = await fetch('/api/reply-settings/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
-          body: JSON.stringify({ message: msg })
+          body: JSON.stringify({ draft: cachedReplySettings, message: msg, code: /^\d{6}$/.test(msg) ? msg : '839201' })
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
@@ -4992,7 +4960,7 @@ async function handleWechatScanLogin() {
               <div style="flex:1; min-width:260px;">
                 <div style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
                   <div style="padding:8px 12px; background:var(--panel-soft); font-size:12.5px; color:var(--text-main);">命中规则：<b>${escapeHtml(json.data.matched_zh)}</b> <span style="color:var(--text-muted);">（${escapeHtml(json.data.matched)}）</span></div>
-                  <div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); line-height:1.7;">该回复由真实消息处理管道输出，与线上公众号实际发送一致（含尾注与项目动态内容）。</div>
+                  <div style="padding:10px 12px; font-size:12.5px; color:var(--text-muted); line-height:1.7;">使用当前未保存草稿与示例数据渲染；不会生成、核销或消耗真实验证码。</div>
                 </div>
               </div>
               <div style="width:320px; max-width:100%; border:1px solid var(--border-color); border-radius:18px; background:var(--preview-wrap-bg); padding:14px 12px; display:flex; flex-direction:column; gap:10px;">

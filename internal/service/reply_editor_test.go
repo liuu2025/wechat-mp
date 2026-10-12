@@ -1,0 +1,127 @@
+package service
+
+import (
+	"strings"
+	"testing"
+
+	"wechat-mp/internal/config"
+	"wechat-mp/internal/model"
+)
+
+func newReplyEditorTestService(t *testing.T) (*ProjectService, *WechatService) {
+	t.Helper()
+	ps := NewProjectService(t.TempDir())
+	ws := &WechatService{
+		cfg:            &config.Config{DefaultCodeExpire: 180},
+		projectService: ps,
+	}
+	return ps, ws
+}
+
+func TestReplySettingsSaveUsesRevisionAndDisablesLegacyFooter(t *testing.T) {
+	ps, _ := newReplyEditorTestService(t)
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalRevision := settings.Revision
+	settings.Replies.Help = "新的帮助回复"
+	settings.Rules.Custom = append(settings.Rules.Custom, model.CustomRule{
+		ID:           "custom_test",
+		Keywords:     []string{"测试规则"},
+		Reply:        "测试回复",
+		AppendFooter: true,
+		Enabled:      true,
+	})
+	if err := ps.SaveReplySettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	if settings.Revision == originalRevision {
+		t.Fatal("保存后 revision 未更新")
+	}
+	if settings.Rules.Custom[0].AppendFooter {
+		t.Fatal("旧 append_footer 开关仍被保留")
+	}
+
+	stale := *settings
+	stale.Revision = originalRevision
+	if err := ps.SaveReplySettings(&stale); err != ErrReplyRevision {
+		t.Fatalf("旧 revision 应被拒绝，实际错误: %v", err)
+	}
+}
+
+func TestCommonLibraryNeverAutoAppendsToProjectReply(t *testing.T) {
+	ps, ws := newReplyEditorTestService(t)
+	project, err := ps.AddProject(&model.AddProjectReq{
+		ID:            "demo",
+		Name:          "演示项目",
+		CustomAdTitle: "项目须知",
+		CustomAd:      "只属于演示项目的补充信息",
+		IncludeGlobal: true,
+	}, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if project.IncludeGlobal {
+		t.Fatal("新项目不应继续启用公共尾注")
+	}
+
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview, err := ws.PreviewReply(settings, "code_success", "", project.ID, "839201")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(preview.Reply, "只属于演示项目的补充信息") {
+		t.Fatalf("项目补充信息未显示: %q", preview.Reply)
+	}
+	if strings.Contains(preview.Reply, "推荐站点") || strings.Contains(preview.Reply, "站长微信") {
+		t.Fatalf("公共内容被错误追加到项目回复: %q", preview.Reply)
+	}
+}
+
+func TestPreviewUsesExampleDataWithoutStorage(t *testing.T) {
+	ps, ws := newReplyEditorTestService(t)
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview, err := ws.PreviewReply(settings, "", "验证码", "", "246810")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Matched != "universal_code" {
+		t.Fatalf("命中规则错误: %s", preview.Matched)
+	}
+	if !strings.Contains(preview.Reply, "246810") {
+		t.Fatalf("示例验证码未渲染: %q", preview.Reply)
+	}
+}
+
+func TestReplySnippetIsCopiedNotReferenced(t *testing.T) {
+	ps, _ := newReplyEditorTestService(t)
+	item := &model.ReplySnippet{Title: "客服", Content: "客服联系方式 A"}
+	if err := ps.SaveReplySnippet(item); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.Replies.Help = item.Content
+	if err := ps.SaveReplySettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	if err := ps.DeleteReplySnippet(item.ID); err != nil {
+		t.Fatal(err)
+	}
+	after, err := ps.GetReplySettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Replies.Help != "客服联系方式 A" {
+		t.Fatalf("删除内容库条目影响了已保存回复: %q", after.Replies.Help)
+	}
+}

@@ -54,6 +54,7 @@ func main() {
 	wechatHandler := handler.NewWechatHandler(wechatService)
 	menuHandler := handler.NewMenuHandler(store)
 	rulesHandler := handler.NewRulesHandler(projectService, wechatService, accountService)
+	replyEditorHandler := handler.NewReplyEditorHandler(projectService, wechatService, accountService)
 	consoleHandler := handler.NewConsoleHandler(accountService)
 	licenseHandler := handler.NewLicenseHandler(licenseService, accountService)
 	projectHandler := handler.NewProjectHandler(projectService, accountService, licenseService)
@@ -105,22 +106,14 @@ func main() {
 	mux.HandleFunc("/api/projects/renew", projectHandler.RenewProject)
 	mux.HandleFunc("/api/projects/rotate-key", projectHandler.RotateProjectKey)
 
-	// 系统全局默认尾注模版管理 API 接口
-	mux.HandleFunc("/api/footers", projectHandler.ListFooters)
-	mux.HandleFunc("/api/footers/add", projectHandler.AddFooter)
-	mux.HandleFunc("/api/footers/update", projectHandler.UpdateFooter)
-	mux.HandleFunc("/api/footers/toggle", projectHandler.ToggleFooter)
-	mux.HandleFunc("/api/footers/set-active", projectHandler.SetFootersActive)
-	mux.HandleFunc("/api/footers/delete", projectHandler.DeleteFooter)
-
-	// 全场景自动回复文案配置 API 接口
-	mux.HandleFunc("/api/replies", projectHandler.GetReplies)
-	mux.HandleFunc("/api/replies/update", projectHandler.UpdateReplies)
-
-	// 关键词规则引擎接口（仅管理员）
-	mux.HandleFunc("/api/rules", rulesHandler.GetRules)
-	mux.HandleFunc("/api/rules/update", rulesHandler.UpdateRules)
+	// 旧规则试跑路径保留兼容，但内部已改为无副作用模拟。
 	mux.HandleFunc("/api/rules/test", rulesHandler.TestRule)
+
+	// 统一回复规则、常用内容库与草稿预览（仅管理员）。
+	mux.HandleFunc("/api/reply-settings", replyEditorHandler.Settings)
+	mux.HandleFunc("/api/reply-settings/preview", replyEditorHandler.Preview)
+	mux.HandleFunc("/api/reply-library", replyEditorHandler.Library)
+	mux.HandleFunc("/api/reply-library/delete", replyEditorHandler.DeleteSnippet)
 
 	// 自定义菜单配置接口（安全只读，返回 config/menu.json 正式配置）
 	mux.HandleFunc("/api/menu", menuHandler.GetMenu)
