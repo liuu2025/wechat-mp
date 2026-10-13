@@ -1221,6 +1221,9 @@
       border-radius: 8px;
       padding: 10px 14px;
     }
+    .search-input-group { display: flex; flex: 1; min-width: 200px; align-items: center; gap: 8px; }
+    .search-input-group > input { min-width: 0 !important; }
+    .search-input-group > button { flex-shrink: 0; min-height: 34px; }
     .registration-setting {
       display: flex;
       justify-content: space-between;
@@ -1783,11 +1786,16 @@
       .record-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; margin-bottom: 22px; }
       .record-filters input, .record-filters select, .record-filters button { height: 40px !important; width: 100% !important; min-width: 0 !important; border-radius: 9px !important; font-size: 13px; }
       .record-filters button { grid-column: 1 / -1; }
+      .record-filters #recordFilterProject, .search-input-group { grid-column: 1 / -1; }
+      .search-input-group { min-width: 0; }
+      .search-input-group > input { width: 0 !important; }
+      .record-filters .search-input-group > button { width: auto !important; grid-column: auto; }
       .account-filters, .project-filters { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px !important; margin-bottom: 18px !important; }
       .account-filters input { grid-column: 1 / -1; }
       .project-filters { padding: 0 !important; border: 0 !important; background: none !important; }
       .project-filters input { grid-column: 1 / -1; }
       .license-filters { display: grid !important; grid-template-columns: minmax(0, 1fr) 112px; gap: 8px !important; margin-bottom: 18px !important; }
+      .license-filters > select { grid-column: 1 / -1; }
       .account-filters input, .account-filters select, .license-filters input, .license-filters select, .project-filters input, .project-filters select { width: 100%; min-width: 0 !important; height: 40px !important; border-radius: 9px !important; padding: 0 10px; }
       #recordSummary { font-size: 12px !important; margin-bottom: 0 !important; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
       .records-table tbody { display: block; }
@@ -2096,7 +2104,10 @@
       </div>
 
       <div class="project-filters" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; background:var(--panel-soft); border:1px solid var(--border-color); border-radius:8px; padding:10px 14px;">
-        <input type="text" id="projFilterKw" placeholder="搜索：项目名 / ID / Key" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderProjectsGrid()">
+        <div class="search-input-group">
+          <input type="text" id="projFilterKw" aria-label="搜索项目名、ID 或 Key" placeholder="搜索：项目名 / ID / Key" style="flex:1; min-width:0; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="syncSearchClearButton(this.id); renderProjectsGrid()">
+          <button type="button" class="btn-action-sm" aria-label="清空项目搜索" onclick="clearSearchInput('projFilterKw')" disabled>清空</button>
+        </div>
         <select id="projFilterStatus" onchange="renderProjectsGrid()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
           <option value="all">全部状态</option>
           <option value="on">正在运行</option>
@@ -2152,7 +2163,10 @@
         <select id="recordFilterProject" aria-label="筛选项目" onchange="loadRecords(1)" style="height:34px; width:240px; max-width:100%; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
           <option value="">全部项目</option>
         </select>
-        <input id="recordFilterOpenID" type="text" placeholder="搜索用户编号或 OpenID" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; flex:1; min-width:180px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+        <div class="search-input-group">
+          <input id="recordFilterOpenID" type="text" aria-label="搜索用户编号或 OpenID" placeholder="搜索用户编号或 OpenID" oninput="syncSearchClearButton(this.id)" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; flex:1; min-width:0; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+          <button id="recordUserClearBtn" type="button" class="btn-action-sm" aria-label="清空用户编号或 OpenID 搜索并查询" onclick="clearSearchInput('recordFilterOpenID')" disabled>清空</button>
+        </div>
         <button class="btn-primary" onclick="loadRecords(1)">查询</button>
       </div>
 
@@ -2539,7 +2553,10 @@
             </div>
           </div>
           <div class="account-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-            <input type="text" id="accFilterKw" placeholder="搜索用户编号 / OpenID / 账号ID" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderAccounts()">
+            <div class="search-input-group">
+              <input type="text" id="accFilterKw" aria-label="搜索平台账号" placeholder="搜索用户编号 / OpenID / 账号ID" style="flex:1; min-width:0; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="syncSearchClearButton(this.id); renderAccounts()">
+              <button type="button" class="btn-action-sm" aria-label="清空平台账号搜索" onclick="clearSearchInput('accFilterKw')" disabled>清空</button>
+            </div>
             <select id="accFilterRole" onchange="renderAccounts()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
               <option value="all">全部角色</option>
               <option value="admin">管理员</option>
@@ -2568,7 +2585,10 @@
               </div>
             </div>
             <div class="account-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-              <input id="userFilterKeyword" type="search" aria-label="搜索已登记用户" placeholder="搜索用户编号 / OpenID" oninput="scheduleRegisteredUsersSearch()" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+              <div class="search-input-group">
+                <input id="userFilterKeyword" type="search" aria-label="搜索已登记用户" placeholder="搜索用户编号 / OpenID" oninput="syncSearchClearButton(this.id); scheduleRegisteredUsersSearch()" style="flex:1; min-width:0; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+                <button type="button" class="btn-action-sm" aria-label="清空已登记用户搜索" onclick="clearSearchInput('userFilterKeyword')" disabled>清空</button>
+              </div>
               <select id="userFilterRegistration" aria-label="平台注册情况" onchange="loadRegisteredUsers(1)" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
                 <option value="all">全部注册情况</option><option value="registered">已注册平台</option><option value="unregistered">未注册平台</option>
               </select>
@@ -2608,7 +2628,10 @@
             </div>
           </div>
           <div class="license-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-            <input type="text" id="licFilterKw" placeholder="搜索激活码 / 用于项目" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderLicenses()">
+            <div class="search-input-group">
+              <input type="text" id="licFilterKw" aria-label="搜索激活码或用于项目" placeholder="搜索激活码 / 用于项目" style="flex:1; min-width:0; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="syncSearchClearButton(this.id); renderLicenses()">
+              <button type="button" class="btn-action-sm" aria-label="清空激活码搜索" onclick="clearSearchInput('licFilterKw')" disabled>清空</button>
+            </div>
             <select id="licFilterStatus" onchange="renderLicenses()" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
               <option value="all">全部状态</option>
               <option value="未使用">未使用</option>
@@ -4043,7 +4066,25 @@ async function handleWechatScanLogin() {
       loadRecords(1);
     }
 
+    function syncSearchClearButton(inputId) {
+      const input = document.getElementById(inputId);
+      const button = input?.closest('.search-input-group')?.querySelector('button');
+      if (button) button.disabled = !input.value;
+    }
+
+    function clearSearchInput(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input || !input.closest('.search-input-group')) return;
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      // 服务端搜索立即回到第一页；其余列表复用现有 oninput 本地筛选。
+      if (inputId === 'recordFilterOpenID') return loadRecords(1);
+      if (inputId === 'userFilterKeyword') return loadRegisteredUsers(1);
+    }
+
     async function loadRecords(page) {
+      syncSearchClearButton('recordFilterOpenID');
       const request = ++recordsRequest;
       const token = currentAuthPassword;
       page = Math.max(1, page || 1);
@@ -4226,6 +4267,7 @@ async function handleWechatScanLogin() {
     }
 
     function renderProjectsGrid(projects) {
+      syncSearchClearButton('projFilterKw');
       projects = projects || cachedProjects || [];
       const container = document.getElementById('projectsContainer');
       container.innerHTML = '';
@@ -5803,6 +5845,7 @@ async function handleWechatScanLogin() {
     }
 
     async function loadRegisteredUsers(page = 1) {
+      syncSearchClearButton('userFilterKeyword');
       clearTimeout(registeredUsersSearchTimer);
       if (currentRole !== 'admin') return;
       const request = ++registeredUsersRequest;
@@ -5953,6 +5996,7 @@ async function handleWechatScanLogin() {
     }
 
     function renderAccounts() {
+      syncSearchClearButton('accFilterKw');
       const c = document.getElementById('accountsContainer');
       if (!c) return;
       const kwEl = document.getElementById('accFilterKw');
@@ -6024,6 +6068,7 @@ async function handleWechatScanLogin() {
     }
 
     function renderLicenses() {
+      syncSearchClearButton('licFilterKw');
       const c = document.getElementById('licensesContainer');
       if (!c) return;
       const kwEl = document.getElementById('licFilterKw');
