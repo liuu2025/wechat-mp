@@ -1,0 +1,2 @@
+# Carry the exact commit and its version tags into git archive source packages.
+build/archive-version.txt export-subst

@@ -11,8 +11,9 @@ RUN go mod tidy
 
 COPY . .
 
-# 静态编译输出无依赖的单一执行文件
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/wechat-server ./cmd/server
+# 自动读取 Git 标签/提交；git archive 源码包通过 export-subst 携带相同信息。
+# 元数据写入二进制，运行时不读取服务器目录中的 Git 或“最新发布”信息。
+RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -ldflags="-s -w $(go run ./cmd/buildmeta)" -o /bin/wechat-server ./cmd/server
 
 # 2. 运行阶段：使用已有镜像，无需从外网下载新底包
 FROM golang:1.26-bookworm

@@ -1,0 +1,12 @@
+# Runtime secrets/data and local-only documents are not part of the image build.
+.env
+.env.*
+config/
+backups/
+docs/
+deploy/artifacts/
+bin/
+*.exe
+*.log
+*.tar.gz
+# Keep .git in the builder stage for automatic metadata; the runtime stage copies only the binary.

@@ -86,6 +86,7 @@ func main() {
 	mux.HandleFunc("/api/code/verify-universal", verifyHandler.VerifyUniversal)
 	mux.HandleFunc("/api/records", recordHandler.List)
 	mux.HandleFunc("/health", verifyHandler.Health)
+	mux.HandleFunc("/api/version", handler.Version)
 
 	// 控制台与项目管理 API 接口
 	mux.HandleFunc("/api/console/login", consoleHandler.Login)

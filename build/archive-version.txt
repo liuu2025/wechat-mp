@@ -1,0 +1,4 @@
+# git archive substitutes these placeholders; ordinary checkouts read Git directly.
+# Missing or unexpanded metadata is displayed as a development build, never a guessed release.
+commit=$Format:%H$
+refs=$Format:%D$
