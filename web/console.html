@@ -1726,6 +1726,8 @@
         --text-main: #edf1f7;
         --text-muted: #99a6b8;
         --btn-secondary-bg: #1a212c;
+        --mobile-action-border: #526176;
+        --mobile-action-hover: #253142;
         --shadow-card: none;
       }
       body.theme-light {
@@ -1738,10 +1740,12 @@
         --text-main: #202b3a;
         --text-muted: #657386;
         --btn-secondary-bg: #fff;
+        --mobile-action-border: #a8b4c3;
+        --mobile-action-hover: #eaf0f7;
       }
       .main-viewport { padding: 26px 22px 40px; max-width: 640px; margin: 0 auto; }
       .mobile-topbar { padding: 10px 22px; gap: 14px; box-shadow: none; }
-      .mobile-topbar .btn-action-sm { min-height: 40px; padding: 0; border: 0; background: none; color: var(--text-muted); }
+      .mobile-topbar .btn-action-sm { min-height: 40px; padding: 8px 12px; }
       .mobile-title { font-size: 13px; font-weight: 600; }
       .card { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
       .card-header { padding: 0; border: 0; margin-bottom: 22px; align-items: flex-start; gap: 14px; }
@@ -1749,9 +1753,8 @@
       #tab-accounts .card-title, .page-head h2, .reply-studio-head h2 { font-size: 21px !important; font-weight: 650; letter-spacing: -.4px; }
       .page-head { margin-bottom: 22px !important; }
       .page-description { font-size: 12px !important; line-height: 1.7; margin-top: 8px !important; }
-      .page-head-actions { align-items: center; gap: 6px 18px !important; }
-      .page-head-actions .btn-action-sm { padding: 8px 0; min-height: 40px; background: none; border: 0; color: var(--text-muted); font-size: 12px; }
-      .page-head-actions .btn-action-sm[aria-pressed="true"] { color: var(--primary); }
+      .page-head-actions { align-items: center; gap: 8px !important; }
+      .page-head-actions .btn-action-sm { font-size: 12px; }
       .btn-primary { min-height: 40px; border-radius: 9px; font-size: 13px; }
       .rules-nav { padding: 0; margin-bottom: 26px; gap: 24px; border: 0; border-bottom: 1px solid var(--border-color); border-radius: 0; background: none; }
       .rules-nav-btn { min-height: 44px; padding: 8px 0; border-radius: 0; font-size: 14px; }
@@ -1777,11 +1780,11 @@
       .records-table .cell-stack { align-items: flex-start; gap: 3px; }
       .records-table .cell-secret { justify-content: flex-start; flex-wrap: nowrap; gap: 10px; }
       .records-table .cell-secret code { padding: 0; background: none; font-size: 12px; color: var(--text-muted); }
-      .records-table .copy-btn { min-height: 32px; padding: 4px 0; font-weight: 500; }
+      .records-table .copy-btn { min-height: 40px; padding: 6px 10px; font-weight: 500; }
       .records-table .cell-muted { font-size: 11.5px; }
       .records-table td[data-label="状态"] { text-align: right; font-size: 12px; }
       .records-table td[data-label="操作"] { text-align: right; }
-      .records-table td[data-label="操作"] .btn-action-sm { min-height: 36px; padding: 4px 0; border: 0; background: none; color: var(--primary); font-size: 12px; }
+      .records-table td[data-label="操作"] .btn-action-sm { min-height: 40px; padding: 6px 10px; font-size: 12px; }
       .record-badge { padding: 2px 7px; font-size: 11px; }
       .accounts-table td[data-label="用户"] { grid-column: 1; grid-row: 1; font-size: 16px; }
       .accounts-table td[data-label="状态"] { grid-column: 2; grid-row: 1; }
@@ -1821,16 +1824,17 @@
       .project-card-header .switch { flex-shrink: 0; }
       .secret-box { padding: 0; border: 0; background: none; gap: 10px; font-size: 11.5px; }
       .secret-box span { min-width: 0; overflow-wrap: anywhere; }
-      .secret-box .copy-btn { flex-shrink: 0; min-height: 36px; }
+      .secret-box .copy-btn { flex-shrink: 0; min-height: 40px; }
       .project-card > div[style] { padding: 0 !important; margin-bottom: 0 !important; border: 0 !important; background: none !important; }
       .ad-preview { padding: 10px 0; border: 0; background: none; font-size: 12px; line-height: 1.6; }
       .ad-preview > div { white-space: pre-wrap; }
       .project-card-footer { padding-top: 0; margin-top: 0; border: 0; }
-      .project-card-footer button { min-height: 40px; padding: 4px; }
+      .project-card-footer { flex-wrap: wrap; gap: 12px; }
+      .project-card-footer > div { flex-wrap: wrap; }
       .reply-studio-shell { gap: 20px; }
       .reply-studio-head { padding: 0; border: 0; background: none; }
       .reply-studio-head p { font-size: 12px; line-height: 1.7; }
-      .reply-studio-head .btn-action-sm { padding: 8px 0; border: 0; background: none; color: var(--primary); }
+      .reply-studio-head .btn-action-sm { padding: 8px 12px; }
       .reply-studio-grid { display: block; }
       .studio-pane { display: none; border: 0; border-radius: 0; background: none; }
       .studio-pane.mobile-active { display: block; }
@@ -1856,6 +1860,40 @@
       .ai-config-grid { grid-template-columns: minmax(0, 1fr) !important; padding: 0; border: 0; background: none; }
       .ai-card-glow { display: none; }
       .modal-card { border-radius: 12px; box-shadow: none; }
+      /* 操作按钮有清晰边界；页签、场景导航和开关保留各自的视觉语义。 */
+      .btn-action-sm, .theme-toggle-btn, .copy-btn, .mobile-inline-action, .modal-close {
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--mobile-action-border);
+        border-radius: 8px;
+        background: var(--btn-secondary-bg);
+        color: var(--text-main);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        line-height: 1.4;
+        cursor: pointer;
+        transition: background .15s ease, border-color .15s ease;
+      }
+      .copy-btn { color: var(--primary); white-space: nowrap; }
+      .mobile-inline-action { border: 1px solid var(--mobile-action-border) !important; background: var(--btn-secondary-bg) !important; }
+      .modal-close { min-width: 40px; padding: 6px; flex-shrink: 0; }
+      .btn-action-sm[aria-pressed="true"] {
+        border-color: var(--primary);
+        background: rgba(59, 130, 246, .12);
+        color: var(--primary);
+      }
+      @media (hover: hover) {
+        .btn-action-sm:not(:disabled):hover, .theme-toggle-btn:hover, .copy-btn:hover, .mobile-inline-action:not(:disabled):hover, .modal-close:hover {
+          background: var(--mobile-action-hover) !important;
+          border-color: var(--primary) !important;
+        }
+      }
+      .btn-action-sm:active, .theme-toggle-btn:active, .copy-btn:active, .mobile-inline-action:active, .modal-close:active { background: var(--mobile-action-hover) !important; }
+      button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+      .btn-action-sm:disabled, .mobile-inline-action:disabled { opacity: .45; cursor: not-allowed; }
+      .btn-action-sm:disabled:active, .mobile-inline-action:disabled:active { background: var(--btn-secondary-bg) !important; }
       body.theme-light .account-state.active { color: #15803d !important; }
       body.theme-light .account-state.disabled { color: #b91c1c !important; }
       body.theme-light .account-role.admin { color: #6d28d9 !important; }
@@ -2836,7 +2874,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width: 520px;">
       <div class="modal-header">
         <div class="modal-title" id="customRuleModalTitle">新增自定义回复规则</div>
-        <button class="modal-close" onclick="closeModal('customRuleModal')">×</button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('customRuleModal')">×</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
         <div>
@@ -2865,7 +2903,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width: 480px;">
       <div class="modal-header">
         <div class="modal-title">更换项目密钥</div>
-        <button class="modal-close" onclick="closeModal('rotateKeyModal')">×</button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('rotateKeyModal')">×</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px;">
         <input type="hidden" id="rotateKeyId">
@@ -2889,7 +2927,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width: 440px;">
       <div class="modal-header">
         <div class="modal-title">批量生成激活码</div>
-        <button class="modal-close" onclick="closeModal('genLicenseModal')">×</button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('genLicenseModal')">×</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
         <div>
@@ -2918,7 +2956,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width: 420px;">
       <div class="modal-header">
         <div class="modal-title">项目续期</div>
-        <button class="modal-close" onclick="closeModal('renewModal')">×</button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('renewModal')">×</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px; padding: 4px 0;">
         <input type="hidden" id="renewProjectId">
@@ -2958,7 +2996,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card modal-lg">
       <div class="modal-header">
         <div class="modal-title">接入新的业务项目</div>
-        <button class="modal-close" onclick="closeModal('addProjectModal')"></button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('addProjectModal')">×</button>
       </div>
 
       <div class="modal-two-col">
@@ -3024,7 +3062,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card modal-lg">
       <div class="modal-header">
         <div class="modal-title">编辑业务项目</div>
-        <button class="modal-close" onclick="closeModal('editProjectModal')"></button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('editProjectModal')">×</button>
       </div>
 
       <div class="modal-two-col">
@@ -3086,7 +3124,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title" id="footerModalTitle">新建常用内容</div>
-        <button class="modal-close" onclick="closeModal('footerModal')"></button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('footerModal')">×</button>
       </div>
       <input type="hidden" id="modalFooterId" value="">
       <div class="input-row">
@@ -3108,7 +3146,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width:560px;">
       <div class="modal-header">
         <div class="modal-title">插入常用内容</div>
-        <button class="modal-close" onclick="closeModal('snippetPickerModal')"></button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('snippetPickerModal')">×</button>
       </div>
       <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">勾选状态会随当前回复保存。已选内容使用独立副本，内容库以后的修改不会自动覆盖它。</div>
       <div id="snippetPickerList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow:auto;"></div>
@@ -3126,7 +3164,7 @@ async function handleWechatScanLogin() {
     <div class="modal-card" style="width:480px;">
       <div class="modal-header">
         <div class="modal-title">动态变量预览</div>
-        <button class="modal-close" onclick="closeModal('variablePreviewModal')"></button>
+        <button class="modal-close" aria-label="关闭弹窗" onclick="closeModal('variablePreviewModal')">×</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:12px;">
         <code class="variable-preview-token" id="variablePreviewToken"></code>
@@ -4140,10 +4178,10 @@ async function handleWechatScanLogin() {
               ${p.enabled ? '正在运行' : '已暂停'}
             </span>
             <div style="display: flex; gap: 8px;">
-              <button onclick="openEditProjectModal('${p.id}')" style="color:var(--primary); border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">编辑</button>
-              <button onclick="openRenewModal('${p.id}')" style="color:#38bdf8; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">续期</button>
-              <button onclick="openRotateKeyModal('${p.id}')" style="color:#f59e0b; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">换Key</button>
-              <button onclick="deleteProject('${p.id}')" style="color:#ef4444; border:none; background:none; font-size:12.5px; cursor:pointer;">删除</button>
+              <button class="mobile-inline-action" onclick="openEditProjectModal('${p.id}')" style="color:var(--primary); border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">编辑</button>
+              <button class="mobile-inline-action" onclick="openRenewModal('${p.id}')" style="color:#38bdf8; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">续期</button>
+              <button class="mobile-inline-action" onclick="openRotateKeyModal('${p.id}')" style="color:#f59e0b; border:none; background:none; font-size:12.5px; cursor:pointer; font-weight: 500;">换Key</button>
+              <button class="mobile-inline-action" onclick="deleteProject('${p.id}')" style="color:#ef4444; border:none; background:none; font-size:12.5px; cursor:pointer;">删除</button>
             </div>
           </div>
         `;
@@ -4279,8 +4317,8 @@ async function handleWechatScanLogin() {
             </div>
           </div>
           <div style="display:flex; gap:10px; flex-shrink:0;">
-            <button onclick="openEditFooterModal('${f.id}')" style="color:var(--primary); border:none; background:none; font-size:13px; cursor:pointer; font-weight:500;">编辑</button>
-            <button onclick="deleteFooter('${f.id}')" style="color:#ef4444; border:none; background:none; font-size:13px; cursor:pointer;">删除</button>
+            <button class="mobile-inline-action" onclick="openEditFooterModal('${f.id}')" style="color:var(--primary); border:none; background:none; font-size:13px; cursor:pointer; font-weight:500;">编辑</button>
+            <button class="mobile-inline-action" onclick="deleteFooter('${f.id}')" style="color:#ef4444; border:none; background:none; font-size:13px; cursor:pointer;">删除</button>
           </div>
         `;
         container.appendChild(row);
