@@ -2074,8 +2074,13 @@
       .studio-pane-head { padding: 16px; }
       .studio-pane-sub { font-size: 12px; }
       .studio-scenes { padding: 8px; gap: 2px; }
-      .studio-scene-group { padding: 14px 10px 6px; font-size: 11px; font-weight: 500; }
-      .studio-scene-btn { padding: 10px; font-size: 12px; }
+      .studio-scene-group {
+        margin: 12px 0 4px; padding: 6px 10px; border-radius: 5px;
+        background: var(--desktop-hover); color: var(--text-main);
+        font-size: 12px; font-weight: 650; line-height: 18px; letter-spacing: .02em; cursor: default;
+      }
+      .studio-scene-group:first-child { margin-top: 2px; }
+      .studio-scene-btn { padding: 10px 10px 10px 18px; font-size: 12px; }
       .studio-scene-btn.active { background: var(--desktop-selected); box-shadow: inset 2px 0 0 var(--primary); }
       .studio-editor-body, .studio-preview-body { padding: 18px; }
       .studio-editor-title h3 { font-size: 18px; font-weight: 650; }
