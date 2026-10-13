@@ -1,6 +1,8 @@
 # Runtime secrets/data and local-only documents are not part of the image build.
 .env
 .env.*
+# 公开、已入库的示例模板必须保留，避免 Git 将构建目录误判为删除了源码文件。
+!.env.example
 config/
 backups/
 docs/
