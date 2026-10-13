@@ -29,3 +29,6 @@ backups/
 
 # 本机构建的部署产物与隔离冒烟数据（不包含在版本发布中）
 deploy/artifacts/
+
+# 本地文档：整个目录及以后新增的文件均不提交到 GitHub
+/docs/
