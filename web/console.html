@@ -2051,18 +2051,6 @@
       .records-table code { font-size: 12px; padding: 3px 6px; }
       .cell-stack { gap: 4px; }
       .cell-secret { gap: 7px; }
-      .audit-table td[data-label="用户 / OpenID"] > .cell-stack { align-items: stretch; }
-      .records-table td[data-label="OpenID"] .cell-secret,
-      .audit-table td[data-label="用户 / OpenID"] .cell-secret {
-        display: grid; grid-template-columns: minmax(0, var(--openid-text-width, 1fr)) auto;
-        width: 100%; column-gap: 8px; justify-content: start; align-items: start;
-      }
-      .records-table td[data-label="OpenID"] .cell-secret code,
-      .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
-        justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere;
-      }
-      .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
-      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: start; }
       .record-badge { min-width: 52px; justify-content: center; padding: 3px 8px; font-size: 11px; font-weight: 500; }
       .record-badge[style*="#16a34a"] { color: #61d69b !important; }
       .record-badge[style*="#f59e0b"] { color: #fbc46c !important; }
@@ -2133,6 +2121,32 @@
     }
     @media (prefers-reduced-motion: reduce) and (min-width: 901px) {
       .btn-primary, .btn-success, .btn-action-sm, .theme-toggle-btn, .project-card { transition: none; }
+    }
+    /* OpenID 共用内容基准：只调整身份文字与复制，不改变卡片/表格的其他字段。 */
+    .audit-table td[data-label="用户 / OpenID"] > .cell-stack { align-items: stretch; }
+    .records-table td[data-label="OpenID"] .cell-secret,
+    .audit-table td[data-label="用户 / OpenID"] .cell-secret {
+      display: grid; grid-template-columns: minmax(0, var(--openid-text-width, 1fr)) auto;
+      width: 100%; column-gap: 8px; justify-content: start; align-items: start;
+    }
+    .records-table td[data-label="OpenID"] .cell-secret code,
+    .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
+      justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+    }
+    .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
+    .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: start; }
+    @media (max-width: 900px) {
+      .records-table td[data-label="OpenID"] .cell-secret code,
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
+        font-size: 12px; line-height: 18px; padding: 11px 0;
+      }
+      .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn {
+        min-width: 40px; min-height: 40px; padding: 6px 10px; font-size: 12px;
+        border: 1px solid var(--mobile-action-border, var(--card-inner-border)); border-radius: 8px;
+        background: var(--btn-secondary-bg); color: var(--primary);
+        display: inline-flex; align-items: center; justify-content: center; line-height: 1.4;
+      }
     }
   </style>
 </head>
@@ -4494,9 +4508,7 @@ async function handleWechatScanLogin() {
     }
 
     function alignOpenIDCopyButtons() {
-      const desktop = window.matchMedia('(min-width: 901px)').matches;
       document.querySelectorAll('.audit-table, .accounts-table, .registered-users-table').forEach(table => {
-        if (!desktop) { table.style.removeProperty('--openid-text-width'); return; }
         if (!table.getBoundingClientRect().width) return; // 隐藏页签在显示后再计算。
         const cells = [...table.querySelectorAll('td[data-label="OpenID"] .cell-secret, td[data-label="用户 / OpenID"] .cell-secret')]
           .filter(cell => cell.querySelector('code') && cell.querySelector('button[data-openid]'));
