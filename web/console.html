@@ -1534,7 +1534,6 @@
       justify-content: flex-start;
     }
     .build-version { padding: 4px 2px 0; color: var(--text-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-    .build-revision { display: block; font-size: 11px; }
     .main-area {
       flex: 1;
       min-width: 0;
@@ -1966,7 +1965,6 @@
       <button class="btn-action-sm" onclick="logout()" style="color: #ef4444;">锁屏退出</button>
       <div class="build-version" id="buildVersionInfo" aria-live="polite">
         <span id="buildVersionLabel">版本信息加载中…</span>
-        <span class="build-revision" id="buildVersionRevision"></span>
       </div>
     </div>
   </aside>
@@ -3363,27 +3361,15 @@ async function handleWechatScanLogin() {
     }
 
     async function loadVersionInfo() {
-      const container = document.getElementById('buildVersionInfo');
       const label = document.getElementById('buildVersionLabel');
-      const revision = document.getElementById('buildVersionRevision');
       try {
         const res = await fetch('/api/version', { cache: 'no-store' });
         const json = await res.json();
         if (!res.ok || json.code !== 0 || !json.data?.display_version) throw new Error('读取失败');
         const info = json.data;
         label.textContent = '版本：' + info.display_version;
-        revision.textContent = info.revision ? '提交 ' + info.revision.slice(0, 7) + (info.dirty ? ' · 含未提交修改' : '') : '';
-        const details = ['当前运行版本：' + info.version];
-        if (info.revision) details.push('提交：' + info.revision);
-        if (info.built_at) {
-          const builtAt = new Date(info.built_at);
-          if (!Number.isNaN(builtAt.getTime())) details.push('构建时间：' + builtAt.toLocaleString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' }) + '（北京时间）');
-        }
-        container.title = details.join('\n');
       } catch (e) {
         label.textContent = '版本信息暂不可用';
-        revision.textContent = '';
-        container.removeAttribute('title');
       }
     }
 
