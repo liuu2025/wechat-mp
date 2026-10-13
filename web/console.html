@@ -1170,7 +1170,8 @@
     }
     .records-table {
       width: 100%;
-      min-width: 850px;
+      min-width: 1120px;
+      table-layout: fixed;
       border-collapse: collapse;
       font-size: 13px;
     }
@@ -1178,7 +1179,8 @@
       padding: 11px 12px;
       text-align: left;
       border-bottom: 1px solid var(--border-color);
-      white-space: nowrap;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
     }
     .records-table th {
       color: var(--text-muted);
@@ -1186,6 +1188,18 @@
       font-weight: 600;
     }
     .records-table tr:last-child td { border-bottom: none; }
+    .admin-data-table { min-width: 850px; }
+    .cell-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+    .cell-secret { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .cell-secret code { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .cell-secret .copy-btn { flex-shrink: 0; margin: 0; }
+    .verification-code { letter-spacing: 1px; white-space: nowrap; }
+    .date-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .openid-toggle-btn, .verification-toggle-btn, .license-toggle-btn, .generated-license-toggle-btn { white-space: nowrap; }
+    .cell-muted { color: var(--text-muted); font-size: 12px; }
+    .admin-data-table th:nth-last-child(-n+2), .admin-data-table td[data-label="状态"],
+    .admin-data-table td[data-label="操作"] { text-align: center; }
+    .generated-code-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; }
     .record-badge {
       display: inline-flex;
       padding: 3px 8px;
@@ -1203,17 +1217,6 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 10px 14px;
-    }
-    .account-card {
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px 14px;
-      background: var(--panel-soft);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
     }
     .registration-setting {
       display: flex;
@@ -1238,9 +1241,6 @@
       padding: 3px 8px;
       border-radius: 999px;
     }
-    .account-main { min-width: 0; }
-    .account-main code { overflow-wrap: anywhere; }
-    .account-actions { display: flex; align-items: center; gap: 10px; }
     /* ---------------- 移动端响应式深度适配 ---------------- */
     @media (max-width: 820px) {
       .modal-card.modal-lg {
@@ -1302,18 +1302,18 @@
       .record-filters select,
       .record-filters input,
       .record-filters button { width: 100% !important; min-width: 0 !important; }
-      #tab-records .records-table-wrap { overflow: visible; border: 0; background: transparent; }
-      #tab-records .records-table { display: block; min-width: 0; }
-      #tab-records .records-table thead { display: none; }
-      #tab-records .records-table tbody { display: grid; gap: 10px; }
-      #tab-records .records-table tr {
+      .records-table-wrap { overflow: visible; border: 0; background: transparent; }
+      .records-table { display: block; min-width: 0; }
+      .records-table colgroup, .records-table thead { display: none; }
+      .records-table tbody { display: grid; gap: 10px; }
+      .records-table tr {
         display: block;
         border: 1px solid var(--border-color);
         border-radius: 10px;
         background: var(--card-bg);
         padding: 6px 12px;
       }
-      #tab-records .records-table td {
+      .records-table td {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -1322,19 +1322,20 @@
         white-space: normal;
         text-align: right;
       }
-      #tab-records .records-table td::before {
+      .records-table td::before {
         content: attr(data-label);
         color: var(--text-muted);
         font-weight: 600;
         flex-shrink: 0;
         text-align: left;
       }
-      #tab-records .records-table td[data-empty] { display: block; text-align: center; }
-      #tab-records .records-table td[data-empty]::before { display: none; }
-      #tab-records .records-table td code { overflow-wrap: anywhere; min-width: 0; }
-      .account-card { align-items: stretch; }
-      .account-main { width: 100%; line-height: 1.9; }
-      .account-actions { width: 100%; justify-content: space-between; }
+      .records-table td[data-empty] { display: block; text-align: center; }
+      .records-table td[data-empty]::before { display: none; }
+      .records-table td code { overflow-wrap: anywhere; min-width: 0; }
+      .records-table .cell-stack { align-items: flex-end; }
+      .cell-secret { justify-content: flex-end; flex-wrap: wrap; }
+      .admin-data-table td[data-label="状态"], .admin-data-table td[data-label="操作"] { text-align: right; }
+      #tab-accounts .card-header { flex-direction: column; align-items: stretch; gap: 12px; }
       .registration-setting { align-items: flex-start; }
       .registration-setting-actions { flex-direction: column-reverse; }
       .records-pagination {
@@ -1910,6 +1911,7 @@
           <p style="font-size:13px; color:var(--text-muted); margin-top:3px;">流水仅保留最近 90 天；用户编号与 OpenID 永久绑定，不随流水过期删除。新记录保留验证码用于审计，但不保存聊天内容或轮询密钥。</p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-action-sm verification-toggle-btn" onclick="toggleVerificationCodeVisibility()">显示完整验证码</button>
           <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
           <button class="btn-action-sm" onclick="loadRecords(1)">刷新</button>
         </div>
@@ -1935,6 +1937,7 @@
       <div id="recordSummary" style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">加载中...</div>
       <div class="records-table-wrap">
         <table class="records-table">
+          <colgroup><col style="width:10%"><col style="width:13%"><col style="width:8%"><col style="width:24%"><col style="width:17%"><col style="width:14%"><col style="width:14%"></colgroup>
           <thead>
             <tr><th>取码方式</th><th>验证码</th><th>状态</th><th>用户 / OpenID</th><th>对应项目</th><th>生成时间</th><th>核销时间</th></tr>
           </thead>
@@ -2326,7 +2329,7 @@
               <option value="disabled">已禁用</option>
             </select>
           </div>
-          <div id="accountsContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+          <div id="accountsContainer"></div>
         </div>
         </div>
 
@@ -2337,7 +2340,10 @@
               <div class="card-title">项目激活码</div>
               <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">普通用户创建项目必须消耗一枚激活码；项目到期 = 兑换日 + 可用天数，提前续期自动顺延，过期续期从当天重算。码一经使用立即销毁。</div>
             </div>
-            <button class="btn-primary" onclick="openGenLicenseModal()">批量生成</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-action-sm license-toggle-btn" onclick="toggleLicenseCodeVisibility()">显示完整激活码</button>
+              <button class="btn-primary" onclick="openGenLicenseModal()">批量生成</button>
+            </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
             <input type="text" id="licFilterKw" placeholder="搜索激活码 / 用于项目" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;" oninput="renderLicenses()">
@@ -2349,7 +2355,7 @@
               <option value="已作废">已作废</option>
             </select>
           </div>
-          <div id="licensesContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="licensesContainer"></div>
         </div>
         </div>
 
@@ -3437,6 +3443,7 @@ async function handleWechatScanLogin() {
 
 
     async function logout() {
+      resetSecretVisibility();
       try { await fetch('/api/console/logout', { method: 'POST', headers: { 'X-Session-Token': currentAuthPassword } }); } catch (e) {}
       if (adminToken && adminToken !== currentAuthPassword) {
         try { await fetch('/api/console/logout', { method: 'POST', headers: { 'X-Session-Token': adminToken } }); } catch (e) {}
@@ -3467,6 +3474,8 @@ async function handleWechatScanLogin() {
 
     // Tab 切换逻辑
     function switchTab(tabId) {
+      const activeTab = document.querySelector('.tab-content.active');
+      if (activeTab && activeTab.id !== 'tab-' + tabId) resetSecretVisibility();
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
@@ -3522,7 +3531,13 @@ async function handleWechatScanLogin() {
 
     // 模态弹窗控制
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+      if (id === 'genLicenseModal') {
+        showFullGeneratedLicenseCode = false;
+        renderGeneratedLicenses();
+      }
+    }
     function openAddProjectModal() {
       const row = document.getElementById('licenseRow');
       if (row) row.style.display = (currentRole === 'admin') ? 'none' : 'flex';
@@ -3767,29 +3782,84 @@ async function handleWechatScanLogin() {
       body.innerHTML = items.map(r => {
         const state = statusView[r.status] || [r.status || '-', 'color:var(--text-muted); background:var(--panel-soft);'];
         const source = r.source === 'wechat' ? '公众号取码' : '网页取码';
-        const project = r.project ? (escapeHtml(r.project_name || r.project) + ' <code>' + escapeHtml(r.project) + '</code>') : '<span style="color:var(--text-muted);">待核销确定</span>';
+        const project = r.project ? `<span>${escapeHtml(r.project_name || r.project)}</span><code class="cell-muted">${escapeHtml(r.project)}</code>` : '<span class="cell-muted">待核销确定</span>';
         const userLabel = formatUserNumber(r.user_number, !!r.openid);
         return `<tr>
           <td data-label="取码方式">${source}</td>
-          <td data-label="验证码">${r.code ? `<code style="letter-spacing:1px;">${escapeHtml(r.code)}</code><button class="copy-btn" data-code="${escapeHtml(r.code)}" onclick="copyText(this.dataset.code)">复制</button>` : '<span style="color:var(--text-muted);">历史记录未保存</span>'}</td>
+          <td data-label="验证码">${r.code ? `<div class="cell-secret"><code class="verification-code">${escapeHtml(formatVerificationCode(r.code))}</code><button class="copy-btn" title="复制完整验证码" aria-label="复制完整验证码" data-code="${escapeHtml(r.code)}" onclick="copyText(this.dataset.code)">复制完整</button></div>` : '<span class="cell-muted">历史记录未保存</span>'}</td>
           <td data-label="状态"><span class="record-badge" style="${state[1]}">${state[0]}</span></td>
           <td data-label="用户 / OpenID">
-            <div style="font-weight:700; color:${r.user_number ? 'var(--text-main)' : 'var(--text-muted)'}; margin-bottom:${r.openid ? '5px' : '0'};">${escapeHtml(userLabel)}</div>
-            ${r.openid ? `<code>${escapeHtml(formatOpenID(r.openid))}</code><button class="copy-btn" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
+            <div class="cell-stack"><strong>${escapeHtml(userLabel)}</strong>
+            ${r.openid ? `<div class="cell-secret"><code>${escapeHtml(formatOpenID(r.openid))}</code><button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div>` : ''}</div>
           </td>
-          <td data-label="对应项目">${project}</td>
-          <td data-label="生成时间">${formatRecordTime(r.created_at)}</td>
-          <td data-label="核销时间">${r.verified_at ? formatRecordTime(r.verified_at) : '-'}</td>
+          <td data-label="对应项目"><div class="cell-stack">${project}</div></td>
+          <td data-label="生成时间" class="date-cell">${formatRecordTime(r.created_at)}</td>
+          <td data-label="核销时间" class="date-cell">${r.verified_at ? formatRecordTime(r.verified_at) : '-'}</td>
         </tr>`;
       }).join('');
     }
 
     function formatRecordTime(ts) {
       if (!ts) return '-';
-      return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+      return formatDate(ts, true);
+    }
+
+    function formatDate(ts, includeTime = false) {
+      if (!ts) return '-';
+      const date = new Date(ts * 1000);
+      const pad = value => String(value).padStart(2, '0');
+      const day = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+      return includeTime ? `${day} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` : day;
     }
 
     let showFullOpenID = false;
+    let showFullVerificationCode = false;
+    let showFullLicenseCode = false;
+    let showFullGeneratedLicenseCode = false;
+
+    function formatVerificationCode(code) {
+      if (!code) return '-';
+      return showFullVerificationCode ? code : code.slice(0, 2) + '*'.repeat(Math.max(0, code.length - 2));
+    }
+
+    function formatLicenseCode(code, full = showFullLicenseCode) {
+      if (!code) return '-';
+      if (full) return code;
+      return code.split('-').map((part, index, parts) => {
+        if (index === 0) return part.slice(0, 2) + '*'.repeat(Math.max(0, part.length - 2));
+        if (index === parts.length - 1) return '*'.repeat(Math.max(0, part.length - 2)) + part.slice(-2);
+        return '*'.repeat(part.length);
+      }).join('-');
+    }
+
+    function syncSecretVisibilityButtons() {
+      const groups = [
+        ['.openid-toggle-btn', showFullOpenID, 'OpenID'],
+        ['.verification-toggle-btn', showFullVerificationCode, '验证码'],
+        ['.license-toggle-btn', showFullLicenseCode, '激活码'],
+        ['.generated-license-toggle-btn', showFullGeneratedLicenseCode, '激活码']
+      ];
+      groups.forEach(([selector, full, label]) => document.querySelectorAll(selector).forEach(btn => {
+        btn.textContent = full ? `隐藏部分${label}` : `显示完整${label}`;
+        btn.setAttribute('aria-pressed', String(full));
+      }));
+    }
+
+    function toggleVerificationCodeVisibility() {
+      showFullVerificationCode = !showFullVerificationCode;
+      syncSecretVisibilityButtons(); renderRecords(cachedRecords);
+    }
+
+    function toggleLicenseCodeVisibility() {
+      showFullLicenseCode = !showFullLicenseCode;
+      syncSecretVisibilityButtons(); renderLicenses();
+    }
+
+    function resetSecretVisibility() {
+      showFullOpenID = showFullVerificationCode = showFullLicenseCode = showFullGeneratedLicenseCode = false;
+      syncSecretVisibilityButtons();
+      renderAccounts(); renderLicenses(); renderRecords(cachedRecords); renderGeneratedLicenses();
+    }
 
     function formatOpenID(openid) {
       return showFullOpenID ? (openid || '-') : maskOpenid(openid);
@@ -3803,9 +3873,7 @@ async function handleWechatScanLogin() {
 
     function toggleOpenIDVisibility() {
       showFullOpenID = !showFullOpenID;
-      document.querySelectorAll('.openid-toggle-btn').forEach(btn => {
-        btn.textContent = showFullOpenID ? '脱敏显示 OpenID' : '显示完整 OpenID';
-      });
+      syncSecretVisibilityButtons();
       renderAccounts();
       renderRecords(cachedRecords);
     }
@@ -5377,6 +5445,7 @@ async function handleWechatScanLogin() {
     // ================= 账号与授权（管理员） =================
     let cachedAccounts = [];
     let cachedLicenses = [];
+    let generatedLicenseResult = null;
     let registrationMode = 'open';
     let registrationModeUpdating = false;
 
@@ -5471,34 +5540,33 @@ async function handleWechatScanLogin() {
         c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">暂无账号。</div>';
         return;
       }
-      c.innerHTML = '';
       if (list.length === 0) {
         c.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">没有符合条件的账号。</div>';
         return;
       }
-      list.forEach(a => {
+      const rows = list.map(a => {
         const isAdminAcc = a.role === 'admin';
-        const item = document.createElement('div');
-        item.className = 'account-card';
-        const created = new Date(a.created_at * 1000).toLocaleDateString();
+        const created = formatDate(a.created_at);
         const statusHtml = a.status === 'active'
           ? '<span style="color:#34d399; font-weight:600;">正常</span>'
           : '<span style="color:#ef4444; font-weight:600;">已禁用</span>';
         const roleHtml = isAdminAcc
           ? '<span style="color:#a78bfa; font-weight:600;">管理员</span>'
           : '<span style="color:#60a5fa;">普通用户</span>';
-        item.innerHTML = `
-          <div class="account-main" style="font-size:13px; color:var(--text-main);">
-            <strong>${escapeHtml(formatUserNumber(a.user_number, !!a.openid))}</strong> ｜ ${roleHtml} ｜ 微信 OpenID：<code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
-            ${a.openid ? `<button class="copy-btn" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制 OpenID</button>` : ''}
-            ｜ 注册：${created}
-          </div>
-          <div class="account-actions">
-            ${statusHtml}
-            ${(!isAdminAcc) ? `<button class="btn-action-sm" onclick="toggleAccount('${a.id}', '${a.status === 'active' ? 'disabled' : 'active'}')">${a.status === 'active' ? '禁用' : '启用'}</button>` : ''}
-          </div>`;
-        c.appendChild(item);
-      });
+        return `<tr>
+          <td data-label="用户"><strong>${escapeHtml(formatUserNumber(a.user_number, !!a.openid))}</strong></td>
+          <td data-label="角色">${roleHtml}</td>
+          <td data-label="OpenID"><div class="cell-secret"><code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
+            ${a.openid ? `<button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制</button>` : ''}</div></td>
+          <td data-label="注册日期" class="date-cell">${created}</td>
+          <td data-label="状态">${statusHtml}</td>
+          <td data-label="操作">${!isAdminAcc ? `<button class="btn-action-sm" data-account-id="${escapeHtml(a.id)}" data-next-status="${a.status === 'active' ? 'disabled' : 'active'}" onclick="toggleAccount(this.dataset.accountId, this.dataset.nextStatus)">${a.status === 'active' ? '禁用' : '启用'}</button>` : '<span class="cell-muted" title="管理员不能禁用">—</span>'}</td>
+        </tr>`;
+      }).join('');
+      c.innerHTML = `<div class="records-table-wrap"><table class="records-table admin-data-table">
+        <colgroup><col style="width:12%"><col style="width:10%"><col style="width:35%"><col style="width:17%"><col style="width:12%"><col style="width:14%"></colgroup>
+        <thead><tr><th>用户</th><th>角色</th><th>OpenID</th><th>注册日期</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody>
+      </table></div>`;
     }
 
     async function toggleAccount(id, status) {
@@ -5546,27 +5614,23 @@ async function handleWechatScanLogin() {
         return;
       }
       const sorted = [...list].reverse();
-      sorted.forEach(l => {
-        const item = document.createElement('div');
-        item.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:10px 14px; background:var(--panel-soft); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+      const rows = sorted.map(l => {
         const st = serviceLicenseStatus(l);
         const stColor = st === '未使用' ? '#34d399' : (st === '已使用' ? '#94a3b8' : '#ef4444');
-        const usedInfo = l.status === 'used' ? `｜用于 <b>${escapeHtml(l.project_id || '-')}</b>` : '';
-        const ddl = new Date(l.redeem_deadline * 1000).toLocaleDateString();
-        item.innerHTML = `
-          <div style="font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="display:inline-flex; align-items:center; gap:6px;">
-              <code style="font-size:14px; font-weight:700;">${escapeHtml(l.code)}</code>
-              <button class="copy-btn" onclick="copyText('${l.code}')">复制</button>
-            </span>
-            ｜ ${l.duration_days} 天 ｜ 兑换期至 ${ddl}${usedInfo}
-          </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="color:${stColor}; font-weight:600;">${st}</span>
-            ${l.status === 'unused' ? `<button class="btn-action-sm" onclick="voidLicense('${l.code}')" style="color:#ef4444;">作废</button>` : ''}
-          </div>`;
-        c.appendChild(item);
-      });
+        return `<tr>
+          <td data-label="激活码"><div class="cell-secret"><code>${escapeHtml(formatLicenseCode(l.code))}</code>
+            <button class="copy-btn" title="复制完整激活码" aria-label="复制完整激活码" data-code="${escapeHtml(l.code)}" onclick="copyText(this.dataset.code)">复制完整</button></div></td>
+          <td data-label="可用天数">${escapeHtml(String(l.duration_days))} 天</td>
+          <td data-label="兑换截止日期" class="date-cell">${formatDate(l.redeem_deadline)}</td>
+          <td data-label="使用项目">${escapeHtml(l.project_id || '-')}</td>
+          <td data-label="状态"><span style="color:${stColor}; font-weight:600;">${escapeHtml(st)}</span></td>
+          <td data-label="操作">${l.status === 'unused' ? `<button class="btn-action-sm" data-code="${escapeHtml(l.code)}" onclick="voidLicense(this.dataset.code)" style="color:#ef4444;">作废</button>` : '<span class="cell-muted">—</span>'}</td>
+        </tr>`;
+      }).join('');
+      c.innerHTML = `<div class="records-table-wrap"><table class="records-table admin-data-table">
+        <colgroup><col style="width:30%"><col style="width:11%"><col style="width:19%"><col style="width:18%"><col style="width:12%"><col style="width:10%"></colgroup>
+        <thead><tr><th>激活码</th><th>可用天数</th><th>兑换截止日期</th><th>使用项目</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody>
+      </table></div>`;
     }
 
     function serviceLicenseStatus(l) {
@@ -5576,8 +5640,25 @@ async function handleWechatScanLogin() {
     }
 
     function openGenLicenseModal() {
+      generatedLicenseResult = null;
+      showFullGeneratedLicenseCode = false;
       document.getElementById('genLicenseResult').style.display = 'none';
       openModal('genLicenseModal');
+    }
+
+    function toggleGeneratedLicenseVisibility() {
+      showFullGeneratedLicenseCode = !showFullGeneratedLicenseCode;
+      renderGeneratedLicenses();
+    }
+
+    function renderGeneratedLicenses() {
+      const area = document.getElementById('genLicenseResult');
+      if (!area || !generatedLicenseResult) return;
+      const data = generatedLicenseResult;
+      area.innerHTML = `<div style="color:#34d399; font-weight:600;">已生成 ${data.count} 枚（${data.days} 天 / 兑换期 ${data.redeem} 天）</div>
+        <button class="btn-action-sm generated-license-toggle-btn" onclick="toggleGeneratedLicenseVisibility()" style="margin:10px 0;">显示完整激活码</button>
+        ${data.codes.map(code => `<div class="generated-code-row"><code>${escapeHtml(formatLicenseCode(code, showFullGeneratedLicenseCode))}</code><button class="copy-btn" title="复制完整激活码" data-code="${escapeHtml(code)}" onclick="copyText(this.dataset.code)">复制完整</button></div>`).join('')}`;
+      syncSecretVisibilityButtons();
     }
 
     async function submitGenLicense() {
@@ -5595,13 +5676,9 @@ async function handleWechatScanLogin() {
         });
         const json = await res.json();
         if (json.code === 0 && json.data) {
-          const codes = json.data.codes.map(c =>
-            '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:3px 0;">' +
-            '<code style="font-size:14px; font-weight:700;">' + escapeHtml(c) + '</code>' +
-            "<button class=\"copy-btn\" onclick=\"copyText('" + c + "')\">复制</button>" +
-            '</div>'
-          ).join('');
-          area.innerHTML = '<div style="color:#34d399; font-weight:600;">已生成 ' + json.data.count + ' 枚（' + json.data.days + ' 天 / 兑换期 ' + json.data.redeem + ' 天）：</div>' + codes;
+          generatedLicenseResult = json.data;
+          showFullGeneratedLicenseCode = false;
+          renderGeneratedLicenses();
           loadLicenses();
         } else {
           area.innerHTML = '<div style="color:#ef4444;">' + escapeHtml(json.message || '生成失败') + '</div>';
@@ -5612,7 +5689,7 @@ async function handleWechatScanLogin() {
     }
 
     async function voidLicense(code) {
-      if (!confirm('确认作废激活码 ' + code + '？')) return;
+      if (!confirm('确认作废激活码 ' + formatLicenseCode(code) + '？')) return;
       const res = await fetch('/api/licenses/void', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Session-Token': currentAuthPassword },
@@ -5669,6 +5746,9 @@ async function handleWechatScanLogin() {
     }
 
     function switchAuthSection(name) {
+      const previous = document.querySelector('#tab-accounts .rules-section.active');
+      const targetId = 'authSection' + name.charAt(0).toUpperCase() + name.slice(1);
+      if (previous && previous.id !== targetId) resetSecretVisibility();
       document.querySelectorAll('#tab-accounts .rules-section').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('#tab-accounts .rules-nav-btn').forEach(el => el.classList.remove('active'));
       const sec = document.getElementById('authSection' + name.charAt(0).toUpperCase() + name.slice(1));
