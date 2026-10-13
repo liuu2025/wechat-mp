@@ -2135,18 +2135,31 @@
     }
     .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
     .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: start; }
+    .copy-help { color: var(--text-muted); font-size: 12px; line-height: 1.6; margin-top: 6px; }
     @media (max-width: 900px) {
       .records-table td[data-label="OpenID"] .cell-secret code,
       .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
         font-size: 12px; line-height: 18px; padding: 11px 0;
       }
       .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
-      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn {
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn,
+      .audit-table td[data-label="验证码"] .cell-secret .copy-btn {
         min-width: 40px; min-height: 40px; padding: 6px 10px; font-size: 12px;
         border: 1px solid var(--mobile-action-border, var(--card-inner-border)); border-radius: 8px;
         background: var(--btn-secondary-bg); color: var(--primary);
         display: inline-flex; align-items: center; justify-content: center; line-height: 1.4;
       }
+    }
+    @media (max-width: 820px) {
+      .audit-table td[data-label="验证码"] .cell-secret {
+        display: grid; grid-template-columns: minmax(0, var(--openid-text-width, 1fr)) auto;
+        width: 100%; column-gap: 8px; justify-content: start; align-items: start;
+      }
+      .audit-table td[data-label="验证码"] .cell-secret code {
+        justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+        line-height: 24px; padding: 8px 0;
+      }
+      .audit-table td[data-label="验证码"] .cell-secret .copy-btn { justify-self: start; }
     }
   </style>
 </head>
@@ -2351,6 +2364,7 @@
         <div>
           <h2 style="font-size:18px; font-weight:700;">取码与核销记录</h2>
           <p class="page-description" style="font-size:13px; color:var(--text-muted); margin-top:3px;">流水仅保留最近 90 天；用户编号与 OpenID 永久绑定，不随流水过期删除。新记录保留验证码用于审计，但不保存聊天内容或轮询密钥。</p>
+          <p class="copy-help">隐藏仅影响显示，复制始终获取完整值。</p>
         </div>
         <div class="page-head-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn-action-sm verification-toggle-btn" onclick="toggleVerificationCodeVisibility()">显示完整验证码</button>
@@ -2744,6 +2758,7 @@
             <div>
               <div class="card-title">平台账号</div>
               <div class="page-description" style="font-size:13px; color:var(--text-muted); margin-top:4px;">每个微信 OpenID 永久绑定“用户 + 编号”；注册开放时，新身份首次登录自动创建普通账号。首个账号固定为唯一管理员，禁用账号将立即踢出其全部会话。</div>
+              <p class="copy-help">隐藏仅影响显示，复制始终获取完整值。</p>
             </div>
             <div class="page-head-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
@@ -2789,6 +2804,7 @@
               <div>
                 <div class="card-title">已登记用户</div>
                 <div class="page-description" style="font-size:13px; color:var(--text-muted); margin-top:4px;">记录过 OpenID 不代表已注册平台账号；同一 OpenID 在各页面使用相同的永久编号，不随流水过期而删除。“仿真身份”仅识别已知测试前缀，其他身份的真实来源未作验证。</div>
+                <p class="copy-help">隐藏仅影响显示，复制始终获取完整值。</p>
               </div>
               <div class="page-head-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
@@ -2832,6 +2848,7 @@
             <div>
               <div class="card-title">项目激活码</div>
               <div class="page-description" style="font-size:13px; color:var(--text-muted); margin-top:4px;">普通用户创建项目必须消耗一枚激活码；项目到期 = 兑换日 + 可用天数，提前续期自动顺延，过期续期从当天重算。码一经使用立即销毁。</div>
+              <p class="copy-help">隐藏仅影响显示，复制始终获取完整值。</p>
             </div>
             <div class="page-head-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn-action-sm license-toggle-btn" onclick="toggleLicenseCodeVisibility()">显示完整激活码</button>
@@ -4401,11 +4418,11 @@ async function handleWechatScanLogin() {
         const userLabel = formatUserNumber(r.user_number, !!r.openid);
         return `<tr>
           <td data-label="取码方式">${source}</td>
-          <td data-label="验证码">${r.code ? `<div class="cell-secret"><code class="verification-code">${escapeHtml(formatVerificationCode(r.code))}</code><button class="copy-btn" title="复制完整验证码" aria-label="复制完整验证码" data-code="${escapeHtml(r.code)}" onclick="copyText(this.dataset.code)">复制完整</button></div>` : '<span class="cell-muted">历史记录未保存</span>'}</td>
+          <td data-label="验证码">${r.code ? `<div class="cell-secret"><code class="verification-code">${escapeHtml(formatVerificationCode(r.code))}</code><button class="copy-btn" title="复制完整验证码" aria-label="复制完整验证码" data-code="${escapeHtml(r.code)}" onclick="copyText(this.dataset.code)">复制</button></div>` : '<span class="cell-muted">历史记录未保存</span>'}</td>
           <td data-label="状态"><span class="record-badge" style="${state[1]}">${state[0]}</span></td>
           <td data-label="用户 / OpenID">
             <div class="cell-stack"><strong>${escapeHtml(userLabel)}</strong>
-            ${r.openid ? `<div class="cell-secret"><code>${escapeHtml(formatOpenID(r.openid))}</code><button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div>` : ''}</div>
+            ${r.openid ? `<div class="cell-secret"><code>${escapeHtml(formatOpenID(r.openid))}</code><button class="copy-btn" title="复制完整 OpenID" aria-label="复制完整 OpenID" data-openid="${escapeHtml(r.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div>` : ''}</div>
           </td>
           <td data-label="对应项目"><div class="cell-stack">${project}</div></td>
           <td data-label="生成时间" class="date-cell">${formatRecordTime(r.created_at)}</td>
@@ -4510,8 +4527,12 @@ async function handleWechatScanLogin() {
     function alignOpenIDCopyButtons() {
       document.querySelectorAll('.audit-table, .accounts-table, .registered-users-table').forEach(table => {
         if (!table.getBoundingClientRect().width) return; // 隐藏页签在显示后再计算。
-        const cells = [...table.querySelectorAll('td[data-label="OpenID"] .cell-secret, td[data-label="用户 / OpenID"] .cell-secret')]
-          .filter(cell => cell.querySelector('code') && cell.querySelector('button[data-openid]'));
+        // 手机卡片的 OpenID 与验证码共用基准；表格布局仍按各字段列分别对齐。
+        const includeCodes = window.matchMedia('(max-width: 820px)').matches && table.classList.contains('audit-table');
+        const selector = 'td[data-label="OpenID"] .cell-secret, td[data-label="用户 / OpenID"] .cell-secret'
+          + (includeCodes ? ', td[data-label="验证码"] .cell-secret' : '');
+        const cells = [...table.querySelectorAll(selector)]
+          .filter(cell => cell.querySelector('code') && cell.querySelector('button.copy-btn'));
         if (!cells.length) { table.style.removeProperty('--openid-text-width'); return; }
         if (!openIDMeasureContext) openIDMeasureContext = document.createElement('canvas').getContext('2d');
         if (!openIDMeasureContext) return;
@@ -4529,10 +4550,14 @@ async function handleWechatScanLogin() {
             + pixels(style.borderLeftWidth) + pixels(style.borderRightWidth);
           longest = Math.max(longest, width);
           available = Math.min(available, cell.getBoundingClientRect().width
-            - cell.querySelector('button[data-openid]').getBoundingClientRect().width - 8);
+            - cell.querySelector('button.copy-btn').getBoundingClientRect().width - 8);
         });
         const width = `${Math.max(0, Math.min(Math.ceil(longest), Math.floor(available)))}px`;
-        if (table.style.getPropertyValue('--openid-text-width') !== width) table.style.setProperty('--openid-text-width', width);
+        if (table.style.getPropertyValue('--openid-text-width') !== width) {
+          table.style.setProperty('--openid-text-width', width);
+          // 自动表格布局可能随文字区域重新分配列宽，下一帧按新宽度复核。
+          scheduleOpenIDAlignment();
+        }
       });
     }
 
@@ -6167,7 +6192,7 @@ async function handleWechatScanLogin() {
         return `<tr>
           <td data-label="用户"><strong>${escapeHtml(formatUserNumber(user.user_number))}</strong></td>
           <td data-label="身份类型">${user.kind === 'mock' ? '仿真身份' : '普通身份'}</td>
-          <td data-label="OpenID"><div class="cell-secret"><code>${escapeHtml(formatOpenID(user.openid))}</code><button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(user.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div></td>
+          <td data-label="OpenID"><div class="cell-secret"><code>${escapeHtml(formatOpenID(user.openid))}</code><button class="copy-btn" title="复制完整 OpenID" aria-label="复制完整 OpenID" data-openid="${escapeHtml(user.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div></td>
           <td data-label="平台账号">${account}</td>
           <td data-label="首次记录" class="date-cell">${formatDate(user.first_seen_at, true)}</td>
           <td data-label="操作"><button class="btn-action-sm" data-openid="${escapeHtml(user.openid)}" onclick="viewRegisteredUserRecords(this.dataset.openid)">查看流水</button></td>
@@ -6304,7 +6329,7 @@ async function handleWechatScanLogin() {
           <td data-label="用户"><strong>${escapeHtml(formatUserNumber(a.user_number, !!a.openid))}</strong></td>
           <td data-label="角色">${roleHtml}</td>
           <td data-label="OpenID"><div class="cell-secret"><code>${escapeHtml(formatOpenID(a.openid || ''))}</code>
-            ${a.openid ? `<button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制</button>` : ''}</div></td>
+            ${a.openid ? `<button class="copy-btn" title="复制完整 OpenID" aria-label="复制完整 OpenID" data-openid="${escapeHtml(a.openid)}" onclick="copyText(this.dataset.openid)">复制</button>` : ''}</div></td>
           <td data-label="注册日期" class="date-cell">${created}</td>
           <td data-label="状态">${statusHtml}</td>
           <td data-label="操作">${!isAdminAcc ? `<button class="btn-action-sm" data-account-id="${escapeHtml(a.id)}" data-next-status="${a.status === 'active' ? 'disabled' : 'active'}" onclick="toggleAccount(this.dataset.accountId, this.dataset.nextStatus)">${a.status === 'active' ? '禁用' : '启用'}</button>` : '<span class="cell-muted" title="管理员不能禁用">—</span>'}</td>
@@ -6368,7 +6393,7 @@ async function handleWechatScanLogin() {
         const stColor = st === '未使用' ? '#34d399' : (st === '已使用' ? '#94a3b8' : '#ef4444');
         return `<tr>
           <td data-label="激活码"><div class="cell-secret"><code>${escapeHtml(formatLicenseCode(l.code))}</code>
-            <button class="copy-btn" title="复制完整激活码" aria-label="复制完整激活码" data-code="${escapeHtml(l.code)}" onclick="copyText(this.dataset.code)">复制完整</button></div></td>
+            <button class="copy-btn" title="复制完整激活码" aria-label="复制完整激活码" data-code="${escapeHtml(l.code)}" onclick="copyText(this.dataset.code)">复制</button></div></td>
           <td data-label="可用天数">${escapeHtml(String(l.duration_days))} 天</td>
           <td data-label="兑换截止日期" class="date-cell">${formatDate(l.redeem_deadline)}</td>
           <td data-label="使用项目">${escapeHtml(l.project_id || '-')}</td>
@@ -6406,7 +6431,8 @@ async function handleWechatScanLogin() {
       const data = generatedLicenseResult;
       area.innerHTML = `<div style="color:#34d399; font-weight:600;">已生成 ${data.count} 枚（${data.days} 天 / 兑换期 ${data.redeem} 天）</div>
         <button class="btn-action-sm generated-license-toggle-btn" onclick="toggleGeneratedLicenseVisibility()" style="margin:10px 0;">显示完整激活码</button>
-        ${data.codes.map(code => `<div class="generated-code-row"><code>${escapeHtml(formatLicenseCode(code, showFullGeneratedLicenseCode))}</code><button class="copy-btn" title="复制完整激活码" data-code="${escapeHtml(code)}" onclick="copyText(this.dataset.code)">复制完整</button></div>`).join('')}`;
+        <p class="copy-help">隐藏仅影响显示，复制始终获取完整值。</p>
+        ${data.codes.map(code => `<div class="generated-code-row"><code>${escapeHtml(formatLicenseCode(code, showFullGeneratedLicenseCode))}</code><button class="copy-btn" title="复制完整激活码" aria-label="复制完整激活码" data-code="${escapeHtml(code)}" onclick="copyText(this.dataset.code)">复制</button></div>`).join('')}`;
       syncSecretVisibilityButtons();
     }
 
