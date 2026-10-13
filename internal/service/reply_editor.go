@@ -311,10 +311,7 @@ func formatReplySnippetSection(base string, section model.ReplySnippetSection) s
 	if len(section.Items) == 0 {
 		return base
 	}
-	parts := make([]string, 0, len(section.Items)+1)
-	if title := strings.TrimSpace(section.Title); title != "" {
-		parts = append(parts, title)
-	}
+	parts := make([]string, 0, len(section.Items))
 	for index, item := range section.Items {
 		contentLines := strings.Split(strings.TrimSpace(item.Content), "\n")
 		for i := range contentLines {
@@ -323,6 +320,13 @@ func formatReplySnippetSection(base string, section model.ReplySnippetSection) s
 		parts = append(parts, fmt.Sprintf("%d. %s\n%s", index+1, strings.TrimSpace(item.Title), strings.Join(contentLines, "\n")))
 	}
 	sectionText := strings.Join(parts, "\n\n")
+	if title := strings.TrimSpace(section.Title); title != "" {
+		separator := "\n\n"
+		if section.CompactTitle {
+			separator = "\n"
+		}
+		sectionText = title + separator + sectionText
+	}
 	base = strings.TrimRight(base, "\n")
 	if strings.TrimSpace(base) == "" {
 		return sectionText

@@ -5235,6 +5235,7 @@ async function handleWechatScanLogin() {
         return;
       }
       box.innerHTML = `<label style="font-size:12px; color:var(--text-muted);">分区标题（可留空）<input type="text" value="${escapeHtml(section.title || '')}" oninput="studioUpdateSnippetTitle('custom', this.value)" style="display:block; width:100%; height:34px; margin-top:5px; padding:0 9px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);"></label>
+        ${snippetSectionSpacingHTML('custom', section)}
         <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">已选 ${section.items.length} 项：${section.items.map((item,index)=>`${index+1}. ${escapeHtml(item.title)}`).join(' / ')}</div>`;
     }
 
@@ -5821,6 +5822,7 @@ async function handleWechatScanLogin() {
         <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:10px;">分区标题（可修改或留空）
           <input type="text" value="${escapeHtml(section.title || '')}" oninput="studioUpdateSnippetTitle('${field}', this.value)" placeholder="留空则只使用空行分隔" style="display:block; width:100%; height:36px; margin-top:6px; padding:0 10px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
         </label>
+        ${snippetSectionSpacingHTML(field, section)}
         <div style="display:flex; flex-direction:column; gap:9px;">${section.items.map((item,index)=>`<div class="snippet-manage-row" style="align-items:flex-start;">
           <div class="snippet-order">${index+1}</div>
           <div style="flex:1; min-width:0;">
@@ -5834,6 +5836,21 @@ async function handleWechatScanLogin() {
     function studioUpdateSnippetTitle(field, value) {
       const section = getSnippetSection(field, true);
       section.title = value;
+      studioMarkDirty(); scheduleStudioPreview();
+    }
+
+    function snippetSectionSpacingHTML(field, section) {
+      return `<label style="display:block; font-size:12px; color:var(--text-muted); margin:10px 0;">分区标题与内容间距
+        <select onchange="studioUpdateSnippetSpacing('${field}', this.value)" style="display:block; width:100%; height:36px; margin-top:6px; padding:0 9px; border-radius:7px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+          <option value="compact" ${section.compact_title?'selected':''}>紧凑，仅换行</option>
+          <option value="blank" ${section.compact_title?'':'selected'}>空一行</option>
+        </select>
+      </label>`;
+    }
+
+    function studioUpdateSnippetSpacing(field, value) {
+      const section = getSnippetSection(field, true);
+      section.compact_title = value === 'compact';
       studioMarkDirty(); scheduleStudioPreview();
     }
 
@@ -6181,7 +6198,7 @@ async function handleWechatScanLogin() {
       if (items.length === 0) {
         delete cachedReplySettings.snippet_sections[key];
       } else {
-        cachedReplySettings.snippet_sections[key] = {title: oldSection?.title ?? '补充信息', items};
+        cachedReplySettings.snippet_sections[key] = {...(oldSection || {}), title: oldSection?.title ?? '补充信息', items};
       }
       studioMarkDirty();
       closeModal('snippetPickerModal');

@@ -338,6 +338,10 @@ func TestSnippetSectionUsesLocalNumbersAndEditableTitle(t *testing.T) {
 	if got := formatReplySnippetSection("项目清单", section); got != want {
 		t.Fatalf("常用内容分区排版错误:\ngot:\n%s\nwant:\n%s", got, want)
 	}
+	section.CompactTitle = true
+	if got := formatReplySnippetSection("项目清单", section); got != strings.Replace(want, "其他说明\n\n1.", "其他说明\n1.", 1) {
+		t.Fatalf("紧凑间距应只改变分区标题与第一项之间的换行: %q", got)
+	}
 	section.Title = ""
 	got := formatReplySnippetSection("项目清单", section)
 	if strings.Contains(got, "其他说明") || !strings.Contains(got, "项目清单\n\n1. 服务维护公告") {
@@ -353,7 +357,8 @@ func TestPreviewRendersSavedSnippetSelectionWithoutLibraryDependency(t *testing.
 	}
 	settings.Replies.Projects = "当前已支持的业务平台\n\n{project_list}"
 	settings.SnippetSections["projects"] = model.ReplySnippetSection{
-		Title: "补充信息",
+		Title:        "补充信息",
+		CompactTitle: true,
 		Items: []model.ReplySnippetSelection{
 			{SourceID: "ft_notice", Title: "服务维护公告", Content: "温馨提示：系统运行平稳。"},
 			{SourceID: "ft_admin", Title: "管理员尾注", Content: "管理员尾注内容"},
@@ -366,7 +371,7 @@ func TestPreviewRendersSavedSnippetSelectionWithoutLibraryDependency(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"\n\n补充信息\n\n1. 服务维护公告", "\n\n2. 管理员尾注"} {
+	for _, expected := range []string{"\n\n补充信息\n1. 服务维护公告", "\n\n2. 管理员尾注"} {
 		if !strings.Contains(preview.Reply, expected) {
 			t.Fatalf("预览未渲染已保存常用内容: %q", preview.Reply)
 		}

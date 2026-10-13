@@ -26,8 +26,9 @@ type ReplySnippetSelection struct {
 // ReplySnippetSection 保存某个回复场景选中的常用内容和可编辑分区标题。
 // map 键使用回复字段名；自定义规则使用 custom:<rule-id>。
 type ReplySnippetSection struct {
-	Title string                  `json:"title"`
-	Items []ReplySnippetSelection `json:"items"`
+	Title        string                  `json:"title"`
+	Items        []ReplySnippetSelection `json:"items"`
+	CompactTitle bool                    `json:"compact_title"` // 分区标题与第一项内容仅换行；旧配置默认空一行
 }
 
 type ReplyPreviewReq struct {
