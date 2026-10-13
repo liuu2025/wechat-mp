@@ -2051,6 +2051,17 @@
       .records-table code { font-size: 12px; padding: 3px 6px; }
       .cell-stack { gap: 4px; }
       .cell-secret { gap: 7px; }
+      .audit-table td[data-label="用户 / OpenID"] > .cell-stack { align-items: stretch; }
+      .records-table td[data-label="OpenID"] .cell-secret,
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; align-items: center;
+      }
+      .records-table td[data-label="OpenID"] .cell-secret code,
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
+        justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+      }
+      .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: end; }
       .record-badge { min-width: 52px; justify-content: center; padding: 3px 8px; font-size: 11px; font-weight: 500; }
       .record-badge[style*="#16a34a"] { color: #61d69b !important; }
       .record-badge[style*="#f59e0b"] { color: #fbc46c !important; }
