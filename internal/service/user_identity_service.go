@@ -273,3 +273,65 @@ func (s *UserIdentityService) Lookup(openID string) (int64, bool) {
 	identity, ok := s.registry.Users[strings.TrimSpace(openID)]
 	return identity.Number, ok
 }
+
+type UserIdentityQuery struct {
+	Keyword      string
+	Registration string // registered | unregistered | all
+	Kind         string // mock | ordinary | all
+	Page         int
+	PageSize     int
+}
+
+// List 只读永久编号表并关联账号快照；不创建编号，不改变 next_number 或文件。
+func (s *UserIdentityService) List(query UserIdentityQuery, accounts []model.Account) *model.RegisteredUserList {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if query.PageSize < 1 {
+		query.PageSize = 20
+	}
+	if query.PageSize > 100 {
+		query.PageSize = 100
+	}
+	accountByOpenID := make(map[string]model.Account, len(accounts))
+	for _, account := range accounts {
+		accountByOpenID[account.OpenID] = account
+	}
+	result := &model.RegisteredUserList{
+		KnownCount: len(s.registry.Users), NextNumber: s.registry.NextNumber, PageSize: query.PageSize,
+	}
+	items := make([]model.RegisteredUser, 0, len(s.registry.Users))
+	for openID, identity := range s.registry.Users {
+		item := model.RegisteredUser{OpenID: openID, UserNumber: identity.Number, FirstSeenAt: identity.FirstSeenAt, Kind: "ordinary"}
+		if strings.HasPrefix(openID, "mock_wx_user_") {
+			item.Kind = "mock"
+			result.MockCount++
+		}
+		if account, ok := accountByOpenID[openID]; ok {
+			item.Registered, item.Role, item.Status = true, account.Role, account.Status
+			result.AccountCount++
+		}
+		if query.Registration == "registered" && !item.Registered || query.Registration == "unregistered" && item.Registered {
+			continue
+		}
+		if query.Kind != "" && query.Kind != "all" && query.Kind != item.Kind {
+			continue
+		}
+		if !recordMatchesUserQuery(model.VerificationRecord{OpenID: openID, UserNumber: identity.Number}, query.Keyword) {
+			continue
+		}
+		items = append(items, item)
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].UserNumber < items[j].UserNumber })
+	result.Total = len(items)
+	result.Page = boundedPage(query.Page, result.Total, query.PageSize)
+	start := (result.Page - 1) * query.PageSize
+	end := min(start+query.PageSize, result.Total)
+	result.Items = items[start:end]
+	return result
+}
+
+// 先限制页码再计算偏移，避免极大查询值乘法溢出。
+func boundedPage(page, total, pageSize int) int {
+	last := max(1, (total+pageSize-1)/pageSize)
+	return min(max(1, page), last)
+}

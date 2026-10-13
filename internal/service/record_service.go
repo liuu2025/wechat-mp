@@ -22,12 +22,13 @@ const (
 
 // RecordQuery 是控制台流水查询条件。
 type RecordQuery struct {
-	Source   string
-	Status   string
-	Project  string
-	OpenID   string
-	Page     int
-	PageSize int
+	Source     string
+	Status     string
+	Project    string
+	Unassigned bool
+	OpenID     string
+	Page       int
+	PageSize   int
 }
 
 // RecordService 以按月 JSONL 文件保存取码/核销快照。
@@ -127,7 +128,7 @@ func (s *RecordService) appendSnapshot(event string, record *model.CodeRecord) e
 }
 
 // List 返回最新状态，管理员看全部；租户只看归属于自己的项目流水。
-func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.VerificationRecordList, error) {
+func (s *RecordService) List(query RecordQuery, role, accountID string, currentProjects ...[]*model.ProjectItem) (*model.VerificationRecordList, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -142,10 +143,7 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 	}
 
 	entries, err := os.ReadDir(s.dir)
-	if os.IsNotExist(err) {
-		return &model.VerificationRecordList{Items: []model.VerificationRecord{}, Page: query.Page, PageSize: query.PageSize}, nil
-	}
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
@@ -161,6 +159,7 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 
 	now := time.Now().Unix()
 	cutoff := time.Now().Add(-s.retention).Unix()
+	visible := make([]model.VerificationRecord, 0, len(latest))
 	items := make([]model.VerificationRecord, 0, len(latest))
 	for _, event := range latest {
 		r := event.VerificationRecord
@@ -176,13 +175,17 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 		if s.userIdentities != nil && r.OpenID != "" {
 			r.UserNumber, _ = s.userIdentities.Lookup(r.OpenID)
 		}
+		visible = append(visible, r)
+		if query.Unassigned && (role != model.RoleAdmin || r.Project != "") {
+			continue
+		}
 		if query.Source != "" && query.Source != "all" && r.Source != query.Source {
 			continue
 		}
 		if query.Status != "" && query.Status != "all" && r.Status != query.Status {
 			continue
 		}
-		if query.Project != "" && query.Project != "all" && r.Project != query.Project {
+		if query.Project != "" && r.Project != query.Project {
 			continue
 		}
 		if query.OpenID != "" && !recordMatchesUserQuery(r, query.OpenID) {
@@ -198,6 +201,7 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 	})
 
 	total := len(items)
+	query.Page = boundedPage(query.Page, total, query.PageSize)
 	start := (query.Page - 1) * query.PageSize
 	if start > total {
 		start = total
@@ -206,12 +210,67 @@ func (s *RecordService) List(query RecordQuery, role, accountID string) (*model.
 	if end > total {
 		end = total
 	}
+	var projects []*model.ProjectItem
+	if len(currentProjects) > 0 {
+		projects = currentProjects[0]
+	}
+	options, hasUnassigned := recordProjectOptions(visible, projects, role, accountID)
 	return &model.VerificationRecordList{
-		Items:    items[start:end],
-		Total:    total,
-		Page:     query.Page,
-		PageSize: query.PageSize,
+		Items:          items[start:end],
+		Total:          total,
+		Page:           query.Page,
+		PageSize:       query.PageSize,
+		ProjectOptions: options,
+		HasUnassigned:  hasUnassigned,
 	}, nil
+}
+
+func recordProjectOptions(records []model.VerificationRecord, projects []*model.ProjectItem, role, accountID string) ([]model.RecordProjectOption, bool) {
+	exists := make(map[string]bool, len(projects))
+	options := make(map[string]model.RecordProjectOption)
+	for _, p := range projects {
+		if p == nil {
+			continue
+		}
+		exists[p.ID] = true
+		if role == model.RoleAdmin || p.OwnerAccountID != "" && p.OwnerAccountID == accountID {
+			options[p.ID] = model.RecordProjectOption{ID: p.ID, Name: p.Name}
+		}
+	}
+	// 同一标识的旧快照用最近一条作为历史名称；当前名称以项目配置为准。
+	sort.Slice(records, func(i, j int) bool {
+		if records[i].CreatedAt == records[j].CreatedAt {
+			return records[i].ID > records[j].ID
+		}
+		return records[i].CreatedAt > records[j].CreatedAt
+	})
+	hasUnassigned := false
+	for _, record := range records {
+		if record.Project == "" {
+			hasUnassigned = hasUnassigned || role == model.RoleAdmin
+			continue
+		}
+		if _, ok := options[record.Project]; ok {
+			continue
+		}
+		options[record.Project] = model.RecordProjectOption{
+			ID: record.Project, Name: record.ProjectName, Deleted: !exists[record.Project], Historical: true,
+		}
+	}
+	result := make([]model.RecordProjectOption, 0, len(options))
+	for _, option := range options {
+		result = append(result, option)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Historical != result[j].Historical {
+			return !result[i].Historical
+		}
+		if result[i].Name != result[j].Name {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].ID < result[j].ID
+	})
+	return result, hasUnassigned
 }
 
 func recordMatchesUserQuery(record model.VerificationRecord, query string) bool {

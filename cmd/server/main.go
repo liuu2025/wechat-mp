@@ -62,7 +62,8 @@ func main() {
 	consoleHandler := handler.NewConsoleHandler(accountService)
 	licenseHandler := handler.NewLicenseHandler(licenseService, accountService)
 	projectHandler := handler.NewProjectHandler(projectService, accountService, licenseService)
-	recordHandler := handler.NewRecordHandler(recordService, accountService)
+	recordHandler := handler.NewRecordHandler(recordService, accountService, projectService)
+	userIdentityHandler := handler.NewUserIdentityHandler(userIdentityService, accountService)
 
 	// 5. 路由注册
 	mux := http.NewServeMux()
@@ -97,6 +98,7 @@ func main() {
 	mux.HandleFunc("/api/console/preview-session", consoleHandler.PreviewSession)
 	mux.HandleFunc("/api/console/me", consoleHandler.Me)
 	mux.HandleFunc("/api/accounts", consoleHandler.ListAccounts)
+	mux.HandleFunc("/api/user-identities", userIdentityHandler.List)
 	mux.HandleFunc("/api/accounts/set-status", consoleHandler.SetAccountStatus)
 	mux.HandleFunc("/api/settings/registration", consoleHandler.RegistrationSettings)
 	mux.HandleFunc("/api/licenses", licenseHandler.ListCodes)

@@ -82,10 +82,20 @@ type VerificationRecordEvent struct {
 }
 
 type VerificationRecordList struct {
-	Items    []VerificationRecord `json:"items"`
-	Total    int                  `json:"total"`
-	Page     int                  `json:"page"`
-	PageSize int                  `json:"page_size"`
+	Items          []VerificationRecord  `json:"items"`
+	Total          int                   `json:"total"`
+	Page           int                   `json:"page"`
+	PageSize       int                   `json:"page_size"`
+	ProjectOptions []RecordProjectOption `json:"project_options"`
+	HasUnassigned  bool                  `json:"has_unassigned"`
+}
+
+// 下拉选项只包含当前角色可见的项目和保存期内的历史项目。
+type RecordProjectOption struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Deleted    bool   `json:"deleted"`
+	Historical bool   `json:"historical"`
 }
 
 // CreateCodeResp 生成验证码的响应结构

@@ -648,6 +648,9 @@
       gap: 6px;
       color: var(--text-main);
     }
+    #authSectionUsers .card-header { gap: 16px; }
+    #authSectionUsers .card-header > div:first-child { flex: 1; min-width: 0; }
+    #authSectionUsers .page-head-actions { flex-shrink: 0; }
 
     .input-row {
       display: flex;
@@ -1810,6 +1813,15 @@
       .accounts-table td[data-label="注册日期"] { grid-column: 1; grid-row: 4; align-self: center; color: var(--text-muted); font-size: 11.5px; }
       .accounts-table td[data-label="注册日期"]::before { display: inline; content: '注册于 '; color: var(--text-muted); font-size: inherit; font-weight: 400; }
       .accounts-table td[data-label="操作"] { grid-column: 2; grid-row: 4; }
+      #tab-accounts .rules-nav { gap: 16px; }
+      .registered-users-table td[data-label="用户"] { grid-column: 1; grid-row: 1; font-size: 16px; }
+      .registered-users-table td[data-label="身份类型"] { grid-column: 2; grid-row: 1; color: var(--text-muted); font-size: 12px; text-align: right; }
+      .registered-users-table td[data-label="OpenID"] { grid-column: 1 / -1; grid-row: 2; }
+      .registered-users-table td[data-label="OpenID"] .cell-secret { justify-content: space-between; }
+      .registered-users-table td[data-label="平台账号"] { grid-column: 1 / -1; grid-row: 3; font-size: 12px; }
+      .registered-users-table td[data-label="首次记录"] { grid-column: 1; grid-row: 4; align-self: center; font-size: 11.5px; color: var(--text-muted); white-space: normal; }
+      .registered-users-table td[data-label="首次记录"]::before { display: block; content: '首次记录'; font-weight: 400; }
+      .registered-users-table td[data-label="操作"] { grid-column: 2; grid-row: 4; align-self: center; }
       .licenses-table td[data-label="激活码"] { grid-column: 1; grid-row: 1; }
       .licenses-table td[data-label="激活码"] code { color: var(--text-main); font-size: 14px; }
       .licenses-table td[data-label="状态"] { grid-column: 2; grid-row: 1; }
@@ -2137,7 +2149,9 @@
           <option value="verified">已核销</option>
           <option value="expired">已过期</option>
         </select>
-        <input id="recordFilterProject" type="text" placeholder="项目唯一标识" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; width:150px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+        <select id="recordFilterProject" aria-label="筛选项目" onchange="loadRecords(1)" style="height:34px; width:240px; max-width:100%; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
+          <option value="">全部项目</option>
+        </select>
         <input id="recordFilterOpenID" type="text" placeholder="搜索用户编号或 OpenID" onkeydown="if(event.key==='Enter') loadRecords(1)" style="height:34px; flex:1; min-width:180px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main);">
         <button class="btn-primary" onclick="loadRecords(1)">查询</button>
       </div>
@@ -2496,6 +2510,7 @@
         <div class="rules-nav">
           <button class="rules-nav-btn" id="authNavBtnLicenses" onclick="switchAuthSection('licenses')">项目激活码</button>
           <button class="rules-nav-btn" id="authNavBtnAccounts" onclick="switchAuthSection('accounts')">平台账号</button>
+          <button class="rules-nav-btn" id="authNavBtnUsers" onclick="switchAuthSection('users')">已登记用户</button>
         </div>
 
         <div class="rules-section" id="authSectionAccounts">
@@ -2538,6 +2553,46 @@
           </div>
           <div id="accountsContainer"></div>
         </div>
+        </div>
+
+        <div class="rules-section" id="authSectionUsers">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">已登记用户</div>
+                <div class="page-description" style="font-size:13px; color:var(--text-muted); margin-top:4px;">记录过 OpenID 不代表已注册平台账号；同一 OpenID 在各页面使用相同的永久编号，不随流水过期而删除。“仿真身份”仅识别已知测试前缀，其他身份的真实来源未作验证。</div>
+              </div>
+              <div class="page-head-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-action-sm openid-toggle-btn" onclick="toggleOpenIDVisibility()">显示完整 OpenID</button>
+                <button class="btn-action-sm" onclick="loadRegisteredUsers(registeredUsersPage)">刷新</button>
+              </div>
+            </div>
+            <div class="account-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <input id="userFilterKeyword" type="search" aria-label="搜索已登记用户" placeholder="搜索用户编号 / OpenID" oninput="scheduleRegisteredUsersSearch()" style="flex:1; min-width:180px; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+              <select id="userFilterRegistration" aria-label="平台注册情况" onchange="loadRegisteredUsers(1)" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+                <option value="all">全部注册情况</option><option value="registered">已注册平台</option><option value="unregistered">未注册平台</option>
+              </select>
+              <select id="userFilterKind" aria-label="身份类型" onchange="loadRegisteredUsers(1)" style="height:34px; border-radius:6px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-size:13px;">
+                <option value="all">全部身份类型</option><option value="ordinary">普通身份</option><option value="mock">仿真身份</option>
+              </select>
+            </div>
+            <div id="registeredUsersStats" style="font-size:13px; color:var(--text-muted); line-height:1.7; margin-bottom:8px;"></div>
+            <div id="registeredUsersSummary" style="font-size:13px; color:var(--text-muted); margin-bottom:8px;" aria-live="polite">加载中...</div>
+            <div id="registeredUsersContainer"></div>
+            <div class="records-pagination">
+              <div class="records-page-size">
+                <label for="registeredUsersPageSize">每页</label>
+                <select id="registeredUsersPageSize" onchange="loadRegisteredUsers(1)">
+                  <option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option>
+                </select><span>条</span>
+              </div>
+              <div class="records-page-nav">
+                <button class="btn-action-sm" id="registeredUsersPrev" onclick="loadRegisteredUsers(registeredUsersPage - 1)" disabled>上一页</button>
+                <span id="registeredUsersPageText">第 1 / 1 页</span>
+                <button class="btn-action-sm" id="registeredUsersNext" onclick="loadRegisteredUsers(registeredUsersPage + 1)" disabled>下一页</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="rules-section active" id="authSectionLicenses">
@@ -3661,6 +3716,7 @@ async function handleWechatScanLogin() {
       currentAuthPassword = '';
       adminToken = '';
       currentRole = '';
+      registeredUsersRequest++; cachedRegisteredUsers = []; renderRegisteredUsers();
       showLockScreen();
     }
 
@@ -3695,7 +3751,10 @@ async function handleWechatScanLogin() {
       if (tabId === 'projects') loadProjects();
       if (tabId === 'records') loadRecords(1);
       if (tabId === 'rules') { loadReplies(); loadFooters(); }
-      if (tabId === 'accounts') { loadAccounts(); loadLicenses(); }
+      if (tabId === 'accounts') {
+        loadAccounts(); loadLicenses();
+        if (document.getElementById('authSectionUsers').classList.contains('active')) loadRegisteredUsers(registeredUsersPage);
+      }
       if (tabId === 'docs') regenerateAiPrompt();
 
       // 移动端：切换后自动收起抽屉
@@ -3974,6 +4033,7 @@ async function handleWechatScanLogin() {
     const recordsPageSizeSelect = document.getElementById('recordsPageSizeSelect');
     if (recordsPageSizeSelect) recordsPageSizeSelect.value = String(recordsPageSize);
     let cachedRecords = [];
+    let recordsRequest = 0;
 
     function changeRecordsPageSize(value) {
       const nextSize = Number(value);
@@ -3984,6 +4044,8 @@ async function handleWechatScanLogin() {
     }
 
     async function loadRecords(page) {
+      const request = ++recordsRequest;
+      const token = currentAuthPassword;
       page = Math.max(1, page || 1);
       const body = document.getElementById('recordsTableBody');
       const summary = document.getElementById('recordSummary');
@@ -3997,7 +4059,8 @@ async function handleWechatScanLogin() {
       const openid = document.getElementById('recordFilterOpenID').value.trim();
       if (source !== 'all') params.set('source', source);
       if (status !== 'all') params.set('status', status);
-      if (project) params.set('project', project);
+      if (project === 'scope:unassigned') params.set('project_scope', 'unassigned');
+      else if (project.startsWith('project:')) params.set('project', project.slice(8));
       if (openid) params.set('openid', openid);
 
       try {
@@ -4005,10 +4068,15 @@ async function handleWechatScanLogin() {
           headers: { 'X-Session-Token': currentAuthPassword }
         });
         const json = await res.json();
+        if (request !== recordsRequest || token !== currentAuthPassword) return;
         if (json.code !== 0 || !json.data) {
           throw new Error(json.message || '读取失败');
         }
         const data = json.data;
+        if (!renderRecordProjectOptions(data, project)) {
+          // 历史项目退出保存期后恢复“全部”，只重查一次。
+          return loadRecords(1);
+        }
         recordsCurrentPage = data.page || page;
         recordsPageSize = data.page_size || recordsPageSize;
         const pageSizeSelect = document.getElementById('recordsPageSizeSelect');
@@ -4026,9 +4094,24 @@ async function handleWechatScanLogin() {
         cachedRecords = data.items || [];
         renderRecords(cachedRecords);
       } catch (err) {
+        if (request !== recordsRequest || token !== currentAuthPassword) return;
         summary.textContent = '读取失败：' + err.message;
         body.innerHTML = '<tr><td colspan="7" data-empty style="text-align:center; color:#ef4444;">读取取码记录失败</td></tr>';
       }
+    }
+
+    function renderRecordProjectOptions(data, selected) {
+      const select = document.getElementById('recordFilterProject');
+      const options = [new Option('全部项目', '')];
+      if (currentRole === 'admin' && data.has_unassigned) options.push(new Option('未确定项目（待核销确定）', 'scope:unassigned'));
+      (data.project_options || []).forEach(p => {
+        const suffix = p.deleted ? ' · 已删除' : p.historical ? ' · 历史项目' : '';
+        options.push(new Option(`${p.name || p.id}（${p.id}）${suffix}`, 'project:' + p.id));
+      });
+      select.replaceChildren(...options);
+      const exists = options.some(option => option.value === selected);
+      select.value = exists ? selected : '';
+      return exists;
     }
 
     function renderRecords(items) {
@@ -4121,7 +4204,7 @@ async function handleWechatScanLogin() {
     function resetSecretVisibility() {
       showFullOpenID = showFullVerificationCode = showFullLicenseCode = showFullGeneratedLicenseCode = false;
       syncSecretVisibilityButtons();
-      renderAccounts(); renderLicenses(); renderRecords(cachedRecords); renderGeneratedLicenses();
+      renderAccounts(); renderRegisteredUsers(); renderLicenses(); renderRecords(cachedRecords); renderGeneratedLicenses();
     }
 
     function formatOpenID(openid) {
@@ -4138,6 +4221,7 @@ async function handleWechatScanLogin() {
       showFullOpenID = !showFullOpenID;
       syncSecretVisibilityButtons();
       renderAccounts();
+      renderRegisteredUsers();
       renderRecords(cachedRecords);
     }
 
@@ -5706,6 +5790,90 @@ async function handleWechatScanLogin() {
     }
 
     // ================= 账号与授权（管理员） =================
+    let cachedRegisteredUsers = [];
+    let registeredUsersPage = 1;
+    let registeredUsersRequest = 0;
+    let registeredUsersSearchTimer = null;
+
+    function scheduleRegisteredUsersSearch() {
+      clearTimeout(registeredUsersSearchTimer);
+      // 输入即废弃旧请求，防止较慢响应盖过新关键词。
+      registeredUsersRequest++;
+      registeredUsersSearchTimer = setTimeout(() => loadRegisteredUsers(1), 250);
+    }
+
+    async function loadRegisteredUsers(page = 1) {
+      clearTimeout(registeredUsersSearchTimer);
+      if (currentRole !== 'admin') return;
+      const request = ++registeredUsersRequest;
+      const token = currentAuthPassword;
+      const summary = document.getElementById('registeredUsersSummary');
+      summary.textContent = '加载中...';
+      const params = new URLSearchParams({
+        page: String(Math.max(1, page)), page_size: document.getElementById('registeredUsersPageSize').value,
+        keyword: document.getElementById('userFilterKeyword').value.trim(),
+        registration: document.getElementById('userFilterRegistration').value,
+        kind: document.getElementById('userFilterKind').value
+      });
+      try {
+        const res = await fetch('/api/user-identities?' + params, { headers: { 'X-Session-Token': token } });
+        const json = await res.json();
+        if (request !== registeredUsersRequest || token !== currentAuthPassword || currentRole !== 'admin') return;
+        if (json.code !== 0 || !json.data) throw new Error(json.message || '读取失败');
+        const data = json.data;
+        cachedRegisteredUsers = data.items || [];
+        registeredUsersPage = data.page;
+        document.getElementById('registeredUsersPageSize').value = String(data.page_size);
+        const pages = Math.max(1, Math.ceil(data.total / data.page_size));
+        const start = data.total ? (data.page - 1) * data.page_size + 1 : 0;
+        const end = Math.min(data.page * data.page_size, data.total);
+        summary.textContent = `符合条件 ${data.total} 人，当前显示 ${start}–${end} 人`;
+        document.getElementById('registeredUsersStats').textContent = `共登记 ${data.known_count} 人 · 已注册平台 ${data.account_count} 人 · 未注册平台 ${data.known_count - data.account_count} 人 · 仿真身份 ${data.mock_count} 人。下一个首次出现的新 OpenID：用户${data.next_number}（已登记身份注册时沿用原编号）。`;
+        document.getElementById('registeredUsersPageText').textContent = `第 ${data.page} / ${pages} 页`;
+        document.getElementById('registeredUsersPrev').disabled = data.page <= 1;
+        document.getElementById('registeredUsersNext').disabled = data.page >= pages;
+        renderRegisteredUsers();
+      } catch (err) {
+        if (request !== registeredUsersRequest || token !== currentAuthPassword || currentRole !== 'admin') return;
+        cachedRegisteredUsers = [];
+        renderRegisteredUsers();
+        document.getElementById('registeredUsersStats').textContent = '';
+        summary.textContent = '读取失败：' + err.message;
+        document.getElementById('registeredUsersPrev').disabled = true;
+        document.getElementById('registeredUsersNext').disabled = true;
+      }
+    }
+
+    function renderRegisteredUsers() {
+      const container = document.getElementById('registeredUsersContainer');
+      if (!container) return;
+      if (currentRole !== 'admin') { container.replaceChildren(); return; }
+      const rows = cachedRegisteredUsers.map(user => {
+        const account = !user.registered ? '<span class="cell-muted">未注册平台</span>'
+          : `<div class="cell-stack"><span>${user.role === 'admin' ? '管理员' : '普通用户'}</span><span class="cell-muted">${user.status === 'active' ? '正常' : '已禁用'}</span></div>`;
+        return `<tr>
+          <td data-label="用户"><strong>${escapeHtml(formatUserNumber(user.user_number))}</strong></td>
+          <td data-label="身份类型">${user.kind === 'mock' ? '仿真身份' : '普通身份'}</td>
+          <td data-label="OpenID"><div class="cell-secret"><code>${escapeHtml(formatOpenID(user.openid))}</code><button class="copy-btn" title="复制完整 OpenID" data-openid="${escapeHtml(user.openid)}" onclick="copyText(this.dataset.openid)">复制</button></div></td>
+          <td data-label="平台账号">${account}</td>
+          <td data-label="首次记录" class="date-cell">${formatDate(user.first_seen_at, true)}</td>
+          <td data-label="操作"><button class="btn-action-sm" data-openid="${escapeHtml(user.openid)}" onclick="viewRegisteredUserRecords(this.dataset.openid)">查看流水</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6" data-empty style="text-align:center; color:var(--text-muted);">没有符合条件的已登记用户。</td></tr>';
+      container.innerHTML = `<div class="records-table-wrap"><table class="records-table admin-data-table registered-users-table">
+        <colgroup><col style="width:12%"><col style="width:10%"><col style="width:32%"><col style="width:13%"><col style="width:21%"><col style="width:12%"></colgroup>
+        <thead><tr><th>用户</th><th>身份类型</th><th>OpenID</th><th>平台账号</th><th>首次记录</th><th>操作</th></tr></thead><tbody>${rows}</tbody>
+      </table></div>`;
+    }
+
+    function viewRegisteredUserRecords(openid) {
+      document.getElementById('recordFilterSource').value = 'all';
+      document.getElementById('recordFilterStatus').value = 'all';
+      document.getElementById('recordFilterProject').value = '';
+      document.getElementById('recordFilterOpenID').value = openid;
+      switchTab('records');
+    }
+
     let cachedAccounts = [];
     let cachedLicenses = [];
     let generatedLicenseResult = null;
@@ -6019,6 +6187,7 @@ async function handleWechatScanLogin() {
       const btn = document.getElementById('authNavBtn' + name.charAt(0).toUpperCase() + name.slice(1));
       if (sec) sec.classList.add('active');
       if (btn) btn.classList.add('active');
+      if (name === 'users') loadRegisteredUsers(1);
     }
 
     function switchDigitResult(key) {
