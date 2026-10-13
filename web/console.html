@@ -1534,6 +1534,7 @@
       flex-direction: column;
     }
     .mobile-topbar { display: none; }
+    .sidebar-backdrop { display: none; }
 
     /* ---------------- 规则中心 ---------------- */
     .rules-nav {
@@ -1678,11 +1679,26 @@
         top: 0;
         bottom: 0;
         width: 232px;
+        height: 100vh;
+        height: 100dvh;
         max-height: none;
-        transition: left 0.25s ease;
+        min-height: 0;
+        visibility: hidden;
+        transition: left 0.25s ease, visibility 0s linear 0.25s;
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.45);
+        overscroll-behavior: contain;
       }
-      .sidebar.open { left: 0; }
+      .sidebar.open { left: 0; visibility: visible; transition-delay: 0s; }
+      .sidebar-backdrop.open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 59;
+        background: rgba(0, 0, 0, .44);
+        touch-action: none;
+      }
+      html.sidebar-open { overflow: hidden; }
+      body.sidebar-open { position: fixed; top: var(--sidebar-scroll-top); width: 100%; overflow: hidden; }
       .mobile-topbar {
         display: flex;
         align-items: center;
@@ -1928,11 +1944,12 @@
       <button class="btn-action-sm" onclick="logout()" style="color: #ef4444;">锁屏退出</button>
     </div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true" onclick="setSidebarOpen(false)"></div>
 
-  <div class="main-area">
+  <div class="main-area" id="mainArea">
     <!-- 移动端顶栏（汉堡菜单） -->
     <div class="mobile-topbar">
-      <button class="btn-action-sm" onclick="toggleSidebar()">菜单</button>
+      <button class="btn-action-sm" id="mobileMenuBtn" aria-controls="sidebarNav" aria-expanded="false" onclick="toggleSidebar()">菜单</button>
       <span class="mobile-title">微信中枢控制台</span>
     </div>
 
@@ -2165,7 +2182,6 @@
               <h2>回复工作台</h2>
               <p>选择场景后，在同一处编辑触发条件和完整回复；场景预览使用示例数据，试跑六位数字时只读查询真实验证码状态，均不会生成或核销验证码。</p>
             </div>
-            <button class="btn-action-sm" onclick="studioSelectScene('library')">内容库</button>
           </div>
 
           <div class="studio-mobile-switch" id="studioMobileSwitch">
@@ -3583,6 +3599,7 @@ async function handleWechatScanLogin() {
 
     // 锁屏控制
     function showLockScreen() {
+      setSidebarOpen(false);
       document.getElementById('lockScreen').style.display = 'flex';
       const inp = document.getElementById('loginCodeInput');
       if (inp) inp.focus();
@@ -3682,14 +3699,69 @@ async function handleWechatScanLogin() {
       if (tabId === 'docs') regenerateAiPrompt();
 
       // 移动端：切换后自动收起抽屉
+      setSidebarOpen(false);
+    }
+
+    let sidebarScrollPosition = null;
+    const sidebarMobileViewport = window.matchMedia('(max-width: 900px)');
+
+    function setSidebarOpen(requestedOpen) {
       const sb = document.getElementById('sidebarNav');
-      if (sb) sb.classList.remove('open');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      const main = document.getElementById('mainArea');
+      const menu = document.getElementById('mobileMenuBtn');
+      if (!sb || !backdrop || !main || !menu) return;
+      const open = requestedOpen && sidebarMobileViewport.matches;
+      const wasOpen = sb.classList.contains('open');
+      if (open && !wasOpen) {
+        sidebarScrollPosition = { x: window.scrollX, y: window.scrollY };
+        document.body.style.setProperty('--sidebar-scroll-top', `-${sidebarScrollPosition.y}px`);
+      }
+      sb.inert = sidebarMobileViewport.matches && !open;
+      sb.classList.toggle('open', open);
+      backdrop.classList.toggle('open', open);
+      menu.setAttribute('aria-expanded', String(open));
+      document.documentElement.classList.toggle('sidebar-open', open);
+      document.body.classList.toggle('sidebar-open', open);
+      main.inert = open;
+      if (open && !wasOpen) {
+        // 等抽屉从隐藏状态变为可见后再移动焦点，避免动画首帧聚焦失败。
+        requestAnimationFrame(() => {
+          if (sb.classList.contains('open')) {
+            (sb.querySelector('.side-nav .tab-btn.active') || sb.querySelector('button')).focus({ preventScroll: true });
+          }
+        });
+      }
+      if (!open && wasOpen) {
+        document.body.style.removeProperty('--sidebar-scroll-top');
+        if (sidebarScrollPosition) window.scrollTo(sidebarScrollPosition.x, sidebarScrollPosition.y);
+        sidebarScrollPosition = null;
+        if (sidebarMobileViewport.matches) menu.focus({ preventScroll: true });
+      }
     }
 
     function toggleSidebar() {
       const sb = document.getElementById('sidebarNav');
-      if (sb) sb.classList.toggle('open');
+      if (sb) setSidebarOpen(!sb.classList.contains('open'));
     }
+
+    sidebarMobileViewport.addEventListener('change', () => setSidebarOpen(false));
+    document.addEventListener('keydown', event => {
+      const sb = document.getElementById('sidebarNav');
+      if (!sb?.classList.contains('open')) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSidebarOpen(false);
+      } else if (event.key === 'Tab') {
+        const buttons = [...sb.querySelectorAll('button:not(:disabled)')].filter(button => button.getClientRects().length);
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }
+    });
+    setSidebarOpen(false);
 
     // Tab 5 文档内部子分组切换
     function switchDocSection(sectionKey) {
