@@ -2054,14 +2054,15 @@
       .audit-table td[data-label="用户 / OpenID"] > .cell-stack { align-items: stretch; }
       .records-table td[data-label="OpenID"] .cell-secret,
       .audit-table td[data-label="用户 / OpenID"] .cell-secret {
-        display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; align-items: center;
+        display: grid; grid-template-columns: minmax(0, var(--openid-text-width, 1fr)) auto;
+        width: 100%; column-gap: 8px; justify-content: start; align-items: start;
       }
       .records-table td[data-label="OpenID"] .cell-secret code,
       .audit-table td[data-label="用户 / OpenID"] .cell-secret code {
         justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere;
       }
       .records-table td[data-label="OpenID"] .cell-secret .copy-btn,
-      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: end; }
+      .audit-table td[data-label="用户 / OpenID"] .cell-secret .copy-btn { justify-self: start; }
       .record-badge { min-width: 52px; justify-content: center; padding: 3px 8px; font-size: 11px; font-weight: 500; }
       .record-badge[style*="#16a34a"] { color: #61d69b !important; }
       .record-badge[style*="#f59e0b"] { color: #fbc46c !important; }
@@ -3545,6 +3546,7 @@ async function handleWechatScanLogin() {
       if (typeof renderFootersList === 'function' && cachedFooters) {
         renderFootersList(cachedFooters);
       }
+      scheduleOpenIDAlignment();
     }
 
     function toggleTheme() {
@@ -3992,6 +3994,7 @@ async function handleWechatScanLogin() {
 
       // 移动端：切换后自动收起抽屉
       setSidebarOpen(false);
+      scheduleOpenIDAlignment();
     }
 
     let sidebarScrollPosition = null;
@@ -4369,6 +4372,7 @@ async function handleWechatScanLogin() {
       const body = document.getElementById('recordsTableBody');
       if (!items.length) {
         body.innerHTML = '<tr><td colspan="7" data-empty style="text-align:center; color:var(--text-muted); padding:24px;">没有符合条件的记录</td></tr>';
+        scheduleOpenIDAlignment();
         return;
       }
       const statusView = {
@@ -4394,6 +4398,7 @@ async function handleWechatScanLogin() {
           <td data-label="核销时间" class="date-cell">${r.verified_at ? formatRecordTime(r.verified_at) : '-'}</td>
         </tr>`;
       }).join('');
+      scheduleOpenIDAlignment();
     }
 
     function formatRecordTime(ts) {
@@ -4474,6 +4479,49 @@ async function handleWechatScanLogin() {
       renderAccounts();
       renderRegisteredUsers();
       renderRecords(cachedRecords);
+    }
+
+    // 每个可见表格只测量当前页显示的文字，不读取完整身份来推测遮挡后的宽度。
+    // 分页、筛选、显示切换及容器宽度变化后，合并到一个动画帧内重算。
+    let openIDAlignmentFrame = 0;
+    let openIDMeasureContext = null;
+    function scheduleOpenIDAlignment() {
+      if (openIDAlignmentFrame) return;
+      openIDAlignmentFrame = requestAnimationFrame(() => {
+        openIDAlignmentFrame = 0;
+        alignOpenIDCopyButtons();
+      });
+    }
+
+    function alignOpenIDCopyButtons() {
+      const desktop = window.matchMedia('(min-width: 901px)').matches;
+      document.querySelectorAll('.audit-table, .accounts-table, .registered-users-table').forEach(table => {
+        if (!desktop) { table.style.removeProperty('--openid-text-width'); return; }
+        if (!table.getBoundingClientRect().width) return; // 隐藏页签在显示后再计算。
+        const cells = [...table.querySelectorAll('td[data-label="OpenID"] .cell-secret, td[data-label="用户 / OpenID"] .cell-secret')]
+          .filter(cell => cell.querySelector('code') && cell.querySelector('button[data-openid]'));
+        if (!cells.length) { table.style.removeProperty('--openid-text-width'); return; }
+        if (!openIDMeasureContext) openIDMeasureContext = document.createElement('canvas').getContext('2d');
+        if (!openIDMeasureContext) return;
+        let longest = 0;
+        let available = Infinity;
+        cells.forEach(cell => {
+          const code = cell.querySelector('code');
+          const style = getComputedStyle(code);
+          const text = code.textContent;
+          const pixels = value => parseFloat(value) || 0;
+          openIDMeasureContext.font = style.font || `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          const width = openIDMeasureContext.measureText(text).width
+            + pixels(style.letterSpacing) * [...text].length
+            + pixels(style.paddingLeft) + pixels(style.paddingRight)
+            + pixels(style.borderLeftWidth) + pixels(style.borderRightWidth);
+          longest = Math.max(longest, width);
+          available = Math.min(available, cell.getBoundingClientRect().width
+            - cell.querySelector('button[data-openid]').getBoundingClientRect().width - 8);
+        });
+        const width = `${Math.max(0, Math.min(Math.ceil(longest), Math.floor(available)))}px`;
+        if (table.style.getPropertyValue('--openid-text-width') !== width) table.style.setProperty('--openid-text-width', width);
+      });
     }
 
     function renderProjectsGrid(projects) {
@@ -6117,6 +6165,7 @@ async function handleWechatScanLogin() {
         <colgroup><col style="width:12%"><col style="width:10%"><col style="width:32%"><col style="width:13%"><col style="width:21%"><col style="width:12%"></colgroup>
         <thead><tr><th>用户</th><th>身份类型</th><th>OpenID</th><th>平台账号</th><th>首次记录</th><th>操作</th></tr></thead><tbody>${rows}</tbody>
       </table></div>`;
+      scheduleOpenIDAlignment();
     }
 
     function viewRegisteredUserRecords(openid) {
@@ -6253,6 +6302,7 @@ async function handleWechatScanLogin() {
         <colgroup><col style="width:12%"><col style="width:10%"><col style="width:35%"><col style="width:17%"><col style="width:12%"><col style="width:14%"></colgroup>
         <thead><tr><th>用户</th><th>角色</th><th>OpenID</th><th>注册日期</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody>
       </table></div>`;
+      scheduleOpenIDAlignment();
     }
 
     async function toggleAccount(id, status) {
@@ -6443,6 +6493,7 @@ async function handleWechatScanLogin() {
       if (sec) sec.classList.add('active');
       if (btn) btn.classList.add('active');
       if (name === 'users') loadRegisteredUsers(1);
+      scheduleOpenIDAlignment();
     }
 
     function switchDigitResult(key) {
@@ -6986,9 +7037,18 @@ async function handleWechatScanLogin() {
       });
     }
     window.addEventListener('resize', function() {
+      scheduleOpenIDAlignment();
       setTimeout(autoGrowReplyTextareas, 50);
       setTimeout(autoGrowAiPrompt, 50);
     });
+    if (typeof ResizeObserver === 'function') {
+      let openIDContainerWidth = -1;
+      new ResizeObserver(entries => {
+        const width = entries[0].contentRect.width;
+        if (width !== openIDContainerWidth) { openIDContainerWidth = width; scheduleOpenIDAlignment(); }
+      }).observe(document.getElementById('mainArea'));
+    }
+    if (document.fonts) document.fonts.ready.then(scheduleOpenIDAlignment);
 </script>
 </body>
 </html>
